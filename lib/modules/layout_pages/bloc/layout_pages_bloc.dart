@@ -93,7 +93,7 @@ class LayoutPagesBloc extends Bloc<LayoutPagesEvent, LayoutPagesState> {
   Widget getWidget(PageLayout pageLayout) {
     switch (pageLayout.id) {
       case Pages.home:
-        return HomePage(tbContext);
+        return DevicesListPage(tbContext);
       case Pages.alarms:
         return AlarmsPage(tbContext);
       case Pages.devices:

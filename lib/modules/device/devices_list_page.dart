@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
+import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/modules/device/devices_base.dart';
 import 'package:thingsboard_app/modules/device/devices_list.dart';
+import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
+
+import 'provisioning/route/esp_provisioning_route.dart';
 
 class DevicesListPage extends TbContextWidget {
   final String? deviceType;
@@ -106,6 +110,86 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
                 params.add('active=${widget.active}');
               }
               navigateTo('/deviceList?${params.join('&')}');
+            },
+          ),
+          PopupMenuButton(
+            icon: Icon(Icons.add),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: Text('Add Device'),
+                value: 1,
+              ),
+              PopupMenuItem(
+                child: Text('Scan QR Code'),
+                value: 2,
+              ),
+            ],
+            onSelected: (value) async {
+              if (value == 1) {
+                final arguments = {
+                  'deviceName': 'iotgw_64e833595394',
+                  'deviceSecretKey': '',
+                  'name': 'name_iotgw_64e833595394',
+                  'pop': 'pop_abc',
+                };
+
+                bool? provisioningResult = await tbContext.navigateTo(
+                  EspProvisioningRoute.softApRoute,
+                  routeSettings: RouteSettings(arguments: arguments),
+                );
+
+                // bool? provisioningResult = await tbContext.navigateTo(
+                //   EspProvisioningRoute.wifiRoute,
+                //   routeSettings: RouteSettings(arguments: arguments),
+                // );
+
+                // if (provisioningResult == true) {
+                //   return WidgetMobileActionResult.successResult(
+                //     MobileActionResult.provisioning(arguments['deviceName']),
+                //   );
+                // } else {
+                //   return WidgetMobileActionResult.emptyResult();
+                // }
+              } else if (value == 2) {
+                try {
+                  Barcode? barcode = await navigateTo('/qrCodeScan');
+                  if (barcode != null && barcode.code != null) {
+                    print('----------------> Barcode: ${barcode.code}');
+                    final response = await tbClient
+                        .getDeviceService()
+                        .claimDevice(
+                          barcode.code!,
+                          ClaimRequest(secretKey: ''),
+                          requestConfig: RequestConfig(ignoreErrors: true),
+                        )
+                        .timeout(
+                          const Duration(seconds: 20),
+                          onTimeout: () => throw Exception(
+                              'Device claiming timeout reached'),
+                        );
+
+                    // if (response.response == ClaimResponse.CLAIMED ||
+                    //     response.response == ClaimResponse.SUCCESS) {
+                    //   communicationService.fire(
+                    //     const DeviceProvisioningStatusChangedEvent(
+                    //       DeviceProvisioningStatus.done,
+                    //     ),
+                    //   );
+                    // } else {
+                    //   emit(
+                    //     const DeviceProvisioningClaimingErrorState(
+                    //       'Something went wrong. Please try again.',
+                    //     ),
+                    //   );
+                    // }
+                  } else {}
+                } catch (e) {
+                  log.error(
+                    'Login with qr code error',
+                    e,
+                  );
+                }
+              }
             },
           ),
         ],

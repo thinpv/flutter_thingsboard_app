@@ -1,5 +1,5 @@
 abstract class ThingsboardAppConstants {
-  static const thingsBoardApiEndpoint = 'http://localhost:8080';
+  static const thingsBoardApiEndpoint = 'http://demo.thingsboard.io';
   static const thingsboardOAuth2CallbackUrlScheme = 'org.thingsboard.app.auth';
 
   static const thingsboardIOSAppSecret = 'Your app secret here';
