@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
@@ -116,79 +120,101 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
             icon: Icon(Icons.add),
             itemBuilder: (context) => [
               PopupMenuItem(
-                child: Text('Add Device'),
+                child: Text('Scan QR Code'),
                 value: 1,
               ),
               PopupMenuItem(
-                child: Text('Scan QR Code'),
+                child: Text('Add Device (BLE mode)'),
                 value: 2,
+              ),
+              PopupMenuItem(
+                child: Text('Add Device (AP mode)'),
+                value: 3,
               ),
             ],
             onSelected: (value) async {
               if (value == 1) {
-                final arguments = {
-                  'deviceName': 'iotgw_64e833595394',
-                  'deviceSecretKey': '',
-                  'name': 'name_iotgw_64e833595394',
-                  'pop': 'pop_abc',
-                };
-
-                bool? provisioningResult = await tbContext.navigateTo(
-                  EspProvisioningRoute.softApRoute,
-                  routeSettings: RouteSettings(arguments: arguments),
-                );
-
-                // bool? provisioningResult = await tbContext.navigateTo(
-                //   EspProvisioningRoute.wifiRoute,
-                //   routeSettings: RouteSettings(arguments: arguments),
-                // );
-
-                // if (provisioningResult == true) {
-                //   return WidgetMobileActionResult.successResult(
-                //     MobileActionResult.provisioning(arguments['deviceName']),
-                //   );
-                // } else {
-                //   return WidgetMobileActionResult.emptyResult();
-                // }
-              } else if (value == 2) {
                 try {
-                  Barcode? barcode = await navigateTo('/qrCodeScan');
+                  Barcode? barcode = await tbContext.navigateTo(
+                    '/qrCodeScan',
+                    transition: TransitionType.nativeModal,
+                  );
                   if (barcode != null && barcode.code != null) {
-                    print('----------------> Barcode: ${barcode.code}');
-                    final response = await tbClient
-                        .getDeviceService()
-                        .claimDevice(
-                          barcode.code!,
-                          ClaimRequest(secretKey: ''),
-                          requestConfig: RequestConfig(ignoreErrors: true),
-                        )
-                        .timeout(
-                          const Duration(seconds: 20),
-                          onTimeout: () => throw Exception(
-                              'Device claiming timeout reached'),
-                        );
+                    final decodedJson = jsonDecode(barcode.code!);
+                    final transport = decodedJson?['transport'];
+                    if (transport != null) {
+                      final arguments = {
+                        'deviceName':
+                            decodedJson['tbDeviceName'] ?? decodedJson['name'],
+                        'deviceSecretKey':
+                            decodedJson['tbSecretKey'] ?? decodedJson['pop'],
+                        'name':
+                            decodedJson['name'] ?? decodedJson['tbDeviceName'],
+                        'pop': decodedJson['pop'] ?? decodedJson['tbSecretKey'],
+                      };
 
-                    // if (response.response == ClaimResponse.CLAIMED ||
-                    //     response.response == ClaimResponse.SUCCESS) {
-                    //   communicationService.fire(
-                    //     const DeviceProvisioningStatusChangedEvent(
-                    //       DeviceProvisioningStatus.done,
-                    //     ),
-                    //   );
-                    // } else {
-                    //   emit(
-                    //     const DeviceProvisioningClaimingErrorState(
-                    //       'Something went wrong. Please try again.',
-                    //     ),
-                    //   );
-                    // }
-                  } else {}
+                      bool? provisioningResult;
+                      switch (transport.toLowerCase()) {
+                        case 'ble':
+                          tbContext.navigateTo(
+                            EspProvisioningRoute.wifiRoute,
+                            routeSettings: RouteSettings(arguments: arguments),
+                          );
+                          break;
+
+                        case 'softap':
+                          tbContext.navigateTo(
+                            EspProvisioningRoute.softApRoute,
+                            routeSettings: RouteSettings(arguments: arguments),
+                          );
+                          break;
+
+                        case 'name':
+                          tbClient
+                              .getDeviceService()
+                              .claimDevice(
+                                barcode.code!,
+                                ClaimRequest(secretKey: ''),
+                                requestConfig:
+                                    RequestConfig(ignoreErrors: true),
+                              )
+                              .timeout(
+                                const Duration(seconds: 20),
+                                onTimeout: () => throw Exception(
+                                    'Device claiming timeout reached'),
+                              );
+                          break;
+                      }
+                    }
+                  }
                 } catch (e) {
-                  log.error(
+                  tbContext.log.error(
                     'Login with qr code error',
                     e,
                   );
                 }
+              } else if (value == 2) {
+                final arguments = {
+                  'deviceName': 'iotgw_64e833595394',
+                  'deviceSecretKey': '',
+                  'name': 'PROV_DA737C',
+                  'pop': 'abcd1234',
+                };
+                tbContext.navigateTo(
+                  EspProvisioningRoute.wifiRoute,
+                  routeSettings: RouteSettings(arguments: arguments),
+                );
+              } else if (value == 3) {
+                final arguments = {
+                  'deviceName': 'iotgw_64e833595394',
+                  'deviceSecretKey': '',
+                  'name': 'PROV_DA737C',
+                  'pop': 'abcd1234',
+                };
+                tbContext.navigateTo(
+                  EspProvisioningRoute.softApRoute,
+                  routeSettings: RouteSettings(arguments: arguments),
+                );
               }
             },
           ),

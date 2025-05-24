@@ -34,15 +34,19 @@ final class EspSoftApWiFiListState extends EspSoftApState {
 
 final class EspSoftApProvisioningInProgressState extends EspSoftApState {
   const EspSoftApProvisioningInProgressState({
+    required this.deviceName,
+    required this.deviceSecretKey,
     required this.ssid,
     required this.password,
   });
 
+  final String deviceName;
+  final String deviceSecretKey;
   final String ssid;
   final String password;
 
   @override
-  List<Object?> get props => [ssid, password];
+  List<Object?> get props => [deviceName, deviceSecretKey, ssid, password];
 }
 
 final class EspSoftApProvisioningDoneState extends EspSoftApState {

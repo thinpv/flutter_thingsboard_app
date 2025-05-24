@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:esp_provisioning_softap/esp_provisioning_softap.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -136,20 +138,34 @@ class EspSoftApBloc extends Bloc<EspSoftApEvent, EspSoftApState> {
         break;
 
       case EspSoftApStartProvisioningEvent():
-        emit(
-          EspSoftApProvisioningInProgressState(
-            ssid: event.ssid,
-            password: event.password,
-          ),
-        );
-        await Future.delayed(const Duration(milliseconds: 500));
-        communicationService.fire(
-          const DeviceProvisioningStatusChangedEvent(
-            DeviceProvisioningStatus.wifi,
-          ),
-        );
-
         try {
+          Uint8List bytes = Uint8List.fromList(utf8.encode("GET_DEVICE_NAME"));
+          print(bytes); // Output: [72, 101, 108, 108, 111]
+
+          Uint8List? rs = await softApService.sendReceiveCustomData(
+            provisioning,
+            data: bytes,
+          );
+          String deviceName = utf8.decode(rs);
+          print(deviceName);
+          logger.error('bytes: $bytes, rs: $rs, deviceName: $deviceName');
+
+          emit(
+            EspSoftApProvisioningInProgressState(
+              deviceName: deviceName,
+              deviceSecretKey: "",
+              ssid: event.ssid,
+              password: event.password,
+            ),
+          );
+
+          await Future.delayed(const Duration(milliseconds: 500));
+          communicationService.fire(
+            const DeviceProvisioningStatusChangedEvent(
+              DeviceProvisioningStatus.wifi,
+            ),
+          );
+
           await softApService.sendWifiConfig(
             provisioning,
             ssid: event.ssid,

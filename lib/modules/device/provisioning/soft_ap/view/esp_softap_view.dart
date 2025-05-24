@@ -121,8 +121,8 @@ class _EspSoftApViewState extends TbContextState<EspSoftApView> {
                     case EspSoftApProvisioningInProgressState():
                       return DeviceProvisioningView(
                         tbContext,
-                        deviceName: widget.tbDeviceName,
-                        deviceSecretKey: widget.tbDeviceSecretKey,
+                        deviceName: state.deviceName,
+                        deviceSecretKey: state.deviceSecretKey,
                         ssid: state.ssid,
                         wifiPassword: state.password,
                         mustReconnectToWifiBeforeClaiming: true,
