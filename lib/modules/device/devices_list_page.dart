@@ -198,7 +198,7 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
                   'deviceName': '',
                   'deviceSecretKey': '',
                   'name': 'iotgw_',
-                  'pop': 'abcd1234',
+                  'pop': 'thinpv1607',
                 };
                 tbContext.navigateTo(
                   EspProvisioningRoute.wifiRoute,
@@ -209,7 +209,7 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
                   'deviceName': '',
                   'deviceSecretKey': '',
                   'name': 'iotgw_',
-                  'pop': 'abcd1234',
+                  'pop': 'thinpv1607',
                 };
                 tbContext.navigateTo(
                   EspProvisioningRoute.softApRoute,

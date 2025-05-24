@@ -140,16 +140,11 @@ class EspSoftApBloc extends Bloc<EspSoftApEvent, EspSoftApState> {
       case EspSoftApStartProvisioningEvent():
         try {
           Uint8List bytes = Uint8List.fromList(utf8.encode("GET_DEVICE_NAME"));
-          print(bytes); // Output: [72, 101, 108, 108, 111]
-
           Uint8List? rs = await softApService.sendReceiveCustomData(
             provisioning,
             data: bytes,
           );
           String deviceName = utf8.decode(rs);
-          print(deviceName);
-          logger.error('bytes: $bytes, rs: $rs, deviceName: $deviceName');
-
           emit(
             EspSoftApProvisioningInProgressState(
               deviceName: deviceName,
@@ -183,7 +178,7 @@ class EspSoftApBloc extends Bloc<EspSoftApEvent, EspSoftApState> {
           while (getStatusTries >= 0) {
             if (isClosed) return;
 
-            await Future.delayed(const Duration(seconds: 10));
+            await Future.delayed(const Duration(seconds: 15));
             final status = await softApService.getStatus(provisioning);
             logger.info(
               'SoftAp get connection status: ${status.state},'

@@ -123,7 +123,7 @@ class DeviceProvisioningBloc
                 requestConfig: RequestConfig(ignoreErrors: true),
               )
               .timeout(
-                const Duration(seconds: 20),
+                const Duration(seconds: 60),
                 onTimeout: () =>
                     throw Exception('Device claiming timeout reached'),
               );
