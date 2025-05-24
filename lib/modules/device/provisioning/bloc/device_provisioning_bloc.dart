@@ -114,33 +114,43 @@ class DeviceProvisioningBloc
         }
 
         try {
-          final response = await tbClient
-              .getDeviceService()
-              .claimDevice(
-                deviceName,
-                ClaimRequest(secretKey: deviceSecretKey),
-                // ignore errors is for handling errors by myself
-                requestConfig: RequestConfig(ignoreErrors: true),
-              )
-              .timeout(
-                const Duration(seconds: 60),
-                onTimeout: () =>
-                    throw Exception('Device claiming timeout reached'),
-              );
+          int claimDeviceTries = 5;
+          await Future.delayed(const Duration(seconds: 2));
+          while (claimDeviceTries >= 0) {
+            final response = await tbClient
+                .getDeviceService()
+                .claimDevice(
+                  deviceName,
+                  ClaimRequest(secretKey: deviceSecretKey),
+                  // ignore errors is for handling errors by myself
+                  requestConfig: RequestConfig(ignoreErrors: true),
+                )
+                .timeout(
+                  const Duration(seconds: 20),
+                  onTimeout: () =>
+                      throw Exception('Device claiming timeout reached'),
+                );
 
-          if (response.response == ClaimResponse.CLAIMED ||
-              response.response == ClaimResponse.SUCCESS) {
-            communicationService.fire(
-              const DeviceProvisioningStatusChangedEvent(
-                DeviceProvisioningStatus.done,
-              ),
-            );
-          } else {
-            emit(
-              const DeviceProvisioningClaimingErrorState(
-                'Something went wrong. Please try again.',
-              ),
-            );
+            if (response.response == ClaimResponse.CLAIMED ||
+                response.response == ClaimResponse.SUCCESS) {
+              communicationService.fire(
+                const DeviceProvisioningStatusChangedEvent(
+                  DeviceProvisioningStatus.done,
+                ),
+              );
+              break;
+            } else {
+              if (claimDeviceTries == 0) {
+                emit(
+                  const DeviceProvisioningClaimingErrorState(
+                    'Something went wrong. Please try again.',
+                  ),
+                );
+              } else {
+                claimDeviceTries--;
+                await Future.delayed(const Duration(seconds: 2));
+              }
+            }
           }
         } catch (e) {
           logger.error('Device claiming error: $e');
