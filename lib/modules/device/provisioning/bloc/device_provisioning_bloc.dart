@@ -113,10 +113,10 @@ class DeviceProvisioningBloc
           }
         }
 
-        try {
-          int claimDeviceTries = 5;
-          await Future.delayed(const Duration(seconds: 2));
-          while (claimDeviceTries >= 0) {
+        await Future.delayed(const Duration(seconds: 2));
+        int claimDeviceTries = 5;
+        while (claimDeviceTries >= 0) {
+          try {
             final response = await tbClient
                 .getDeviceService()
                 .claimDevice(
@@ -140,28 +140,26 @@ class DeviceProvisioningBloc
               );
               break;
             } else {
-              if (claimDeviceTries == 0) {
-                emit(
-                  const DeviceProvisioningClaimingErrorState(
-                    'Something went wrong. Please try again.',
-                  ),
-                );
-              } else {
-                claimDeviceTries--;
-                await Future.delayed(const Duration(seconds: 2));
+              emit(
+                const DeviceProvisioningClaimingErrorState(
+                  'Something went wrong. Please try again.',
+                ),
+              );
+            }
+          } catch (e) {
+            logger.error('Device claiming error: $e');
+            if (claimDeviceTries == 0) {
+              String? message;
+              if (e is ThingsboardError) {
+                message = 'Device not found. '
+                    'Please contact the device provider.';
               }
+              emit(DeviceProvisioningClaimingErrorState(message));
+            } else {
+              claimDeviceTries--;
+              await Future.delayed(const Duration(seconds: 2));
             }
           }
-        } catch (e) {
-          logger.error('Device claiming error: $e');
-
-          String? message;
-          if (e is ThingsboardError) {
-            message = 'Device not found. '
-                'Please contact the device provider.';
-          }
-
-          emit(DeviceProvisioningClaimingErrorState(message));
         }
         break;
 
