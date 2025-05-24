@@ -99,29 +99,44 @@ class EspBleProvisioningBloc
 
         try {
           // This workaround because otherwise the library don't start connection to device.
-          await bleProvisioningService.scanBleDevices('');
-          final networks = await bleProvisioningService
-              .scanWifiNetworks(
-                deviceName: event.deviceName,
-                proofOfPossession: event.pop,
-              )
-              .timeout(
-                const Duration(seconds: 20),
-                onTimeout: () => throw Exception(
-                  'Scan Wi-Fi networks by device timeout reached',
-                ),
-              );
+          String scanName = '';
+          List<String> scanNames =
+              await bleProvisioningService.scanBleDevices(event.deviceName);
+          for (var name in scanNames) {
+            if (name.startsWith(event.deviceName)) {
+              scanName = name;
+              break;
+            }
+          }
+          if (scanName.isNotEmpty) {
+            final networks = await bleProvisioningService
+                .scanWifiNetworks(
+                  deviceName: scanName,
+                  proofOfPossession: event.pop,
+                )
+                .timeout(
+                  const Duration(seconds: 20),
+                  onTimeout: () => throw Exception(
+                    'Scan Wi-Fi networks by device timeout reached',
+                  ),
+                );
 
-          emit(
-            EspBleNetworksState(
-              networks,
-              device: event.deviceName,
-              pop: event.pop,
-            ),
-          );
+            emit(
+              EspBleNetworksState(
+                networks,
+                device: scanName,
+                pop: event.pop,
+              ),
+            );
+          } else {
+            logger.error('Ble scan not found');
+            emit(
+              EspEstablishSessionError(event.deviceName + 'XXXXXX'),
+            );
+          }
         } catch (e) {
           logger.error('Ble scan Wi-Fi networks by device error: $e');
-          emit(EspEstablishSessionError(event.deviceName));
+          emit(EspEstablishSessionError(event.deviceName + 'XXXXXX'));
         }
 
         break;

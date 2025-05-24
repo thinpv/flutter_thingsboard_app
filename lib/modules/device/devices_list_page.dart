@@ -195,9 +195,9 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
                 }
               } else if (value == 2) {
                 final arguments = {
-                  'deviceName': 'iotgw_64e833595394',
+                  'deviceName': '',
                   'deviceSecretKey': '',
-                  'name': 'PROV_DA737C',
+                  'name': 'iotgw_',
                   'pop': 'abcd1234',
                 };
                 tbContext.navigateTo(
@@ -206,9 +206,9 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
                 );
               } else if (value == 3) {
                 final arguments = {
-                  'deviceName': 'iotgw_64e833595394',
+                  'deviceName': '',
                   'deviceSecretKey': '',
-                  'name': 'PROV_DA737C',
+                  'name': 'iotgw_',
                   'pop': 'abcd1234',
                 };
                 tbContext.navigateTo(

@@ -117,8 +117,8 @@ class _EspBleProvisioningViewState
                     case EspBleProvisioningInProgressState():
                       return DeviceProvisioningView(
                         tbContext,
-                        deviceName: widget.tbDeviceName,
-                        deviceSecretKey: widget.tbDeviceSecretKey,
+                        deviceName: state.device,
+                        deviceSecretKey: '',
                         onProvisioningTryAgain: () {
                           context.read<EspBleProvisioningBloc>().add(
                                 EspBleProvisionDeviceEvent(
