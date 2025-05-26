@@ -1,57 +1,71 @@
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class Automation extends AssetInfo {
-  SmartScene? smartScene;
+  late SmartScene smartScene;
 
-  Automation.fromJson(super.json) : super.fromJson() {}
+  Automation.fromJson(super.json) : super.fromJson() {
+    smartScene = SmartScene(active: true, ifConditions: [], thenActions: []);
+  }
 
   Automation.fromAssetInfo(AssetInfo info) : super.fromJson(info.toJson()) {
-    smartScene?.active = (additionalInfo?['active'] as bool?)!;
-    smartScene?.ifConditions = (additionalInfo?['ifConditions'] as List?)
-        ?.map((e) => SceneCondition(
-              entityId: e['entityId'],
-              key: e['key'],
-              condition: e['condition'],
-              value: e['value'],
-            ))
-        .toList();
-    smartScene?.thenActions = (additionalInfo?['thenActions'] as List?)
-        ?.map((e) => SceneAction(
-              type: e['type'],
-              entityId: e['entityId'],
-              method: e['method'],
-              params: e['params'] != null
-                  ? Map<String, dynamic>.from(e['params'])
-                  : null,
-              automationId: e['automationId'],
-              action: e['action'],
-            ))
-        .toList();
-    smartScene?.precondition = additionalInfo?['precondition'] != null
+    smartScene = SmartScene(active: true, ifConditions: [], thenActions: []);
+    smartScene.active = additionalInfo != null
+        ? (additionalInfo?['active'] as bool? ?? false)
+        : false;
+    smartScene.ifConditions = (additionalInfo?['ifConditions'] as List?)
+            ?.map((e) => SceneCondition(
+                  entityId: e['entityId'],
+                  key: e['key'],
+                  condition: e['condition'],
+                  value: e['value'],
+                ))
+            .toList() ??
+        [];
+    smartScene.thenActions = (additionalInfo?['thenActions'] as List?)
+            ?.map((e) => SceneAction(
+                  type: e['type'],
+                  entityId: e['entityId'],
+                  method: e['method'],
+                  params: e['params'] != null
+                      ? Map<String, dynamic>.from(e['params'])
+                      : null,
+                  automationId: e['automationId'],
+                  action: e['action'],
+                ))
+            .toList() ??
+        [];
+    smartScene.precondition = additionalInfo?['precondition'] != null
         ? ScenePrecondition(
             from: additionalInfo!['precondition']['from'],
             to: additionalInfo!['precondition']['to'],
           )
         : null;
-    smartScene?.areaIds =
+    smartScene.areaIds =
         (additionalInfo?['areaIds'] as List?)?.map((e) => e as String).toList();
   }
 
-  void update(
-      {String? name,
-      bool? active,
-      List<SceneCondition>? ifConditions,
-      List<SceneAction>? thenActions,
-      ScenePrecondition? precondition,
-      List<String>? areaIds,}) {
+  void update({
+    String? name,
+    bool? active,
+    List<SceneCondition>? ifConditions,
+    List<SceneAction>? thenActions,
+    ScenePrecondition? precondition,
+    List<String>? areaIds,
+  }) {
     this.name = name!;
-    smartScene ??= SmartScene(
-      active: active,
-      ifConditions: ifConditions ?? [],
-      thenActions: thenActions ?? [],
-      precondition: precondition,
-      areaIds: areaIds,
-    );
+    smartScene.active = active ?? smartScene.active;
+    smartScene.ifConditions = ifConditions ?? smartScene.ifConditions;
+    smartScene.thenActions = thenActions ?? smartScene.thenActions;
+    smartScene.precondition = precondition ?? smartScene.precondition;
+    smartScene.areaIds = areaIds ?? smartScene.areaIds;
+    additionalInfo = {
+      'active': smartScene.active,
+      'ifConditions': smartScene.ifConditions.map((e) => e.toJson()).toList(),
+      'thenActions': smartScene.thenActions.map((e) => e.toJson()).toList(),
+      if (smartScene.precondition != null)
+        'precondition': smartScene.precondition!.toJson(),
+      if (smartScene.areaIds != null) 'areaIds': smartScene.areaIds,
+    };
   }
 
   @override
@@ -61,9 +75,9 @@ class Automation extends AssetInfo {
 }
 
 class SmartScene {
-  bool? active;
-  List<SceneCondition>? ifConditions;
-  List<SceneAction>? thenActions;
+  bool active;
+  List<SceneCondition> ifConditions;
+  List<SceneAction> thenActions;
   ScenePrecondition? precondition;
   List<String>? areaIds;
 
@@ -77,8 +91,8 @@ class SmartScene {
 
   Map<String, dynamic> toJson() => {
         'active': active,
-        'if': ifConditions?.map((e) => e.toJson()).toList(),
-        'then': thenActions?.map((e) => e.toJson()).toList(),
+        'if': ifConditions.map((e) => e.toJson()).toList(),
+        'then': thenActions.map((e) => e.toJson()).toList(),
         if (precondition != null) 'precondition': precondition!.toJson(),
         if (areaIds != null) 'areaIds': areaIds,
       };
@@ -86,15 +100,15 @@ class SmartScene {
 
 class SceneCondition {
   final String entityId;
-  final String key;
+  String? key;
   final String condition;
-  final dynamic value;
+  dynamic value;
 
   SceneCondition({
     required this.entityId,
-    required this.key,
+    this.key,
     required this.condition,
-    required this.value,
+    this.value,
   });
 
   Map<String, dynamic> toJson() => {

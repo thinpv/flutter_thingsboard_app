@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/entity/entity_details_page.dart';
 import 'package:thingsboard_app/model/automation_models.dart';
+import 'package:thingsboard_app/modules/automation/if/if_devices_page.dart';
+import 'package:thingsboard_app/modules/automation/then_devices_list_page.dart';
+import 'package:thingsboard_app/provider/DeviceManager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class AutomationDetailsPage extends EntityDetailsPage<AssetInfo> {
+class AutomationDetailsPage extends EntityDetailsPage<Automation> {
   AutomationDetailsPage(TbContext tbContext, String automationId, {super.key})
       : super(
           tbContext,
@@ -14,13 +17,16 @@ class AutomationDetailsPage extends EntityDetailsPage<AssetInfo> {
         );
 
   @override
-  Future<AssetInfo?> fetchEntity(String id) {
-    return tbClient.getAssetService().getAssetInfo(id);
+  Future<Automation?> fetchEntity(String id) async {
+    AssetInfo? assetInfo = await tbClient.getAssetService().getAssetInfo(id);
+    if (assetInfo == null) return null;
+    Automation entity = Automation.fromAssetInfo(assetInfo);
+    return entity;
   }
 
   @override
-  Widget buildEntityDetails(BuildContext context, AssetInfo assetInfo) {
-    Automation entity = Automation.fromAssetInfo(assetInfo);
+  Widget buildEntityDetails(BuildContext context, Automation entity) {
+    print('buildEntityDetails: ${entity.toString()}');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tạo Ngữ cảnh thông minh'),
@@ -33,40 +39,62 @@ class AutomationDetailsPage extends EntityDetailsPage<AssetInfo> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildIfBlock(entity),
+            _buildIfBlock(context, entity),
             const SizedBox(height: 16),
-            _buildThenBlock(entity),
+            _buildThenBlock(context, entity),
             const SizedBox(height: 16),
             _buildPreconditionDisplayArea(entity),
             const Spacer(),
-            _buildSaveButton(entity, context),
+            _buildSaveButton(context, entity),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildIfBlock(Automation entity) {
+  Widget _buildIfBlock(BuildContext context, Automation entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionTitle('If', 'Khi bất kỳ điều kiện nào được đáp ứng'),
-          ListTile(
-            leading: const Icon(Icons.garage),
-            title: const Text('cửa cuốn 3'),
-            subtitle: const Text('Door : closed'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {}, // navigate to condition detail
-          ),
-          _addButton(onPressed: () {}, tooltip: 'Thêm điều kiện'),
+          ...entity.smartScene.ifConditions.map((condition) {
+            return ListTile(
+              leading: const Icon(Icons.device_hub),
+              title: Text(condition.entityId),
+              subtitle: Text(condition.condition),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                // Optionally handle tap to edit/view condition
+              },
+            );
+          }).toList(),
+          _addButton(
+              onPressed: () async {
+                final result = await Navigator.push<Map<String, dynamic>>(
+                  context,
+                  MaterialPageRoute(builder: (context) => IfDevicesPage()),
+                );
+                if (result != null) {
+                  DeviceInfo? device =
+                      await DeviceManager.instance.getDevice(result['name']);
+                  if (device != null) {
+                    entity.smartScene.ifConditions.add(SceneCondition(
+                      entityId: device.name,
+                      condition: result['data'].toString(),
+                    ));
+                    buildEntityDetails(context, entity);
+                  }
+                }
+              },
+              tooltip: 'Thêm điều kiện'),
         ],
       ),
     );
   }
 
-  Widget _buildThenBlock(Automation entity) {
+  Widget _buildThenBlock(BuildContext context, Automation entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -80,7 +108,24 @@ class AutomationDetailsPage extends EntityDetailsPage<AssetInfo> {
           const ListTile(
             title: Text('Thêm tác vụ', style: TextStyle(color: Colors.grey)),
           ),
-          _addButton(onPressed: () {}, tooltip: 'Thêm tác vụ'),
+          _addButton(
+              onPressed: () async {
+                final result = await Navigator.push<EntityData>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ThenDevicesListPage(tbContext),
+                  ),
+                );
+
+                if (result != null) {
+                  print(
+                      '------------------- Selected Device: ${result.entityId}');
+                  // setState(() {
+                  //   selectedDevices.add(result);
+                  // });
+                }
+              },
+              tooltip: 'Thêm tác vụ'),
         ],
       ),
     );
@@ -103,7 +148,7 @@ class AutomationDetailsPage extends EntityDetailsPage<AssetInfo> {
     );
   }
 
-  Widget _buildSaveButton(Automation entity, BuildContext context) {
+  Widget _buildSaveButton(BuildContext context, Automation entity) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
