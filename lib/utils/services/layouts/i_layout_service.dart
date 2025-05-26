@@ -10,6 +10,7 @@ abstract interface class ILayoutService {
 
   void setBottomBarItems(
     List<TbMainNavigationItem> items, {
+    required TbMainNavigationItem automations,
     required TbMainNavigationItem more,
   });
 
