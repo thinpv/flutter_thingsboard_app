@@ -1,4 +1,4 @@
-import 'package:thingsboard_app/provider/DeviceManager.dart';
+import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class Scenario extends AssetInfo {

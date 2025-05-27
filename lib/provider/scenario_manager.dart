@@ -35,11 +35,8 @@ class ScenarioManager {
 
     _isLoading = true;
     try {
-      final user = await tbClient.getUserService().getUser();
-      final customerId = user.customerId?.id;
-
-      if (customerId == null ||
-          customerId == '13814000-1dd2-11b2-8080-808080808080') {
+      final customerId = tbClient.getAuthUser()?.customerId;
+      if (customerId == null) {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 

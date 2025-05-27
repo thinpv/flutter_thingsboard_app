@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_app/provider/DeviceManager.dart';
+import 'package:thingsboard_app/provider/device_manager.dart';
 
 import 'component/then_page_switch_2.dart';
 

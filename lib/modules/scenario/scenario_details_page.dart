@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_app/provider/ScenarioManager.dart';
+import 'package:thingsboard_app/provider/scenario_manager.dart';
 
 import 'if/if_devices_page.dart';
 import 'then/then_devices_page.dart';
