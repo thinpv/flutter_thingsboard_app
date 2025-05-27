@@ -3,11 +3,11 @@ import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/core/entity/entities_list.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-import 'automations_base.dart';
+import 'scenarios_base.dart';
 
-class AutomationsList extends BaseEntitiesWidget<AssetInfo, PageLink>
-    with AutomationsBase, EntitiesListStateBase {
-  AutomationsList(
+class ScenariosList extends BaseEntitiesWidget<AssetInfo, PageLink>
+    with ScenariosBase, EntitiesListStateBase {
+  ScenariosList(
     TbContext tbContext,
     PageKeyController<PageLink> pageKeyController, {
     super.key,

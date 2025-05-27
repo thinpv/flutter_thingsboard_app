@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/entity/entity_details_page.dart';
-import 'package:thingsboard_app/model/automation_models.dart';
-import 'package:thingsboard_app/modules/automation/if/if_devices_page.dart';
-import 'package:thingsboard_app/modules/automation/then_devices_list_page.dart';
-import 'package:thingsboard_app/provider/DeviceManager.dart';
+import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class AutomationDetailsPage extends EntityDetailsPage<Automation> {
-  AutomationDetailsPage(TbContext tbContext, String automationId, {super.key})
+import 'if/if_devices_page.dart';
+import 'then/then_devices_page.dart';
+
+class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
+  ScenarioDetailsPage(TbContext tbContext, String scenarioId, {super.key})
       : super(
           tbContext,
-          entityId: automationId,
-          defaultTitle: 'Automation',
-          subTitle: 'Automation details',
+          entityId: scenarioId,
+          defaultTitle: 'Scenario',
+          subTitle: 'Scenario details',
         );
 
   @override
-  Future<Automation?> fetchEntity(String id) async {
+  Future<Scenario?> fetchEntity(String id) async {
     AssetInfo? assetInfo = await tbClient.getAssetService().getAssetInfo(id);
     if (assetInfo == null) return null;
-    Automation entity = Automation.fromAssetInfo(assetInfo);
+    Scenario entity = Scenario.fromAssetInfo(assetInfo);
     return entity;
   }
 
   @override
-  Widget buildEntityDetails(BuildContext context, Automation entity) {
-    print('buildEntityDetails: ${entity.toString()}');
+  Widget buildEntityDetails(BuildContext context, Scenario entity) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tạo Ngữ cảnh thông minh'),
@@ -52,7 +51,7 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
     );
   }
 
-  Widget _buildIfBlock(BuildContext context, Automation entity) {
+  Widget _buildIfBlock(BuildContext context, Scenario entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -62,7 +61,7 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
           ...entity.smartScene.ifConditions.map((condition) {
             return ListTile(
               leading: const Icon(Icons.device_hub),
-              title: Text(condition.entityId),
+              title: Text(condition.device.name),
               subtitle: Text(condition.condition),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
@@ -72,21 +71,15 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
           }).toList(),
           _addButton(
               onPressed: () async {
-                final result = await Navigator.push<Map<String, dynamic>>(
+                final result = await Navigator.push<SceneCondition>(
                   context,
                   MaterialPageRoute(builder: (context) => IfDevicesPage()),
                 );
-                if (result != null) {
-                  DeviceInfo? device =
-                      await DeviceManager.instance.getDevice(result['name']);
-                  if (device != null) {
-                    entity.smartScene.ifConditions.add(SceneCondition(
-                      entityId: device.name,
-                      condition: result['data'].toString(),
-                    ));
-                    buildEntityDetails(context, entity);
-                  }
-                }
+                entity.smartScene.ifConditions.add(result!);
+                entity.update(
+                  ifConditions: entity.smartScene.ifConditions,
+                );
+                buildEntityDetails(context, entity);
               },
               tooltip: 'Thêm điều kiện'),
         ],
@@ -94,7 +87,7 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
     );
   }
 
-  Widget _buildThenBlock(BuildContext context, Automation entity) {
+  Widget _buildThenBlock(BuildContext context, Scenario entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -110,20 +103,13 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
           ),
           _addButton(
               onPressed: () async {
-                final result = await Navigator.push<EntityData>(
+                final result = await Navigator.push<SceneAction>(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => ThenDevicesListPage(tbContext),
-                  ),
+                  MaterialPageRoute(builder: (context) => ThenDevicesPage()),
                 );
-
-                if (result != null) {
-                  print(
-                      '------------------- Selected Device: ${result.entityId}');
-                  // setState(() {
-                  //   selectedDevices.add(result);
-                  // });
-                }
+                print('Selected action: ${result?.toJson()}');
+                entity.smartScene.thenActions.add(result!);
+                buildEntityDetails(context, entity);
               },
               tooltip: 'Thêm tác vụ'),
         ],
@@ -131,7 +117,7 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
     );
   }
 
-  Widget _buildPreconditionDisplayArea(Automation entity) {
+  Widget _buildPreconditionDisplayArea(Scenario entity) {
     return Column(
       children: [
         ListTile(
@@ -148,7 +134,7 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
     );
   }
 
-  Widget _buildSaveButton(BuildContext context, Automation entity) {
+  Widget _buildSaveButton(BuildContext context, Scenario entity) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -158,7 +144,10 @@ class AutomationDetailsPage extends EntityDetailsPage<Automation> {
             active: true,
             ifConditions: [],
             thenActions: [],
-            precondition: ScenePrecondition(from: '00:00', to: '23:59'),
+            precondition: ScenePrecondition(
+              DateTime.now().toString(),
+              DateTime.now().add(const Duration(days: 1)).toString(),
+            ),
             areaIds: ['areaId1'],
           );
           await tbClient.getAssetService().saveAsset(entity);

@@ -2,45 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
+mixin ScenariosBase on EntitiesBase<AssetInfo, PageLink> {
   @override
-  String get title => 'Automations';
+  String get title => 'Scenarios';
 
   @override
-  String get noItemsFoundText => 'No automations found';
+  String get noItemsFoundText => 'No scenarios found';
 
   @override
   Future<PageData<AssetInfo>> fetchEntities(PageLink pageLink) {
     if (tbClient.isTenantAdmin()) {
-      return tbClient.getAssetService().getTenantAssetInfos(pageLink, type: 'Automation');
+      return tbClient.getAssetService().getTenantAssetInfos(pageLink, type: 'Scenario');
     } else {
       return tbClient
           .getAssetService()
-          .getCustomerAssetInfos(tbClient.getAuthUser()!.customerId!, pageLink, type: 'Automation');
+          .getCustomerAssetInfos(tbClient.getAuthUser()!.customerId!, pageLink, type: 'Scenario');
     }
   }
 
   @override
-  void onEntityTap(AssetInfo automation) {
-    navigateTo('/automation/${automation.id!.id}');
+  void onEntityTap(AssetInfo scenario) {
+    navigateTo('/scenario/${scenario.id!.id}');
   }
 
   @override
-  Widget buildEntityListCard(BuildContext context, AssetInfo automation) {
-    return _buildCard(context, automation);
+  Widget buildEntityListCard(BuildContext context, AssetInfo scenario) {
+    return _buildCard(context, scenario);
   }
 
   @override
-  Widget buildEntityListWidgetCard(BuildContext context, AssetInfo automation) {
-    return _buildListWidgetCard(context, automation);
+  Widget buildEntityListWidgetCard(BuildContext context, AssetInfo scenario) {
+    return _buildListWidgetCard(context, scenario);
   }
 
   @override
-  Widget buildEntityGridCard(BuildContext context, AssetInfo automation) {
-    return Text(automation.name);
+  Widget buildEntityGridCard(BuildContext context, AssetInfo scenario) {
+    return Text(scenario.name);
   }
 
-  Widget _buildCard(context, AssetInfo automation) {
+  Widget _buildCard(context, AssetInfo scenario) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -66,7 +66,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                automation.name,
+                                scenario.name,
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -79,7 +79,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
                           Text(
                             entityDateFormat.format(
                               DateTime.fromMillisecondsSinceEpoch(
-                                automation.createdTime!,
+                                scenario.createdTime!,
                               ),
                             ),
                             style: const TextStyle(
@@ -93,7 +93,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        automation.type,
+                        scenario.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,
@@ -115,7 +115,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
     );
   }
 
-  Widget _buildListWidgetCard(BuildContext context, AssetInfo automation) {
+  Widget _buildListWidgetCard(BuildContext context, AssetInfo scenario) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -135,7 +135,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          automation.name,
+                          scenario.name,
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,
@@ -145,7 +145,7 @@ mixin AutomationsBase on EntitiesBase<AssetInfo, PageLink> {
                         ),
                       ),
                       Text(
-                        automation.type,
+                        scenario.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,

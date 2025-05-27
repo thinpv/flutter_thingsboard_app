@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
-import 'package:thingsboard_app/modules/automation/then_devices_list.dart';
+import 'package:thingsboard_app/modules/scenario/then_devices_list.dart';
 import 'package:thingsboard_app/modules/device/devices_base.dart';
 
 class ThenDevicesListPage extends TbContextWidget {

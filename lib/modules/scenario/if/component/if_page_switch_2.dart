@@ -1,7 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:thingsboard_client/thingsboard_client.dart';
+import 'package:thingsboard_app/model/scenario_models.dart';
 
 class IfPageSwitch2 extends StatelessWidget {
   final List<Option> options = [
@@ -11,8 +9,8 @@ class IfPageSwitch2 extends StatelessWidget {
     Option(name: 'Nút số 2 bật', value: '{"bt2":1, "op":"=="}'),
   ];
 
-  DeviceInfo device;
-  IfPageSwitch2(this.device, {super.key});
+  final SceneCondition condition;
+  IfPageSwitch2(this.condition, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +23,8 @@ class IfPageSwitch2 extends StatelessWidget {
           return ListTile(
             title: Text(option.name),
             onTap: () async {
-              Navigator.pop(context, json.decode(option.value));
+              condition.condition = option.value;
+              Navigator.pop(context, condition);
             },
           );
         },

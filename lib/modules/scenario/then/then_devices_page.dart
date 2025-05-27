@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/DeviceManager.dart';
 
-import 'component/if_page_switch_2.dart';
+import 'component/then_page_switch_2.dart';
 
-class IfDevicesPage extends StatelessWidget {
+class ThenDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
@@ -30,17 +31,13 @@ class IfDevicesPage extends StatelessWidget {
                 return ListTile(
                   title: Text(device.name),
                   onTap: () async {
-                    final result = await Navigator.push<Map<String, dynamic>>(
+                    SceneAction action = SceneAction.empty(device);
+                    final result = await Navigator.push<SceneAction>(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => IfPageSwitch2(device)),
+                          builder: (context) => ThenPageSwitch2(action)),
                     );
-                    if (result != null) {
-                      Map<String, dynamic> data = {};
-                      data['name'] = device.name;
-                      data['data'] = result;
-                      Navigator.pop(context, data);
-                    }
+                    Navigator.pop(context, result);
                   },
                 );
               },

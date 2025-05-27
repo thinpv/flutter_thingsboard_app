@@ -24,7 +24,7 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/layouts/i_layout_service.dart';
 import 'package:thingsboard_app/utils/ui/tb_text_styles.dart';
 
-import '../../automation/automations_page.dart';
+import '../../scenario/scenarios_page.dart';
 
 class LayoutPagesBloc extends Bloc<LayoutPagesEvent, LayoutPagesState> {
   LayoutPagesBloc({
@@ -67,15 +67,15 @@ class LayoutPagesBloc extends Bloc<LayoutPagesEvent, LayoutPagesState> {
                 ),
               )
               .toList(),
-          automations: TbMainNavigationItem(
+          scenarios: TbMainNavigationItem(
             page: MainItemWidget(
               tbContext,
-              path: '/automations',
-              child: AutomationsPage(tbContext),
+              path: '/scenarios',
+              child: ScenariosPage(tbContext),
             ),
-            title: S.of(event.context).automations,
+            title: S.of(event.context).scenarios,
             icon: Icons.auto_mode,
-            path: '/automations',
+            path: '/scenarios',
           ),
           more: TbMainNavigationItem(
             page: MainItemWidget(

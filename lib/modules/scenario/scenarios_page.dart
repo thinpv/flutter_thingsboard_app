@@ -4,27 +4,27 @@ import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 
-import 'automations_list.dart';
+import 'scenarios_list.dart';
 
-class AutomationsPage extends TbContextWidget {
+class ScenariosPage extends TbContextWidget {
   final bool searchMode;
 
-  AutomationsPage(
+  ScenariosPage(
     TbContext tbContext, {
     this.searchMode = false,
     super.key,
   }) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _AutomationsPageState();
+  State<StatefulWidget> createState() => _ScenariosPageState();
 }
 
-class _AutomationsPageState extends TbContextState<AutomationsPage> {
+class _ScenariosPageState extends TbContextState<ScenariosPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
   @override
   Widget build(BuildContext context) {
-    final automationsList = AutomationsList(
+    final scenariosList = ScenariosList(
       tbContext,
       _pageLinkController,
       searchMode: widget.searchMode,
@@ -38,18 +38,18 @@ class _AutomationsPageState extends TbContextState<AutomationsPage> {
     } else {
       appBar = TbAppBar(
         tbContext,
-        title: Text(automationsList.title),
+        title: Text(scenariosList.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              navigateTo('/automations?search=true');
+              navigateTo('/scenarios?search=true');
             },
           ),
         ],
       );
     }
-    return Scaffold(appBar: appBar, body: automationsList);
+    return Scaffold(appBar: appBar, body: scenariosList);
   }
 
   @override

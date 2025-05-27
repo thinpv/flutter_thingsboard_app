@@ -17,6 +17,7 @@ import 'package:thingsboard_app/modules/dashboard/domain/entites/dashboard_argum
 import 'package:thingsboard_app/modules/version/route/version_route.dart';
 import 'package:thingsboard_app/modules/version/route/version_route_arguments.dart';
 import 'package:thingsboard_app/provider/DeviceManager.dart';
+import 'package:thingsboard_app/provider/ScenarioManager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
 import 'package:thingsboard_app/utils/services/firebase/i_firebase_service.dart';
@@ -131,6 +132,10 @@ class TbContext implements PopEntry {
       await tbClient.init();
 
       DeviceManager.init(tbClient);
+      DeviceManager.instance.getDevices();
+
+      ScenarioManager.init(tbClient);
+      ScenarioManager.instance.getScenarios();
     } catch (e, s) {
       log.error('Failed to init tbContext: $e', e, s);
       await onFatalError(e);
