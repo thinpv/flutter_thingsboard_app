@@ -30,12 +30,12 @@ class Scenario extends AssetInfo {
     }
     if (ifConditions != null) {
       smartScene.ifConditions = ifConditions;
-      additionalInfo?['ifConditions'] =
+      additionalInfo?['if'] =
           ifConditions.map((e) => e.toJson()).toList();
     }
     if (thenActions != null) {
       smartScene.thenActions = thenActions;
-      additionalInfo?['thenActions'] =
+      additionalInfo?['then'] =
           thenActions.map((e) => e.toJson()).toList();
     }
     if (precondition != null) {
@@ -72,7 +72,7 @@ class SmartScene {
     final active = assetInfo.additionalInfo != null
         ? (assetInfo.additionalInfo?['active'] as bool? ?? false)
         : false;
-    final ifConditionsRaw = assetInfo.additionalInfo?['ifConditions'] as List?;
+    final ifConditionsRaw = assetInfo.additionalInfo?['if'] as List?;
     final List<SceneCondition> ifConditions = [];
     if (ifConditionsRaw != null) {
       for (final e in ifConditionsRaw) {
@@ -89,7 +89,7 @@ class SmartScene {
         }
       }
     }
-    final thenActionsRaw = assetInfo.additionalInfo?['thenActions'] as List?;
+    final thenActionsRaw = assetInfo.additionalInfo?['then'] as List?;
     final List<SceneAction> thenActions = [];
     if (thenActionsRaw != null) {
       for (final e in thenActionsRaw) {
@@ -167,7 +167,7 @@ class SceneAction {
 
   Map<String, dynamic> toJson() {
     return {
-      'name': device.toJson(),
+      'name': device.name,
       'action': action,
     };
   }

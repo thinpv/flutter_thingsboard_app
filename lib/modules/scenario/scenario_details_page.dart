@@ -56,10 +56,45 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
   Widget _buildEntityDetails(BuildContext context, Scenario entity) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tạo Ngữ cảnh thông minh'),
-        leading: TextButton(
+        title: GestureDetector(
+          onTap: () async {
+            final controller = TextEditingController(text: entity.name);
+            final newName = await showDialog<String>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Cập nhật tên ngữ cảnh'),
+                content: TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên ngữ cảnh',
+                  ),
+                  autofocus: true,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, controller.text),
+                    child: const Text('Lưu'),
+                  ),
+                ],
+              ),
+            );
+            if (newName != null &&
+                newName.trim().isNotEmpty &&
+                newName != entity.name) {
+              entity.name = newName.trim();
+              entity.update(name: entity.name);
+              _refresh();
+            }
+          },
+          child: Text(entity.name),
+        ),
+        leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy bỏ'),
+          icon: const Icon(Icons.arrow_back),
         ),
         actions: [
           IconButton(
@@ -68,18 +103,19 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildIfBlock(context, entity),
-            const SizedBox(height: 16),
-            _buildThenBlock(context, entity),
-            const SizedBox(height: 16),
-            _buildPreconditionDisplayArea(entity),
-            const Spacer(),
-            _buildSaveButton(context, entity),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildIfBlock(context, entity),
+              const SizedBox(height: 16),
+              _buildThenBlock(context, entity),
+              const SizedBox(height: 16),
+              _buildPreconditionDisplayArea(entity),
+              _buildSaveButton(context, entity),
+            ],
+          ),
         ),
       ),
     );
