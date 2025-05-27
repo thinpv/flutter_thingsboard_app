@@ -1,31 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
-import 'package:thingsboard_app/core/entity/entity_details_page.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_client/thingsboard_client.dart';
+import 'package:thingsboard_app/provider/ScenarioManager.dart';
 
 import 'if/if_devices_page.dart';
 import 'then/then_devices_page.dart';
 
-class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
-  ScenarioDetailsPage(TbContext tbContext, String scenarioId, {super.key})
-      : super(
-          tbContext,
-          entityId: scenarioId,
-          defaultTitle: 'Scenario',
-          subTitle: 'Scenario details',
-        );
+class ScenarioDetailsPage extends StatefulWidget {
+  final TbContext tbContext;
+  final String scenarioId;
+
+  const ScenarioDetailsPage(this.tbContext, this.scenarioId, {super.key});
 
   @override
+  State<ScenarioDetailsPage> createState() => _ScenarioDetailsPageState();
+}
+
+class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
+  late Future<Scenario?> _scenarioFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _scenarioFuture = fetchEntity(widget.scenarioId);
+  }
+
   Future<Scenario?> fetchEntity(String id) async {
-    AssetInfo? assetInfo = await tbClient.getAssetService().getAssetInfo(id);
-    if (assetInfo == null) return null;
-    Scenario entity = Scenario.fromAssetInfo(assetInfo);
-    return entity;
+    return ScenarioManager.instance.getScenarioById(id);
+  }
+
+  void _refresh() {
+    setState(() {
+      _scenarioFuture = fetchEntity(widget.scenarioId);
+    });
   }
 
   @override
-  Widget buildEntityDetails(BuildContext context, Scenario entity) {
+  Widget build(BuildContext context) {
+    return FutureBuilder<Scenario?>(
+      future: _scenarioFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const Scaffold(
+              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+        }
+        return _buildEntityDetails(context, snapshot.data!);
+      },
+    );
+  }
+
+  Widget _buildEntityDetails(BuildContext context, Scenario entity) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tạo Ngữ cảnh thông minh'),
@@ -33,6 +61,12 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Hủy bỏ'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -64,9 +98,6 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
               title: Text(condition.device.name),
               subtitle: Text(condition.condition),
               trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                // Optionally handle tap to edit/view condition
-              },
             );
           }).toList(),
           _addButton(
@@ -75,11 +106,11 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
                   context,
                   MaterialPageRoute(builder: (context) => IfDevicesPage()),
                 );
-                entity.smartScene.ifConditions.add(result!);
-                entity.update(
-                  ifConditions: entity.smartScene.ifConditions,
-                );
-                buildEntityDetails(context, entity);
+                if (result != null) {
+                  entity.smartScene.ifConditions.add(result);
+                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  _refresh();
+                }
               },
               tooltip: 'Thêm điều kiện'),
         ],
@@ -93,23 +124,26 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Text('Then',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          const ListTile(
-            title: Text('Thêm tác vụ', style: TextStyle(color: Colors.grey)),
-          ),
+          _sectionTitle('Then', 'Thêm tác vụ khi điều kiện đúng'),
+          ...entity.smartScene.thenActions.map((action) {
+            return ListTile(
+              leading: const Icon(Icons.device_hub),
+              title: Text(action.device.name),
+              subtitle: Text(action.action),
+              trailing: const Icon(Icons.arrow_forward_ios),
+            );
+          }).toList(),
           _addButton(
               onPressed: () async {
                 final result = await Navigator.push<SceneAction>(
                   context,
                   MaterialPageRoute(builder: (context) => ThenDevicesPage()),
                 );
-                print('Selected action: ${result?.toJson()}');
-                entity.smartScene.thenActions.add(result!);
-                buildEntityDetails(context, entity);
+                if (result != null) {
+                  entity.smartScene.thenActions.add(result);
+                  entity.update(thenActions: entity.smartScene.thenActions);
+                  _refresh();
+                }
               },
               tooltip: 'Thêm tác vụ'),
         ],
@@ -123,12 +157,10 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
         ListTile(
           title: const Text('Precondition'),
           trailing: const Text('Cả ngày'),
-          onTap: () {},
         ),
         ListTile(
           title: const Text('Display Area'),
           trailing: const Icon(Icons.arrow_forward_ios),
-          onTap: () {},
         ),
       ],
     );
@@ -139,18 +171,8 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          entity.update(
-            name: 'Ngữ cảnh mới 2',
-            active: true,
-            ifConditions: [],
-            thenActions: [],
-            precondition: ScenePrecondition(
-              DateTime.now().toString(),
-              DateTime.now().add(const Duration(days: 1)).toString(),
-            ),
-            areaIds: ['areaId1'],
-          );
-          await tbClient.getAssetService().saveAsset(entity);
+          await widget.tbContext.tbClient.getAssetService().saveAsset(entity);
+          _refresh();
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange,
@@ -196,7 +218,8 @@ class ScenarioDetailsPage extends EntityDetailsPage<Scenario> {
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
-        BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+        const BoxShadow(
+            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
       ],
     );
   }

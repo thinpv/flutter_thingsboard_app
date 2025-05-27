@@ -56,11 +56,11 @@ class DeviceManager {
     }
   }
 
-  Future<DeviceInfo?> getDevice(String name) async {
+  Future<DeviceInfo?> getDeviceByName(String name) async {
     if (_deviceCache == null) await getDevices();
     return _deviceCache?.firstWhere(
       (device) => device.name == name,
-      orElse: () => throw Exception('Không tìm thấy thiết bị: $name'),
+      orElse: () => throw Exception('Không tìm thấy thiết bị tên: $name'),
     );
   }
 

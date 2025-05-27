@@ -50,8 +50,12 @@ class ScenarioManager {
           .getAssetService()
           .getCustomerAssetInfos(customerId, pageLink);
 
+      List<Scenario> scenarios = await Future.wait(
+        pageData.data.map((asset) => Scenario.fromAssetInfo(asset)),
+      );
+
       PageData<Scenario> scenarioPageData = PageData(
-        pageData.data.map((asset) => Scenario.fromAssetInfo(asset)).toList(),
+        scenarios,
         pageData.totalPages,
         pageData.totalElements,
         pageData.hasNext,
@@ -64,11 +68,19 @@ class ScenarioManager {
     }
   }
 
-  Future<Scenario?> getScenario(String name) async {
+  Future<Scenario?> getScenarioByName(String name) async {
     if (_scenarioCache == null) await getScenarios();
     return _scenarioCache?.firstWhere(
       (scenario) => scenario.name == name,
-      orElse: () => throw Exception('Không tìm thấy thiết bị: $name'),
+      orElse: () => throw Exception('Không tìm thấy kịch bản tên: $name'),
+    );
+  }
+
+  Future<Scenario?> getScenarioById(String id) async {
+    if (_scenarioCache == null) await getScenarios();
+    return _scenarioCache?.firstWhere(
+      (scenario) => scenario.id?.id == id,
+      orElse: () => throw Exception('Không tìm thấy kịch bản id: $id'),
     );
   }
 

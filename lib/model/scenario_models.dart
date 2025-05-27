@@ -1,38 +1,15 @@
+import 'package:thingsboard_app/provider/DeviceManager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class Scenario extends AssetInfo {
   late SmartScene smartScene;
 
-  Scenario.fromJson(super.json) : super.fromJson() {
-    smartScene = SmartScene(active: true, ifConditions: [], thenActions: []);
-  }
+  Scenario.fromJson(super.json) : super.fromJson();
 
-  Scenario.fromAssetInfo(AssetInfo info) : super.fromJson(info.toJson()) {
-    smartScene = SmartScene(active: true, ifConditions: [], thenActions: []);
-    smartScene.active = additionalInfo != null
-        ? (additionalInfo?['active'] as bool? ?? false)
-        : false;
-    smartScene.ifConditions = (additionalInfo?['ifConditions'] as List?)
-            ?.map((e) => SceneCondition(
-                  DeviceInfo.fromJson(e['device']),
-                  e['op'] as String,
-                  e['condition'] as String,
-                ))
-            .toList() ??
-        [];
-    smartScene.thenActions = (additionalInfo?['thenActions'] as List?)
-            ?.map((e) => SceneAction(
-                  DeviceInfo.fromJson(e['device']),
-                  e['action'] as String,
-                ))
-            .toList() ??
-        [];
-    smartScene.precondition = additionalInfo?['precondition'] != null
-        ? ScenePrecondition(additionalInfo!['precondition']['from'] as String,
-            additionalInfo!['precondition']['to'] as String)
-        : null;
-    smartScene.areaIds =
-        (additionalInfo?['areaIds'] as List?)?.map((e) => e as String).toList();
+  static Future<Scenario> fromAssetInfo(AssetInfo assetInfo) async {
+    final scenario = Scenario.fromJson(assetInfo.toJson());
+    scenario.smartScene = await SmartScene.fromAssetInfo(assetInfo);
+    return scenario;
   }
 
   void update({
@@ -46,29 +23,29 @@ class Scenario extends AssetInfo {
     if (name != null) {
       this.name = name;
     }
+    additionalInfo ??= {};
     if (active != null) {
       smartScene.active = active;
+      additionalInfo?['active'] = active;
     }
     if (ifConditions != null) {
       smartScene.ifConditions = ifConditions;
+      additionalInfo?['ifConditions'] =
+          ifConditions.map((e) => e.toJson()).toList();
     }
     if (thenActions != null) {
       smartScene.thenActions = thenActions;
+      additionalInfo?['thenActions'] =
+          thenActions.map((e) => e.toJson()).toList();
     }
     if (precondition != null) {
       smartScene.precondition = precondition;
+      additionalInfo?['precondition'] = precondition.toJson();
     }
     if (areaIds != null) {
       smartScene.areaIds = areaIds;
+      additionalInfo?['areaIds'] = areaIds;
     }
-    additionalInfo = {
-      'active': smartScene.active,
-      'ifConditions': smartScene.ifConditions.map((e) => e.toJson()).toList(),
-      'thenActions': smartScene.thenActions.map((e) => e.toJson()).toList(),
-      if (smartScene.precondition != null)
-      'precondition': smartScene.precondition!.toJson(),
-      if (smartScene.areaIds != null) 'areaIds': smartScene.areaIds,
-    };
   }
 
   @override
@@ -78,9 +55,9 @@ class Scenario extends AssetInfo {
 }
 
 class SmartScene {
-  bool active;
-  List<SceneCondition> ifConditions;
-  List<SceneAction> thenActions;
+  late bool active;
+  late List<SceneCondition> ifConditions;
+  late List<SceneAction> thenActions;
   ScenePrecondition? precondition;
   List<String>? areaIds;
 
@@ -91,6 +68,60 @@ class SmartScene {
     this.precondition,
     this.areaIds,
   });
+  static Future<SmartScene> fromAssetInfo(AssetInfo assetInfo) async {
+    final active = assetInfo.additionalInfo != null
+        ? (assetInfo.additionalInfo?['active'] as bool? ?? false)
+        : false;
+    final ifConditionsRaw = assetInfo.additionalInfo?['ifConditions'] as List?;
+    final List<SceneCondition> ifConditions = [];
+    if (ifConditionsRaw != null) {
+      for (final e in ifConditionsRaw) {
+        if (e['device'] is String) {
+          final device =
+              await DeviceManager.instance.getDeviceByName(e['device']);
+          if (device != null) {
+            ifConditions.add(SceneCondition(
+              device,
+              e['op'] as String,
+              e['condition'] as String,
+            ));
+          }
+        }
+      }
+    }
+    final thenActionsRaw = assetInfo.additionalInfo?['thenActions'] as List?;
+    final List<SceneAction> thenActions = [];
+    if (thenActionsRaw != null) {
+      for (final e in thenActionsRaw) {
+        if (e['device'] is String) {
+          final device =
+              await DeviceManager.instance.getDeviceByName(e['device']);
+          if (device != null) {
+            thenActions.add(SceneAction(
+              device,
+              e['action'] as String,
+            ));
+          }
+        }
+      }
+    }
+    final precondition = assetInfo.additionalInfo?['precondition'] != null
+        ? ScenePrecondition(
+            assetInfo.additionalInfo!['precondition']['from'] as String,
+            assetInfo.additionalInfo!['precondition']['to'] as String)
+        : null;
+    final areaIds = (assetInfo.additionalInfo?['areaIds'] as List?)
+        ?.map((e) => e as String)
+        .toList();
+
+    return SmartScene(
+      active: active,
+      ifConditions: ifConditions,
+      thenActions: thenActions,
+      precondition: precondition,
+      areaIds: areaIds,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'active': active,
