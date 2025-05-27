@@ -21,7 +21,6 @@ class ScenarioManager {
     return _instance!;
   }
 
-  // getScenarios(), refresh(), clearCache() như đã viết ở trên
   /// Lấy danh sách thiết bị, dùng cache nếu có
   Future<List<Scenario>> getScenarios({bool forceRefresh = false}) async {
     if (_scenarioCache != null && !forceRefresh) {
@@ -70,18 +69,24 @@ class ScenarioManager {
 
   Future<Scenario?> getScenarioByName(String name) async {
     if (_scenarioCache == null) await getScenarios();
-    return _scenarioCache?.firstWhere(
-      (scenario) => scenario.name == name,
-      orElse: () => throw Exception('Không tìm thấy kịch bản tên: $name'),
-    );
+    try {
+      return _scenarioCache?.firstWhere(
+        (scenario) => scenario.name == name,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<Scenario?> getScenarioById(String id) async {
     if (_scenarioCache == null) await getScenarios();
-    return _scenarioCache?.firstWhere(
-      (scenario) => scenario.id?.id == id,
-      orElse: () => throw Exception('Không tìm thấy kịch bản id: $id'),
-    );
+    try {
+      return _scenarioCache?.firstWhere(
+        (scenario) => scenario.id?.id == id,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Làm mới cache

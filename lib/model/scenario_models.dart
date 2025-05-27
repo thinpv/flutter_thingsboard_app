@@ -30,13 +30,11 @@ class Scenario extends AssetInfo {
     }
     if (ifConditions != null) {
       smartScene.ifConditions = ifConditions;
-      additionalInfo?['if'] =
-          ifConditions.map((e) => e.toJson()).toList();
+      additionalInfo?['if'] = ifConditions.map((e) => e.toJson()).toList();
     }
     if (thenActions != null) {
       smartScene.thenActions = thenActions;
-      additionalInfo?['then'] =
-          thenActions.map((e) => e.toJson()).toList();
+      additionalInfo?['then'] = thenActions.map((e) => e.toJson()).toList();
     }
     if (precondition != null) {
       smartScene.precondition = precondition;
@@ -78,11 +76,10 @@ class SmartScene {
       for (final e in ifConditionsRaw) {
         if (e['device'] is String) {
           final device =
-              await DeviceManager.instance.getDeviceByName(e['device']);
+              await DeviceManager.instance.getDeviceById(e['device']);
           if (device != null) {
             ifConditions.add(SceneCondition(
               device,
-              e['op'] as String,
               e['condition'] as String,
             ));
           }
@@ -95,7 +92,7 @@ class SmartScene {
       for (final e in thenActionsRaw) {
         if (e['device'] is String) {
           final device =
-              await DeviceManager.instance.getDeviceByName(e['device']);
+              await DeviceManager.instance.getDeviceById(e['device']);
           if (device != null) {
             thenActions.add(SceneAction(
               device,
@@ -134,22 +131,17 @@ class SmartScene {
 
 class SceneCondition {
   DeviceInfo device;
-  String op;
   String condition;
 
   SceneCondition(
     this.device,
-    this.op,
     this.condition,
   );
 
-  SceneCondition.empty(this.device)
-      : op = '',
-        condition = '';
+  SceneCondition.empty(this.device) : condition = '';
 
   Map<String, dynamic> toJson() => {
-        'device': device.name,
-        'op': op,
+        'device': device.id?.id,
         'condition': condition,
       };
 }
@@ -167,7 +159,7 @@ class SceneAction {
 
   Map<String, dynamic> toJson() {
     return {
-      'name': device.name,
+      'device': device.id?.id,
       'action': action,
     };
   }

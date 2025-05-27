@@ -20,7 +20,6 @@ class DeviceManager {
     return _instance!;
   }
 
-  // getDevices(), refresh(), clearCache() như đã viết ở trên
   /// Lấy danh sách thiết bị, dùng cache nếu có
   Future<List<DeviceInfo>> getDevices({bool forceRefresh = false}) async {
     if (_deviceCache != null && !forceRefresh) {
@@ -58,10 +57,24 @@ class DeviceManager {
 
   Future<DeviceInfo?> getDeviceByName(String name) async {
     if (_deviceCache == null) await getDevices();
-    return _deviceCache?.firstWhere(
-      (device) => device.name == name,
-      orElse: () => throw Exception('Không tìm thấy thiết bị tên: $name'),
-    );
+    try {
+      return _deviceCache?.firstWhere(
+        (device) => device.name == name,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<DeviceInfo?> getDeviceById(String id) async {
+    if (_deviceCache == null) await getDevices();
+    try {
+      return _deviceCache?.firstWhere(
+        (device) => device.id?.id == id,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Làm mới cache
