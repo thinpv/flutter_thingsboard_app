@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
-import 'package:thingsboard_app/modules/device_profile/devices_base.dart';
-import 'package:thingsboard_app/modules/device_profile/devices_list.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
+
+import 'devices_list.dart';
+import 'devices_list_base.dart';
 
 class DevicesListPage extends TbContextWidget {
   final String? deviceType;

@@ -12,15 +12,15 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'devices_grid.dart';
 import 'provisioning/route/esp_provisioning_route.dart';
 
-class DevicesMainPage extends TbContextWidget {
-  DevicesMainPage(TbContext tbContext, {super.key}) : super(tbContext);
+class DevicesGridPage extends TbContextWidget {
+  DevicesGridPage(TbContext tbContext, {super.key}) : super(tbContext);
 
   @override
   State<StatefulWidget> createState() => _DevicesMainPageState();
 }
 
-class _DevicesMainPageState extends TbContextState<DevicesMainPage>
-    with AutomaticKeepAliveClientMixin<DevicesMainPage> {
+class _DevicesMainPageState extends TbContextState<DevicesGridPage>
+    with AutomaticKeepAliveClientMixin<DevicesGridPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
   @override

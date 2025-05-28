@@ -3,14 +3,20 @@ import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/core/entity/entities_list.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-import 'devices_base.dart';
+import 'devices_list_base.dart';
 
-class DevicesList extends BaseEntitiesWidget<DeviceInfo, PageLink>
-    with DevicesBase, EntitiesListStateBase {
+class DevicesList extends BaseEntitiesWidget<EntityData, EntityDataQuery>
+    with DevicesListBase, EntitiesListStateBase {
+  final bool displayDeviceImage;
+
   DevicesList(
     TbContext tbContext,
-    PageKeyController<PageLink> pageKeyController, {
+    PageKeyController<EntityDataQuery> pageKeyController, {
     super.key,
     searchMode = false,
+    this.displayDeviceImage = false,
   }) : super(tbContext, pageKeyController, searchMode: searchMode);
+
+  @override
+  bool displayCardImage(bool listWidgetCard) => displayDeviceImage;
 }

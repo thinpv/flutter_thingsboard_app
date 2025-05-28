@@ -10,10 +10,9 @@ import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
-import 'package:thingsboard_app/utils/services/device_profile_cache.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
-mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
+mixin DevicesGridBase on EntitiesBase<DeviceInfo, PageLink> {
   @override
   String get title => 'Devices';
 
@@ -27,8 +26,8 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
 
   @override
   void onEntityTap(DeviceInfo deviceInfo) {
-    var deviceProfile =
-        DeviceProfileManager.instance.getDeviceProfileById(deviceInfo.id!.id!);
+    var deviceProfile = DeviceProfileManager.instance
+        .getDeviceProfileById(deviceInfo.deviceProfileId!.id!);
     if (deviceProfile?.defaultDashboardId != null) {
       var dashboardId = deviceProfile?.defaultDashboardId!.id!;
       var state = Utils.createDashboardEntityState(

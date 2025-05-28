@@ -14,7 +14,7 @@ import 'package:thingsboard_app/utils/services/device_profile_cache.dart';
 import 'package:thingsboard_app/utils/services/entity_query_api.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
-mixin DevicesBase on EntitiesBase<EntityData, EntityDataQuery> {
+mixin DevicesListBase on EntitiesBase<EntityData, EntityDataQuery> {
   @override
   String get title => 'Devices';
 
