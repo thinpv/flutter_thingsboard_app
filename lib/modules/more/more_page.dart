@@ -76,12 +76,12 @@ class _MorePageState extends TbContextState<MorePage> {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: EndpointNameWidget(
-                      endpoint: getIt<IEndpointService>().getCachedEndpoint(),
-                    ),
-                  ),
+                  // Padding(
+                  //   padding: const EdgeInsets.only(left: 10),
+                  //   child: EndpointNameWidget(
+                  //     endpoint: getIt<IEndpointService>().getCachedEndpoint(),
+                  //   ),
+                  // ),
                 ],
               ),
               Text(

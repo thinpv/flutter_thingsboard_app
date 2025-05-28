@@ -52,7 +52,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
 
   Widget _buildEntityDetails(BuildContext context, Device entity) {
     return Scaffold(
-      appBar: AppBar(title: Text('Device Detail')),
+      appBar: AppBar(title: Text(entity.name)),
       body: ListTile(
         title: Text(entity.name),
         subtitle: Text(entity.type),
