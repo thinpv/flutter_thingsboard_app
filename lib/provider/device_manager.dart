@@ -17,12 +17,9 @@ class DeviceManager {
     TbStorage storage = getIt();
     String? jsonString = await storage.getItem('devices') as String?;
     if (jsonString != null) {
-      print('---------------jsonString1: ${jsonString}');
       DeviceManager.instance._deviceCache = (jsonDecode(jsonString) as List)
           .map((item) => DeviceInfo.fromJson(item))
           .toList();
-      print(
-          '-------------DeviceManager.instance._deviceCache: ${DeviceManager.instance._deviceCache}');
     }
   }
 
@@ -64,7 +61,6 @@ class DeviceManager {
         TbStorage storage = getIt();
         String jsonString =
             jsonEncode(_deviceCache?.map((d) => d.toJson()).toList());
-        print('---------------jsonString: ${jsonString}');
         storage.setItem('devices', jsonString);
       }
       return _deviceCache!;

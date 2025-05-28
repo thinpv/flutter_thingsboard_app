@@ -18,17 +18,11 @@ class ScenarioManager {
     TbStorage storage = getIt();
     String? jsonString = await storage.getItem('scenarios') as String?;
     if (jsonString != null) {
-      print('---------------jsonString1: ${jsonString}');
       List<AssetInfo>? assetInfoList = (jsonDecode(jsonString) as List)
           .map((item) => AssetInfo.fromJson(item))
           .toList();
-      print('-------------assetInfoList: ${assetInfoList}');
-      // ScenarioManager.instance._scenarioCache =
-      //     assetInfoList.whereType<Scenario>().toList();
-      ScenarioManager.instance._scenarioCache =
-          await Future.wait(assetInfoList.map((p) => Scenario.fromAssetInfo(p)));
-      print(
-          '-------------ScenarioManager.instance._scenarioCache: ${ScenarioManager.instance._scenarioCache}');
+      ScenarioManager.instance._scenarioCache = await Future.wait(
+          assetInfoList.map((p) => Scenario.fromAssetInfo(p)));
     }
   }
 
@@ -44,8 +38,6 @@ class ScenarioManager {
     if (_scenarioCache != null && !forceRefresh) {
       return _scenarioCache!;
     }
-
-    return _scenarioCache!;
 
     if (_isLoading) {
       // Nếu đang loading song song, đợi một chút
@@ -83,7 +75,6 @@ class ScenarioManager {
         TbStorage storage = getIt();
         String jsonString =
             jsonEncode(_scenarioCache?.map((d) => d.toJson()).toList());
-        print('---------------jsonString: ${jsonString}');
         storage.setItem('scenarios', jsonString);
       }
       return _scenarioCache!;

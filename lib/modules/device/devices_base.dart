@@ -29,31 +29,31 @@ mixin DevicesBase on EntitiesBase<EntityData, EntityDataQuery> {
 
   @override
   void onEntityTap(EntityData device) async {
-    navigateTo('/device/${device.entityId.id}');
-    // var profile = await DeviceProfileCache.getDeviceProfileInfo(
-    //   tbClient,
-    //   device.field('type')!,
-    //   device.entityId.id!,
-    // );
-    // if (profile.defaultDashboardId != null) {
-    //   var dashboardId = profile.defaultDashboardId!.id!;
-    //   var state = Utils.createDashboardEntityState(
-    //     device.entityId,
-    //     entityName: device.field('name')!,
-    //     entityLabel: device.field('label')!,
-    //   );
-    //   navigateToDashboard(
-    //     dashboardId,
-    //     dashboardTitle: device.field('name'),
-    //     state: state,
-    //   );
-    // } else {
-    //   if (tbClient.isTenantAdmin()) {
-    //     showWarnNotification(
-    //       'Mobile dashboard should be configured in device profile!',
-    //     );
-    //   }
-    // }
+    var profile = await DeviceProfileCache.getDeviceProfileInfo(
+      tbClient,
+      device.field('type')!,
+      device.entityId.id!,
+    );
+    if (profile.defaultDashboardId != null) {
+      var dashboardId = profile.defaultDashboardId!.id!;
+      var state = Utils.createDashboardEntityState(
+        device.entityId,
+        entityName: device.field('name')!,
+        entityLabel: device.field('label'),
+      );
+      navigateToDashboard(
+        dashboardId,
+        dashboardTitle: device.field('name'),
+        state: state,
+      );
+    } else {
+      navigateTo('/device/${device.entityId.id}');
+      // if (tbClient.isTenantAdmin()) {
+      //   showWarnNotification(
+      //     'Mobile dashboard should be configured in device profile!',
+      //   );
+      // }
+    }
   }
 
   @override
