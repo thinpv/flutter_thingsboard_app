@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class DeviceManager {
@@ -9,8 +12,18 @@ class DeviceManager {
 
   DeviceManager._internal(this.tbClient);
 
-  static void init(ThingsboardClient client) {
+  static Future<void> init(ThingsboardClient client) async {
     _instance = DeviceManager._internal(client);
+    TbStorage storage = getIt();
+    String? jsonString = await storage.getItem('devices') as String?;
+    if (jsonString != null) {
+      print('---------------jsonString1: ${jsonString}');
+      DeviceManager.instance._deviceCache = (jsonDecode(jsonString) as List)
+          .map((item) => DeviceInfo.fromJson(item))
+          .toList();
+      print(
+          '-------------DeviceManager.instance._deviceCache: ${DeviceManager.instance._deviceCache}');
+    }
   }
 
   static DeviceManager get instance {
@@ -46,6 +59,14 @@ class DeviceManager {
           .getCustomerDeviceInfos(customerId, pageLink);
 
       _deviceCache = pageData.data;
+
+      if (forceRefresh) {
+        TbStorage storage = getIt();
+        String jsonString =
+            jsonEncode(_deviceCache?.map((d) => d.toJson()).toList());
+        print('---------------jsonString: ${jsonString}');
+        storage.setItem('devices', jsonString);
+      }
       return _deviceCache!;
     } finally {
       _isLoading = false;

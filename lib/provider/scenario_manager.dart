@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
@@ -10,8 +13,23 @@ class ScenarioManager {
 
   ScenarioManager._internal(this.tbClient);
 
-  static void init(ThingsboardClient client) {
+  static Future<void> init(ThingsboardClient client) async {
     _instance = ScenarioManager._internal(client);
+    TbStorage storage = getIt();
+    String? jsonString = await storage.getItem('scenarios') as String?;
+    if (jsonString != null) {
+      print('---------------jsonString1: ${jsonString}');
+      List<AssetInfo>? assetInfoList = (jsonDecode(jsonString) as List)
+          .map((item) => AssetInfo.fromJson(item))
+          .toList();
+      print('-------------assetInfoList: ${assetInfoList}');
+      // ScenarioManager.instance._scenarioCache =
+      //     assetInfoList.whereType<Scenario>().toList();
+      ScenarioManager.instance._scenarioCache =
+          await Future.wait(assetInfoList.map((p) => Scenario.fromAssetInfo(p)));
+      print(
+          '-------------ScenarioManager.instance._scenarioCache: ${ScenarioManager.instance._scenarioCache}');
+    }
   }
 
   static ScenarioManager get instance {
@@ -26,6 +44,8 @@ class ScenarioManager {
     if (_scenarioCache != null && !forceRefresh) {
       return _scenarioCache!;
     }
+
+    return _scenarioCache!;
 
     if (_isLoading) {
       // Nếu đang loading song song, đợi một chút
@@ -58,6 +78,14 @@ class ScenarioManager {
       );
 
       _scenarioCache = scenarioPageData.data;
+
+      if (forceRefresh) {
+        TbStorage storage = getIt();
+        String jsonString =
+            jsonEncode(_scenarioCache?.map((d) => d.toJson()).toList());
+        print('---------------jsonString: ${jsonString}');
+        storage.setItem('scenarios', jsonString);
+      }
       return _scenarioCache!;
     } finally {
       _isLoading = false;
