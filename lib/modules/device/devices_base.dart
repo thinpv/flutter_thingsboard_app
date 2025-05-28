@@ -8,6 +8,7 @@ import 'package:thingsboard_app/constants/assets_path.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
+import 'package:thingsboard_app/provider/entity_device_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/device_profile_cache.dart';
 import 'package:thingsboard_app/utils/services/entity_query_api.dart';
@@ -22,35 +23,37 @@ mixin DevicesBase on EntitiesBase<EntityData, EntityDataQuery> {
 
   @override
   Future<PageData<EntityData>> fetchEntities(EntityDataQuery dataQuery) {
-    return tbClient.getEntityQueryService().findEntityDataByQuery(dataQuery);
+    // return tbClient.getEntityQueryService().findEntityDataByQuery(dataQuery);
+    return EntityDeviceManager.instance.getDevices();
   }
 
   @override
   void onEntityTap(EntityData device) async {
-    var profile = await DeviceProfileCache.getDeviceProfileInfo(
-      tbClient,
-      device.field('type')!,
-      device.entityId.id!,
-    );
-    if (profile.defaultDashboardId != null) {
-      var dashboardId = profile.defaultDashboardId!.id!;
-      var state = Utils.createDashboardEntityState(
-        device.entityId,
-        entityName: device.field('name')!,
-        entityLabel: device.field('label')!,
-      );
-      navigateToDashboard(
-        dashboardId,
-        dashboardTitle: device.field('name'),
-        state: state,
-      );
-    } else {
-      if (tbClient.isTenantAdmin()) {
-        showWarnNotification(
-          'Mobile dashboard should be configured in device profile!',
-        );
-      }
-    }
+    navigateTo('/device/${device.entityId.id}');
+    // var profile = await DeviceProfileCache.getDeviceProfileInfo(
+    //   tbClient,
+    //   device.field('type')!,
+    //   device.entityId.id!,
+    // );
+    // if (profile.defaultDashboardId != null) {
+    //   var dashboardId = profile.defaultDashboardId!.id!;
+    //   var state = Utils.createDashboardEntityState(
+    //     device.entityId,
+    //     entityName: device.field('name')!,
+    //     entityLabel: device.field('label')!,
+    //   );
+    //   navigateToDashboard(
+    //     dashboardId,
+    //     dashboardTitle: device.field('name'),
+    //     state: state,
+    //   );
+    // } else {
+    //   if (tbClient.isTenantAdmin()) {
+    //     showWarnNotification(
+    //       'Mobile dashboard should be configured in device profile!',
+    //     );
+    //   }
+    // }
   }
 
   @override

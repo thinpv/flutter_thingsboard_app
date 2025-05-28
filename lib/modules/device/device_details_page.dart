@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/entity/entity_details_page.dart';
+import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 class DeviceDetailsPage extends EntityDetailsPage<DeviceInfo> {
@@ -9,7 +10,8 @@ class DeviceDetailsPage extends EntityDetailsPage<DeviceInfo> {
 
   @override
   Future<DeviceInfo?> fetchEntity(String id) {
-    return tbClient.getDeviceService().getDeviceInfo(id);
+    // return tbClient.getDeviceService().getDeviceInfo(id);
+    return DeviceManager.instance.getDeviceById(id);
   }
 
   @override
