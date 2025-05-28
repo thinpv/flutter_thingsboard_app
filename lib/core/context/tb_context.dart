@@ -133,7 +133,7 @@ class TbContext implements PopEntry {
       }
       await tbClient.init();
 
-      DeviceProfileManager.init(tbClient);
+      await DeviceProfileManager.init(tbClient);
       await DeviceManager.init(tbClient);
       await ScenarioManager.init(tbClient);
       EntityDeviceManager.init(tbClient);

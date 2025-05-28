@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class DeviceProfileManager {
@@ -9,8 +12,16 @@ class DeviceProfileManager {
 
   DeviceProfileManager._internal(this.tbClient);
 
-  static void init(ThingsboardClient client) {
+  static Future<void> init(ThingsboardClient client) async {
     _instance = DeviceProfileManager._internal(client);
+    TbStorage storage = getIt();
+    String? jsonString = await storage.getItem('deviceProfiles') as String?;
+    if (jsonString != null) {
+      DeviceProfileManager.instance._deviceProfileCache =
+          (jsonDecode(jsonString) as List)
+              .map((item) => DeviceProfileInfo.fromJson(item))
+              .toList();
+    }
   }
 
   static DeviceProfileManager get instance {
@@ -40,6 +51,12 @@ class DeviceProfileManager {
           .getDeviceProfileInfos(pageLink);
 
       _deviceProfileCache = pageData.data;
+      if (forceRefresh) {
+        TbStorage storage = getIt();
+        String jsonString =
+            jsonEncode(_deviceProfileCache?.map((d) => d.toJson()).toList());
+        storage.setItem('deviceProfiles', jsonString);
+      }
       return _deviceProfileCache!;
     } finally {
       _isLoading = false;
@@ -76,5 +93,12 @@ class DeviceProfileManager {
   /// Xoá cache thủ công nếu cần
   void clearCache() {
     _deviceProfileCache = null;
+  }
+}
+
+extension on DeviceProfileInfo {
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> json = {'id': id};
+    return json;
   }
 }
