@@ -1,4 +1,4 @@
-package org.thingsboard.app
+package org.thinpv.app
 
 import android.content.Context
 import android.content.Intent

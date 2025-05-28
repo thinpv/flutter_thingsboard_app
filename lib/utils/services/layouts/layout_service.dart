@@ -13,7 +13,6 @@ class LayoutService implements ILayoutService {
 
   late Size deviceScreenSize;
   late List<TbMainNavigationItem> bottomBarItems;
-  late TbMainNavigationItem scenarios;
   late TbMainNavigationItem more;
   late List<PageLayout> pagesLayout;
 
@@ -26,27 +25,25 @@ class LayoutService implements ILayoutService {
 
     if (deviceScreenSize.width < 600) {
       return bottomBarItems.length > 3
-          ? [...bottomBarItems.sublist(0, 3), scenarios, more]
-          : [...bottomBarItems, scenarios, more];
+          ? [...bottomBarItems.sublist(0, 3), more]
+          : [...bottomBarItems, more];
     } else if (deviceScreenSize.width < 960) {
       return bottomBarItems.length > 5
-          ? [...bottomBarItems.sublist(0, 5), scenarios, more]
-          : [...bottomBarItems, scenarios, more];
+          ? [...bottomBarItems.sublist(0, 5), more]
+          : [...bottomBarItems, more];
     } else {
       return bottomBarItems.length > 9
-          ? [...bottomBarItems.sublist(0, 9), scenarios, more]
-          : [...bottomBarItems, scenarios, more];
+          ? [...bottomBarItems.sublist(0, 9), more]
+          : [...bottomBarItems, more];
     }
   }
 
   @override
   void setBottomBarItems(
     List<TbMainNavigationItem> items, {
-    required TbMainNavigationItem scenarios,
     required TbMainNavigationItem more,
   }) {
     bottomBarItems = List.of(items);
-    this.scenarios = scenarios;
     this.more = more;
   }
 

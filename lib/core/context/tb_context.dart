@@ -283,6 +283,7 @@ class TbContext implements PopEntry {
   }
 
   Future<void> onUserLoaded({VoidCallback? onDone}) async {
+    print('------------packageName: $packageName');
     try {
       log.debug(
         'TbContext.onUserLoaded: isAuthenticated=${tbClient.isAuthenticated()}',
@@ -292,6 +293,7 @@ class TbContext implements PopEntry {
         log.debug('authUser: ${tbClient.getAuthUser()}');
         if (tbClient.getAuthUser()!.userId != null) {
           try {
+            print('------------packageName2: $packageName');
             final mobileInfo =
                 await tbClient.getMobileService().getUserMobileInfo(
                       MobileInfoQuery(
@@ -303,6 +305,7 @@ class TbContext implements PopEntry {
             homeDashboard = mobileInfo?.homeDashboardInfo;
             versionInfo = mobileInfo?.versionInfo;
             storeInfo = mobileInfo?.storeInfo;
+            print('-------mobileInfo?.pages: ${mobileInfo?.pages}');
             getIt<ILayoutService>().cachePageLayouts(
               mobileInfo?.pages,
               authority: tbClient.getAuthUser()!.authority,
