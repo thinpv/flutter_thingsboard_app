@@ -133,10 +133,17 @@ class TbContext implements PopEntry {
       }
       await tbClient.init();
 
-      await DeviceProfileManager.init(tbClient);
+      // await DeviceProfileManager.init(tbClient);
       await DeviceManager.init(tbClient);
       await ScenarioManager.init(tbClient);
       EntityDeviceManager.init(tbClient);
+
+      // DeviceProfileManager.instance.getDeviceProfiles(forceRefresh: true);
+      if (tbClient.getAuthUser()?.customerId != null) {
+        DeviceManager.instance.getDevices(forceRefresh: true);
+        ScenarioManager.instance.getScenarios(forceRefresh: true);
+      }
+      EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {
       log.error('Failed to init tbContext: $e', e, s);
       await onFatalError(e);
@@ -358,13 +365,6 @@ class TbContext implements PopEntry {
           await NotificationService(tbClient, log, this).init();
         }
       }
-
-      DeviceProfileManager.instance.getDeviceProfiles(forceRefresh: true);
-      if (tbClient.getAuthUser()?.customerId != null) {
-        DeviceManager.instance.getDevices(forceRefresh: true);
-        ScenarioManager.instance.getScenarios(forceRefresh: true);
-      }
-      EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {
       log.error('TbContext.onUserLoaded: $e', e, s);
 

@@ -1,18 +1,10 @@
-import 'dart:convert';
-import 'dart:math';
-
-import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
-import 'package:thingsboard_app/modules/device/devices_base.dart';
-import 'package:thingsboard_app/modules/device/devices_list.dart';
-import 'package:thingsboard_app/thingsboard_client.dart';
+import 'package:thingsboard_app/modules/device_profile/devices_base.dart';
+import 'package:thingsboard_app/modules/device_profile/devices_list.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
-
-import 'provisioning/route/esp_provisioning_route.dart';
 
 class DevicesListPage extends TbContextWidget {
   final String? deviceType;
@@ -134,88 +126,8 @@ class _DevicesListPageState extends TbContextState<DevicesListPage>
             ],
             onSelected: (value) async {
               if (value == 1) {
-                try {
-                  Barcode? barcode = await tbContext.navigateTo(
-                    '/qrCodeScan',
-                    transition: TransitionType.nativeModal,
-                  );
-                  if (barcode != null && barcode.code != null) {
-                    final decodedJson = jsonDecode(barcode.code!);
-                    final transport = decodedJson?['transport'];
-                    if (transport != null) {
-                      final arguments = {
-                        'deviceName':
-                            decodedJson['tbDeviceName'] ?? decodedJson['name'],
-                        'deviceSecretKey':
-                            decodedJson['tbSecretKey'] ?? decodedJson['pop'],
-                        'name':
-                            decodedJson['name'] ?? decodedJson['tbDeviceName'],
-                        'pop': decodedJson['pop'] ?? decodedJson['tbSecretKey'],
-                      };
-
-                      bool? provisioningResult;
-                      switch (transport.toLowerCase()) {
-                        case 'ble':
-                          tbContext.navigateTo(
-                            EspProvisioningRoute.wifiRoute,
-                            routeSettings: RouteSettings(arguments: arguments),
-                          );
-                          break;
-
-                        case 'softap':
-                          tbContext.navigateTo(
-                            EspProvisioningRoute.softApRoute,
-                            routeSettings: RouteSettings(arguments: arguments),
-                          );
-                          break;
-
-                        case 'name':
-                          tbClient
-                              .getDeviceService()
-                              .claimDevice(
-                                barcode.code!,
-                                ClaimRequest(secretKey: ''),
-                                requestConfig:
-                                    RequestConfig(ignoreErrors: true),
-                              )
-                              .timeout(
-                                const Duration(seconds: 20),
-                                onTimeout: () => throw Exception(
-                                    'Device claiming timeout reached'),
-                              );
-                          break;
-                      }
-                    }
-                  }
-                } catch (e) {
-                  tbContext.log.error(
-                    'Login with qr code error',
-                    e,
-                  );
-                }
               } else if (value == 2) {
-                final arguments = {
-                  'deviceName': '',
-                  'deviceSecretKey': '',
-                  'name': 'iotgw_',
-                  'pop': 'thinpv1607',
-                };
-                tbContext.navigateTo(
-                  EspProvisioningRoute.wifiRoute,
-                  routeSettings: RouteSettings(arguments: arguments),
-                );
-              } else if (value == 3) {
-                final arguments = {
-                  'deviceName': '',
-                  'deviceSecretKey': '',
-                  'name': 'iotgw_',
-                  'pop': 'thinpv1607',
-                };
-                tbContext.navigateTo(
-                  EspProvisioningRoute.softApRoute,
-                  routeSettings: RouteSettings(arguments: arguments),
-                );
-              }
+              } else if (value == 3) {}
             },
           ),
         ],

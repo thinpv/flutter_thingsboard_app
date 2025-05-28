@@ -1,4 +1,4 @@
-import 'package:thingsboard_app/modules/device/devices_base.dart';
+import 'package:thingsboard_app/modules/device_profile/devices_base.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class EntityDeviceManager {

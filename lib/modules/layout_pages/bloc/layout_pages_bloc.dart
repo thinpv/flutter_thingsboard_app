@@ -9,8 +9,9 @@ import 'package:thingsboard_app/modules/audit_log/audit_logs_page.dart';
 import 'package:thingsboard_app/modules/customer/customers_page.dart';
 import 'package:thingsboard_app/modules/dashboard/presentation/view/dashboards_page.dart';
 import 'package:thingsboard_app/modules/dashboard/presentation/view/single_dashboard_view.dart';
-import 'package:thingsboard_app/modules/device/devices_list_page.dart';
-import 'package:thingsboard_app/modules/device/devices_main_page.dart';
+import 'package:thingsboard_app/modules/device/devices_page.dart';
+import 'package:thingsboard_app/modules/device_profile/devices_list_page.dart';
+import 'package:thingsboard_app/modules/device_profile/devices_main_page.dart';
 import 'package:thingsboard_app/modules/home/home_page.dart';
 import 'package:thingsboard_app/modules/layout_pages/bloc/bloc.dart';
 import 'package:thingsboard_app/modules/main/main_item_widget.dart';
@@ -105,7 +106,7 @@ class LayoutPagesBloc extends Bloc<LayoutPagesEvent, LayoutPagesState> {
   Widget getWidget(PageLayout pageLayout) {
     switch (pageLayout.id) {
       case Pages.home:
-        return DevicesListPage(tbContext);
+        return DevicesPage(tbContext);
       case Pages.alarms:
         return AlarmsPage(tbContext);
       case Pages.devices:
