@@ -5,7 +5,7 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 
 import 'devices_base.dart';
 
-class DevicesList extends BaseEntitiesWidget<Device, PageLink>
+class DevicesList extends BaseEntitiesWidget<DeviceInfo, PageLink>
     with DevicesBase, EntitiesListStateBase {
   DevicesList(
     TbContext tbContext,

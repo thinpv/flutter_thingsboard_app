@@ -69,6 +69,25 @@ class DeviceManager {
     }
   }
 
+  Future<PageData<DeviceInfo>> getDeviceInfos(PageLink pageLink) async {
+    if (_deviceCache != null) {
+      final deviceInfos = _deviceCache!;
+      return PageData<DeviceInfo>(
+        deviceInfos,
+        1,
+        deviceInfos.length,
+        false,
+      );
+    } else {
+      return PageData<DeviceInfo>(
+        [],
+        1,
+        0,
+        false,
+      );
+    }
+  }
+
   Future<DeviceInfo?> getDeviceByName(String name) async {
     if (_deviceCache == null) await getDevices();
     try {

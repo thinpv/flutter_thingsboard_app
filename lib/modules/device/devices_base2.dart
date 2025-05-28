@@ -26,18 +26,21 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
   }
 
   @override
-  void onEntityTap(DeviceInfo deviceInfo) {
-    var deviceProfile =
-        DeviceProfileManager.instance.getDeviceProfileById(deviceInfo.id!.id!);
-    if (deviceProfile?.defaultDashboardId != null) {
-      var dashboardId = deviceProfile?.defaultDashboardId!.id!;
+  Future<void> onEntityTap(DeviceInfo deviceInfo) async {
+    var profile = await DeviceProfileCache.getDeviceProfileInfo(
+      tbClient,
+      deviceInfo.type,
+      deviceInfo.id!.id!,
+    );
+    if (profile.defaultDashboardId != null) {
+      var dashboardId = profile.defaultDashboardId!.id!;
       var state = Utils.createDashboardEntityState(
         deviceInfo.id,
         entityName: deviceInfo.name,
         entityLabel: deviceInfo.label,
       );
       navigateToDashboard(
-        dashboardId!,
+        dashboardId,
         dashboardTitle: deviceInfo.name,
         state: state,
       );
@@ -46,10 +49,10 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
     }
   }
 
-  // @override
-  // Future<void> onRefresh() {
-  //   return Future.value();
-  // }
+  @override
+  Future<void> onRefresh() {
+    return Future.value();
+  }
 
   @override
   Widget buildEntityGridCard(

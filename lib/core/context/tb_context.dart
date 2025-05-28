@@ -133,17 +133,17 @@ class TbContext implements PopEntry {
       }
       await tbClient.init();
 
-      // await DeviceProfileManager.init(tbClient);
+      await DeviceProfileManager.init(tbClient);
       await DeviceManager.init(tbClient);
       await ScenarioManager.init(tbClient);
       EntityDeviceManager.init(tbClient);
 
-      // DeviceProfileManager.instance.getDeviceProfiles(forceRefresh: true);
+      await DeviceProfileManager.instance.getDeviceProfiles(forceRefresh: true);
       if (tbClient.getAuthUser()?.customerId != null) {
-        DeviceManager.instance.getDevices(forceRefresh: true);
-        ScenarioManager.instance.getScenarios(forceRefresh: true);
+        await DeviceManager.instance.getDevices(forceRefresh: true);
+        await ScenarioManager.instance.getScenarios(forceRefresh: true);
       }
-      EntityDeviceManager.instance.getDevices(forceRefresh: true);
+      await EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {
       log.error('Failed to init tbContext: $e', e, s);
       await onFatalError(e);
@@ -283,7 +283,6 @@ class TbContext implements PopEntry {
   }
 
   Future<void> onUserLoaded({VoidCallback? onDone}) async {
-    print('------------packageName: $packageName');
     try {
       log.debug(
         'TbContext.onUserLoaded: isAuthenticated=${tbClient.isAuthenticated()}',
@@ -293,7 +292,6 @@ class TbContext implements PopEntry {
         log.debug('authUser: ${tbClient.getAuthUser()}');
         if (tbClient.getAuthUser()!.userId != null) {
           try {
-            print('------------packageName2: $packageName');
             final mobileInfo =
                 await tbClient.getMobileService().getUserMobileInfo(
                       MobileInfoQuery(
@@ -305,7 +303,6 @@ class TbContext implements PopEntry {
             homeDashboard = mobileInfo?.homeDashboardInfo;
             versionInfo = mobileInfo?.versionInfo;
             storeInfo = mobileInfo?.storeInfo;
-            print('-------mobileInfo?.pages: ${mobileInfo?.pages}');
             getIt<ILayoutService>().cachePageLayouts(
               mobileInfo?.pages,
               authority: tbClient.getAuthUser()!.authority,

@@ -11,7 +11,7 @@ import 'package:thingsboard_app/modules/dashboard/presentation/view/dashboards_p
 import 'package:thingsboard_app/modules/dashboard/presentation/view/single_dashboard_view.dart';
 import 'package:thingsboard_app/modules/device/devices_page.dart';
 import 'package:thingsboard_app/modules/device_profile/devices_list_page.dart';
-import 'package:thingsboard_app/modules/device_profile/devices_main_page.dart';
+import 'package:thingsboard_app/modules/device/devices_main_page.dart';
 import 'package:thingsboard_app/modules/home/home_page.dart';
 import 'package:thingsboard_app/modules/layout_pages/bloc/bloc.dart';
 import 'package:thingsboard_app/modules/main/main_item_widget.dart';

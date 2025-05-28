@@ -17,10 +17,10 @@ class DeviceProfileManager {
     TbStorage storage = getIt();
     String? jsonString = await storage.getItem('deviceProfiles') as String?;
     if (jsonString != null) {
-      DeviceProfileManager.instance._deviceProfileCache =
-          (jsonDecode(jsonString) as List)
-              .map((item) => DeviceProfileInfo.fromJson(item))
-              .toList();
+      // DeviceProfileManager.instance._deviceProfileCache =
+      //     (jsonDecode(jsonString) as List)
+      //         .map((item) => DeviceProfileInfo.fromJson(item))
+      //         .toList();
     }
   }
 
@@ -63,8 +63,8 @@ class DeviceProfileManager {
     }
   }
 
-  Future<DeviceProfileInfo?> getDeviceProfileByName(String name) async {
-    if (_deviceProfileCache == null) await getDeviceProfiles();
+  DeviceProfileInfo? getDeviceProfileByName(String name) {
+    if (_deviceProfileCache == null) return null;
     try {
       return _deviceProfileCache?.firstWhere(
         (deviceProfile) => deviceProfile.name == name,
@@ -74,8 +74,8 @@ class DeviceProfileManager {
     }
   }
 
-  Future<DeviceProfileInfo?> getDeviceProfileById(String id) async {
-    if (_deviceProfileCache == null) await getDeviceProfiles();
+  DeviceProfileInfo? getDeviceProfileById(String id) {
+    if (_deviceProfileCache == null) return null;
     try {
       return _deviceProfileCache?.firstWhere(
         (deviceProfile) => deviceProfile.id.id == id,
