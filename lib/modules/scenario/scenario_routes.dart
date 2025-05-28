@@ -4,6 +4,7 @@ import 'package:thingsboard_app/config/routes/router.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/modules/scenario/scenarios_page.dart';
 
+import 'scenario_add_page.dart';
 import 'scenario_details_page.dart';
 
 class ScenarioRoutes extends TbRoutes {
@@ -11,6 +12,12 @@ class ScenarioRoutes extends TbRoutes {
     handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
       var searchMode = params['search']?.first == 'true';
       return ScenariosPage(tbContext, searchMode: searchMode);
+    },
+  );
+
+  late var scenarioAddHandler = Handler(
+    handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
+      return ScenarioAddPage(tbContext);
     },
   );
 
@@ -25,6 +32,7 @@ class ScenarioRoutes extends TbRoutes {
   @override
   void doRegisterRoutes(router) {
     router.define('/scenarios', handler: scenariosHandler);
+    router.define('/scenario', handler: scenarioAddHandler);
     router.define('/scenario/:id', handler: scenarioDetailsHandler);
   }
 }

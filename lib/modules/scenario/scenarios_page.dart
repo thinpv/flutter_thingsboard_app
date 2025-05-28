@@ -46,6 +46,12 @@ class _ScenariosPageState extends TbContextState<ScenariosPage> {
               navigateTo('/scenarios?search=true');
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              navigateTo('/scenario');
+            },
+          ),
         ],
       );
     }

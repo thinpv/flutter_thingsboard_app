@@ -52,6 +52,52 @@ class Scenario extends AssetInfo {
   }
 }
 
+class ScenarioAdd {
+  String name = 'Tên kịch bản';
+  Map<String, dynamic>? additionalInfo;
+  SmartScene smartScene =
+      SmartScene(active: true, ifConditions: [], thenActions: []);
+
+  void update({
+    String? name,
+    bool? active,
+    List<SceneCondition>? ifConditions,
+    List<SceneAction>? thenActions,
+    ScenePrecondition? precondition,
+    List<String>? areaIds,
+  }) {
+    if (name != null) {
+      this.name = name;
+    }
+    additionalInfo ??= {};
+    if (active != null) {
+      smartScene.active = active;
+      additionalInfo?['active'] = active;
+    }
+    if (ifConditions != null) {
+      smartScene.ifConditions = ifConditions;
+      additionalInfo?['if'] = ifConditions.map((e) => e.toJson()).toList();
+    }
+    if (thenActions != null) {
+      smartScene.thenActions = thenActions;
+      additionalInfo?['then'] = thenActions.map((e) => e.toJson()).toList();
+    }
+    if (precondition != null) {
+      smartScene.precondition = precondition;
+      additionalInfo?['precondition'] = precondition.toJson();
+    }
+    if (areaIds != null) {
+      smartScene.areaIds = areaIds;
+      additionalInfo?['areaIds'] = areaIds;
+    }
+  }
+
+  // @override
+  // String toString() {
+  //   return 'ScenarioAdd{${assetString('assetProfileName: $assetProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
+  // }
+}
+
 class SmartScene {
   late bool active;
   late List<SceneCondition> ifConditions;
