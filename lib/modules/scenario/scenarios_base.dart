@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
+import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-mixin ScenariosBase on EntitiesBase<AssetInfo, PageLink> {
+mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
   @override
   String get title => 'Scenarios';
 
@@ -10,37 +12,38 @@ mixin ScenariosBase on EntitiesBase<AssetInfo, PageLink> {
   String get noItemsFoundText => 'No scenarios found';
 
   @override
-  Future<PageData<AssetInfo>> fetchEntities(PageLink pageLink) {
-    if (tbClient.isTenantAdmin()) {
-      return tbClient.getAssetService().getTenantAssetInfos(pageLink, type: 'Scenario');
-    } else {
-      return tbClient
-          .getAssetService()
-          .getCustomerAssetInfos(tbClient.getAuthUser()!.customerId!, pageLink, type: 'Scenario');
-    }
+  Future<PageData<Scenario>> fetchEntities(PageLink pageLink) {
+    return ScenarioManager.instance
+        .getScenarios()
+        .then((scenarios) => PageData<Scenario>(
+              scenarios,
+              1,
+              scenarios.length,
+              false,
+            ));
   }
 
   @override
-  void onEntityTap(AssetInfo scenario) {
+  void onEntityTap(Scenario scenario) {
     navigateTo('/scenario/${scenario.id!.id}');
   }
 
   @override
-  Widget buildEntityListCard(BuildContext context, AssetInfo scenario) {
+  Widget buildEntityListCard(BuildContext context, Scenario scenario) {
     return _buildCard(context, scenario);
   }
 
   @override
-  Widget buildEntityListWidgetCard(BuildContext context, AssetInfo scenario) {
+  Widget buildEntityListWidgetCard(BuildContext context, Scenario scenario) {
     return _buildListWidgetCard(context, scenario);
   }
 
   @override
-  Widget buildEntityGridCard(BuildContext context, AssetInfo scenario) {
+  Widget buildEntityGridCard(BuildContext context, Scenario scenario) {
     return Text(scenario.name);
   }
 
-  Widget _buildCard(context, AssetInfo scenario) {
+  Widget _buildCard(context, Scenario scenario) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -115,7 +118,7 @@ mixin ScenariosBase on EntitiesBase<AssetInfo, PageLink> {
     );
   }
 
-  Widget _buildListWidgetCard(BuildContext context, AssetInfo scenario) {
+  Widget _buildListWidgetCard(BuildContext context, Scenario scenario) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -56,7 +56,7 @@ class ScenarioManager {
           PageLink(100); // hoặc tuỳ chỉnh phân trang nếu nhiều thiết bị
       final pageData = await tbClient
           .getAssetService()
-          .getCustomerAssetInfos(customerId, pageLink);
+          .getCustomerAssetInfos(customerId, pageLink, type: 'Scenario');
 
       List<Scenario> scenarios = await Future.wait(
         pageData.data.map((asset) => Scenario.fromAssetInfo(asset)),
