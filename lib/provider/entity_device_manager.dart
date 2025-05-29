@@ -1,4 +1,7 @@
-import 'package:thingsboard_app/modules/device/devices_list_base.dart';
+import 'dart:convert';
+
+import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/utils/services/entity_query_api.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class EntityDeviceManager {
@@ -11,8 +14,15 @@ class EntityDeviceManager {
 
   EntityDeviceManager._internal(this.tbClient);
 
-  static void init(ThingsboardClient client) {
+  static Future<void> init(ThingsboardClient client) async {
     _instance = EntityDeviceManager._internal(client);
+
+    TbStorage storage = getIt();
+    String? jsonString = await storage.getItem('entityDevices') as String?;
+    if (jsonString != null) {
+      EntityDeviceManager.instance._entityCache =
+          parseEntityDataPageData(jsonDecode(jsonString));
+    }
   }
 
   static EntityDeviceManager get instance {
@@ -36,12 +46,18 @@ class EntityDeviceManager {
 
     _isLoading = true;
     try {
-      DeviceQueryController _deviceQueryController =
-          DeviceQueryController(pageSize: 100);
+      EntityDataQuery dataQuery =
+          EntityQueryApi.createDefaultDeviceQuery(pageSize: 100);
 
       _entityCache = await tbClient
           .getEntityQueryService()
-          .findEntityDataByQuery(_deviceQueryController.value.pageKey);
+          .findEntityDataByQuery(dataQuery);
+
+      if (forceRefresh) {
+        TbStorage storage = getIt();
+        String jsonString = jsonEncode(PageDataEntityDatatoJson(_entityCache!));
+        storage.setItem('entityDevices', jsonString);
+      }
 
       return _entityCache!;
     } finally {
@@ -90,4 +106,44 @@ class EntityDeviceManager {
   void clearCache() {
     _entityCache = null;
   }
+}
+
+Map<String, dynamic> TsValueToJson(TsValue tsValue) {
+  return {
+    'ts': tsValue.ts,
+    'value': tsValue.value,
+  };
+}
+
+Map<String, dynamic> ComparisonTsValueToJson(
+    ComparisonTsValue comparisonTsValue) {
+  return {
+    'current': TsValueToJson(comparisonTsValue.current),
+    'previous': comparisonTsValue.previous != null
+        ? TsValueToJson(comparisonTsValue.previous!)
+        : null,
+  };
+}
+
+Map<String, dynamic> EntityDataToJson(EntityData entityData) {
+  return {
+    'entityId': entityData.entityId.toJson(),
+    'latest': entityData.latest.map((key, value) => MapEntry(
+          key.toShortString(),
+          value.map((k, v) => MapEntry(k, TsValueToJson(v))),
+        )),
+    'timeseries': entityData.timeseries.map((key, value) =>
+        MapEntry(key, value.map((tsVal) => TsValueToJson(tsVal)).toList())),
+    'aggLatest': entityData.aggLatest.map((key, value) =>
+        MapEntry(key.toString(), ComparisonTsValueToJson(value))),
+  };
+}
+
+Map<String, dynamic> PageDataEntityDatatoJson(PageData<EntityData> pageData) {
+  return {
+    'data': pageData.data.map((dynamic e) => EntityDataToJson(e)).toList(),
+    'totalPages': pageData.totalPages,
+    'totalElements': pageData.totalElements,
+    'hasNext': pageData.hasNext
+  };
 }
