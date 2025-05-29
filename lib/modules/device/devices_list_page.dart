@@ -1,148 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
+import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 
 import 'devices_list.dart';
-import 'devices_list_base.dart';
 
 class DevicesListPage extends TbContextWidget {
-  final String? deviceType;
-  final bool? active;
-  final bool searchMode;
-
-  DevicesListPage(
-    TbContext tbContext, {
-    this.deviceType,
-    this.active,
-    this.searchMode = false,
-    super.key,
-  }) : super(tbContext);
+  DevicesListPage(TbContext tbContext, {super.key}) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _DevicesListPageState();
+  State<StatefulWidget> createState() => _DevicesMainPageState();
 }
 
-class _DevicesListPageState extends TbContextState<DevicesListPage>
+class _DevicesMainPageState extends TbContextState<DevicesListPage>
     with AutomaticKeepAliveClientMixin<DevicesListPage> {
-  late final DeviceQueryController _deviceQueryController;
+  final PageLinkController _pageLinkController = PageLinkController();
 
   @override
-  void initState() {
-    super.initState();
-    _deviceQueryController = DeviceQueryController(
-      deviceType: widget.deviceType,
-      active: widget.active,
-    );
+  bool get wantKeepAlive {
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    var devicesList = DevicesList(
+    final deviceInfosList = DevicesList(
       tbContext,
-      _deviceQueryController,
-      searchMode: widget.searchMode,
-      displayDeviceImage: widget.deviceType == null,
+      _pageLinkController,
+      displayDeviceImage: true,
     );
-    PreferredSizeWidget appBar;
-    if (widget.searchMode) {
-      appBar = TbAppSearchBar(
-        tbContext,
-        onSearch: (searchText) =>
-            _deviceQueryController.onSearchText(searchText),
-      );
-    } else {
-      String titleText = widget.deviceType != null
-          ? widget.deviceType!
-          : S.of(context).allDevices;
-      String? subTitleText;
-      if (widget.active != null) {
-        subTitleText = widget.active == true
-            ? S.of(context).active
-            : S.of(context).inactive;
-      }
-      Column title = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            titleText,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: subTitleText != null ? 16 : 20,
-              height: subTitleText != null ? 20 / 16 : 24 / 20,
-            ),
-          ),
-          if (subTitleText != null)
-            Text(
-              subTitleText,
-              style: TextStyle(
-                color: Theme.of(context)
-                    .primaryTextTheme
-                    .titleLarge!
-                    .color!
-                    .withAlpha((0.38 * 255).ceil()),
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-                height: 16 / 12,
-              ),
-            ),
-        ],
-      );
 
-      appBar = TbAppBar(
+    return Scaffold(
+      appBar: TbAppSearchBar(
         tbContext,
-        title: title,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              List<String> params = [];
-              params.add('search=true');
-              if (widget.deviceType != null) {
-                params.add('deviceType=${widget.deviceType}');
-              }
-              if (widget.active != null) {
-                params.add('active=${widget.active}');
-              }
-              navigateTo('/deviceList?${params.join('&')}');
-            },
-          ),
-          PopupMenuButton(
-            icon: Icon(Icons.add),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: Text('Scan QR Code'),
-                value: 1,
-              ),
-              PopupMenuItem(
-                child: Text('Add Device (BLE mode)'),
-                value: 2,
-              ),
-              PopupMenuItem(
-                child: Text('Add Device (AP mode)'),
-                value: 3,
-              ),
-            ],
-            onSelected: (value) async {
-              if (value == 1) {
-              } else if (value == 2) {
-              } else if (value == 3) {}
-            },
-          ),
-        ],
-      );
-    }
-    return Scaffold(appBar: appBar, body: devicesList);
+        onSearch: (searchText) => _pageLinkController.onSearchText(searchText),
+      ),
+      body: deviceInfosList,
+    );
   }
 
   @override
   void dispose() {
-    _deviceQueryController.dispose();
+    _pageLinkController.dispose();
     super.dispose();
   }
-
-  @override
-  bool get wantKeepAlive => true;
 }

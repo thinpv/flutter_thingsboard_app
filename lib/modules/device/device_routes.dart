@@ -17,15 +17,15 @@ class DeviceRoutes extends TbRoutes {
 
   late final deviceListHandler = Handler(
     handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
-      var searchMode = params['search']?.first == 'true';
-      var deviceType = params['deviceType']?.first;
-      String? activeStr = params['active']?.first;
-      bool? active = activeStr != null ? activeStr == 'true' : null;
+      // var searchMode = params['search']?.first == 'true';
+      // var deviceType = params['deviceType']?.first;
+      // String? activeStr = params['active']?.first;
+      // bool? active = activeStr != null ? activeStr == 'true' : null;
       return DevicesListPage(
         tbContext,
-        searchMode: searchMode,
-        deviceType: deviceType,
-        active: active,
+        // searchMode: searchMode,
+        // deviceType: deviceType,
+        // active: active,
       );
     },
   );
