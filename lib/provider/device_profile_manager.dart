@@ -31,40 +31,65 @@ class DeviceProfileManager {
     return _instance!;
   }
 
-  Future<List<DeviceProfileInfo>> getDeviceProfiles(
+  Future<List<DeviceProfileInfo>> getDeviceProfilesAsync(
       {bool forceRefresh = false}) async {
     if (_deviceProfileCache != null && !forceRefresh) {
       return _deviceProfileCache!;
     }
 
-    if (_isLoading) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      return _deviceProfileCache ?? [];
+    int count = 3;
+    while (_isLoading && count > 0) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (--count == 0) return [];
     }
 
-    _isLoading = true;
     try {
-      final pageLink =
-          PageLink(100); // hoặc tuỳ chỉnh phân trang nếu nhiều thiết bị
+      final pageLink = PageLink(200);
       final pageData = await tbClient
           .getDeviceProfileService()
           .getDeviceProfileInfos(pageLink);
 
-      _deviceProfileCache = pageData.data;
+      var deviceProfileCache = pageData.data;
       if (forceRefresh) {
         TbStorage storage = getIt();
         String jsonString =
-            jsonEncode(_deviceProfileCache?.map((d) => d.toJson()).toList());
+            jsonEncode(deviceProfileCache.map((d) => d.toJson()).toList());
         storage.setItem('deviceProfiles', jsonString);
       }
+
+      _isLoading = true;
+      _deviceProfileCache = deviceProfileCache;
       return _deviceProfileCache!;
     } finally {
       _isLoading = false;
     }
   }
 
+  Future<PageData<DeviceProfileInfo>> getDeviceProfiles(
+      PageLink pageLink) async {
+    if (_deviceProfileCache != null) {
+      final searchText = pageLink.textSearch?.toLowerCase() ?? '';
+      final deviceProfileInfos = _deviceProfileCache!
+          .where((deviceInfo) =>
+              deviceInfo.name.toLowerCase().contains(searchText))
+          .toList();
+      return PageData<DeviceProfileInfo>(
+        deviceProfileInfos,
+        1,
+        deviceProfileInfos.length,
+        false,
+      );
+    } else {
+      return PageData<DeviceProfileInfo>(
+        [],
+        0,
+        0,
+        false,
+      );
+    }
+  }
+
   DeviceProfileInfo? getDeviceProfileByName(String name) {
-    if (_deviceProfileCache == null) return null;
     try {
       return _deviceProfileCache?.firstWhere(
         (deviceProfile) => deviceProfile.name == name,
@@ -75,7 +100,6 @@ class DeviceProfileManager {
   }
 
   DeviceProfileInfo? getDeviceProfileById(String id) {
-    if (_deviceProfileCache == null) return null;
     try {
       return _deviceProfileCache?.firstWhere(
         (deviceProfile) => deviceProfile.id.id == id,
@@ -85,12 +109,10 @@ class DeviceProfileManager {
     }
   }
 
-  /// Làm mới cache
   Future<void> refresh() async {
-    await getDeviceProfiles(forceRefresh: true);
+    await getDeviceProfilesAsync(forceRefresh: true);
   }
 
-  /// Xoá cache thủ công nếu cần
   void clearCache() {
     _deviceProfileCache = null;
   }

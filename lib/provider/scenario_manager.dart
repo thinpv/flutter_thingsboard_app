@@ -33,27 +33,24 @@ class ScenarioManager {
     return _instance!;
   }
 
-  /// Lấy danh sách thiết bị, dùng cache nếu có
-  Future<List<Scenario>> getScenarios({bool forceRefresh = false}) async {
+  Future<List<Scenario>> getScenariosAsync({bool forceRefresh = false}) async {
     if (_scenarioCache != null && !forceRefresh) {
       return _scenarioCache!;
     }
 
-    if (_isLoading) {
-      // Nếu đang loading song song, đợi một chút
-      await Future.delayed(Duration(milliseconds: 300));
-      return _scenarioCache ?? [];
+    int count = 3;
+    while (_isLoading && count > 0) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (--count == 0) return [];
     }
 
-    _isLoading = true;
     try {
       final customerId = tbClient.getAuthUser()?.customerId;
       if (customerId == null) {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 
-      final pageLink =
-          PageLink(100); // hoặc tuỳ chỉnh phân trang nếu nhiều thiết bị
+      final pageLink = PageLink(200);
       final pageData = await tbClient
           .getAssetService()
           .getCustomerAssetInfos(customerId, pageLink, type: 'Scenario');
@@ -69,22 +66,44 @@ class ScenarioManager {
         pageData.hasNext,
       );
 
-      _scenarioCache = scenarioPageData.data;
-
       if (forceRefresh) {
         TbStorage storage = getIt();
         String jsonString =
-            jsonEncode(_scenarioCache?.map((d) => d.toJson()).toList());
+            jsonEncode(scenarioPageData.data.map((d) => d.toJson()).toList());
         storage.setItem('scenarios', jsonString);
       }
+
+      _isLoading = true;
+      _scenarioCache = scenarioPageData.data;
       return _scenarioCache!;
     } finally {
       _isLoading = false;
     }
   }
 
-  Future<Scenario?> getScenarioByName(String name) async {
-    if (_scenarioCache == null) await getScenarios();
+  Future<PageData<Scenario>> getScenarios(PageLink pageLink) async {
+    if (_scenarioCache != null) {
+      final searchText = pageLink.textSearch?.toLowerCase() ?? '';
+      final scenarios = _scenarioCache!
+          .where((scenario) => scenario.name.toLowerCase().contains(searchText))
+          .toList();
+      return PageData<Scenario>(
+        scenarios,
+        1,
+        scenarios.length,
+        false,
+      );
+    } else {
+      return PageData<Scenario>(
+        [],
+        0,
+        0,
+        false,
+      );
+    }
+  }
+
+  Scenario? getScenarioByName(String name) {
     try {
       return _scenarioCache?.firstWhere(
         (scenario) => scenario.name == name,
@@ -94,8 +113,7 @@ class ScenarioManager {
     }
   }
 
-  Future<Scenario?> getScenarioById(String id) async {
-    if (_scenarioCache == null) await getScenarios();
+  Scenario? getScenarioById(String id) {
     try {
       return _scenarioCache?.firstWhere(
         (scenario) => scenario.id?.id == id,
@@ -105,12 +123,10 @@ class ScenarioManager {
     }
   }
 
-  /// Làm mới cache
   Future<void> refresh() async {
-    await getScenarios(forceRefresh: true);
+    await getScenariosAsync(forceRefresh: true);
   }
 
-  /// Xoá cache thủ công nếu cần
   void clearCache() {
     _scenarioCache = null;
   }

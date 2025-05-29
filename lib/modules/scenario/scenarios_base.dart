@@ -14,13 +14,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
   @override
   Future<PageData<Scenario>> fetchEntities(PageLink pageLink) {
     return ScenarioManager.instance
-        .getScenarios()
-        .then((scenarios) => PageData<Scenario>(
-              scenarios,
-              1,
-              scenarios.length,
-              false,
-            ));
+        .getScenarios(pageLink);
   }
 
   @override

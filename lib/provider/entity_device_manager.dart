@@ -38,27 +38,28 @@ class EntityDeviceManager {
       return _entityCache!;
     }
 
-    if (_isLoading) {
-      // Nếu đang loading song song, đợi một chút
-      await Future.delayed(const Duration(milliseconds: 300));
-      return _entityCache ?? PageData<EntityData>([], 0, 0, false);
+    int count = 3;
+    while (_isLoading && count > 0) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (--count == 0) return PageData<EntityData>([], 0, 0, false);
     }
 
-    _isLoading = true;
     try {
       EntityDataQuery dataQuery =
           EntityQueryApi.createDefaultDeviceQuery(pageSize: 100);
 
-      _entityCache = await tbClient
+      var entityCache = await tbClient
           .getEntityQueryService()
           .findEntityDataByQuery(dataQuery);
 
       if (forceRefresh) {
         TbStorage storage = getIt();
-        String jsonString = jsonEncode(PageDataEntityDatatoJson(_entityCache!));
+        String jsonString = jsonEncode(PageDataEntityDatatoJson(entityCache));
         storage.setItem('entityDevices', jsonString);
       }
-
+      
+      _isLoading = true;
+      _entityCache = entityCache;
       return _entityCache!;
     } finally {
       _isLoading = false;

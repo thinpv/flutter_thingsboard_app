@@ -30,48 +30,54 @@ class DeviceManager {
     return _instance!;
   }
 
-  /// Lấy danh sách thiết bị, dùng cache nếu có
-  Future<List<DeviceInfo>> getDevices({bool forceRefresh = false}) async {
+  get devices => _deviceCache;
+
+  Future<List<DeviceInfo>> getDevicesAsync({bool forceRefresh = false}) async {
     if (_deviceCache != null && !forceRefresh) {
       return _deviceCache!;
     }
 
-    if (_isLoading) {
-      // Nếu đang loading song song, đợi một chút
-      await Future.delayed(Duration(milliseconds: 300));
-      return _deviceCache ?? [];
+    int count = 3;
+    while (_isLoading && count > 0) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (--count == 0) return [];
     }
 
-    _isLoading = true;
     try {
       final customerId = tbClient.getAuthUser()?.customerId;
       if (customerId == null) {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 
-      final pageLink =
-          PageLink(100); // hoặc tuỳ chỉnh phân trang nếu nhiều thiết bị
+      final pageLink = PageLink(200);
       final pageData = await tbClient
           .getDeviceService()
           .getCustomerDeviceInfos(customerId, pageLink);
 
-      _deviceCache = pageData.data;
+      var deviceCache = pageData.data;
 
       if (forceRefresh) {
         TbStorage storage = getIt();
         String jsonString =
-            jsonEncode(_deviceCache?.map((d) => d.toJson()).toList());
+            jsonEncode(deviceCache.map((d) => d.toJson()).toList());
         storage.setItem('devices', jsonString);
       }
+
+      _isLoading = true;
+      _deviceCache = deviceCache;
       return _deviceCache!;
     } finally {
       _isLoading = false;
     }
   }
 
-  Future<PageData<DeviceInfo>> getDeviceInfos(PageLink pageLink) async {
+  Future<PageData<DeviceInfo>> getDevices(PageLink pageLink) async {
     if (_deviceCache != null) {
-      final deviceInfos = _deviceCache!;
+      final searchText = pageLink.textSearch?.toLowerCase() ?? '';
+      final deviceInfos = _deviceCache!
+          .where((deviceInfo) =>
+              deviceInfo.name.toLowerCase().contains(searchText))
+          .toList();
       return PageData<DeviceInfo>(
         deviceInfos,
         1,
@@ -81,15 +87,14 @@ class DeviceManager {
     } else {
       return PageData<DeviceInfo>(
         [],
-        1,
+        0,
         0,
         false,
       );
     }
   }
 
-  Future<DeviceInfo?> getDeviceByName(String name) async {
-    if (_deviceCache == null) await getDevices();
+  DeviceInfo? getDeviceByName(String name) {
     try {
       return _deviceCache?.firstWhere(
         (device) => device.name == name,
@@ -99,8 +104,7 @@ class DeviceManager {
     }
   }
 
-  Future<DeviceInfo?> getDeviceById(String id) async {
-    if (_deviceCache == null) await getDevices();
+  DeviceInfo? getDeviceById(String id) {
     try {
       return _deviceCache?.firstWhere(
         (device) => device.id?.id == id,
@@ -110,12 +114,10 @@ class DeviceManager {
     }
   }
 
-  /// Làm mới cache
   Future<void> refresh() async {
-    await getDevices(forceRefresh: true);
+    await getDevicesAsync(forceRefresh: true);
   }
 
-  /// Xoá cache thủ công nếu cần
   void clearCache() {
     _deviceCache = null;
   }

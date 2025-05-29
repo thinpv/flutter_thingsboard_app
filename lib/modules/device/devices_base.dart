@@ -23,7 +23,7 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
 
   @override
   Future<PageData<DeviceInfo>> fetchEntities(PageLink pageLink) {
-    return DeviceManager.instance.getDeviceInfos(pageLink);
+    return DeviceManager.instance.getDevices(pageLink);
   }
 
   @override
