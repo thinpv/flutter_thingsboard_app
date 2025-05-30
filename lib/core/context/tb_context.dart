@@ -18,8 +18,10 @@ import 'package:thingsboard_app/modules/version/route/version_route.dart';
 import 'package:thingsboard_app/modules/version/route/version_route_arguments.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
+import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/entity_device_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/service/device_type_service.dart';
 import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
@@ -134,9 +136,14 @@ class TbContext implements PopEntry {
       }
       await tbClient.init();
 
-      await DeviceProfileManager.init(tbClient);
-      await DeviceProfileManager.instance
-          .getDeviceProfilesPageData(forceRefresh: true);
+      // await DeviceProfileManager.init(tbClient);
+      // await DeviceProfileManager.instance
+      //     .getDeviceProfilesPageData(forceRefresh: true);
+
+      DeviceTypeService.init(tbClient);
+      await DeviceTypeManager.init(tbClient);
+      await DeviceTypeManager.instance
+          .getDeviceTypesPageData(forceRefresh: true);
 
       await DeviceManager.init(tbClient);
       if (tbClient.getAuthUser()?.customerId != null) {

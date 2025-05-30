@@ -11,6 +11,7 @@ import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
+import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
@@ -39,10 +40,10 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
 
   @override
   void onEntityTap(DeviceInfo deviceInfo) {
-    var deviceProfile = DeviceProfileManager.instance
-        .getDeviceProfileById(deviceInfo.deviceProfileId!.id!);
-    if (deviceProfile?.defaultDashboardId != null) {
-      var dashboardId = deviceProfile?.defaultDashboardId!.id!;
+    var deviceType = DeviceTypeManager.instance
+        .getDeviceTypeById(deviceInfo.deviceProfileId!.id!);
+    if (deviceType?.defaultDashboardId != null) {
+      var dashboardId = deviceType?.defaultDashboardId!.id!;
       var state = Utils.createDashboardEntityState(
         deviceInfo.id,
         entityName: deviceInfo.name,
@@ -117,14 +118,14 @@ class _DeviceGridCardState extends TbContextState<DeviceGridCard> {
   @override
   Widget build(BuildContext context) {
     var entity = widget.deviceInfo;
-    var deviceProfile = DeviceProfileManager.instance
-        .getDeviceProfileById(entity.deviceProfileId!.id!);
-    var hasImage = deviceProfile?.image != null;
+    var deviceType = DeviceTypeManager.instance
+        .getDeviceTypeById(entity.deviceProfileId!.id!);
+    var hasImage = deviceType?.image != null;
     Widget image;
     BoxFit imageFit;
     double padding;
     if (hasImage) {
-      image = Utils.imageFromTbImage(context, tbClient, deviceProfile?.image);
+      image = Utils.imageFromTbImage(context, tbClient, deviceType?.image);
       imageFit = BoxFit.contain;
       padding = 8;
     } else {
@@ -205,14 +206,14 @@ class DeviceListCard extends TbContextWidget {
 class _DeviceListCardState extends TbContextState<DeviceListCard> {
   final entityDateFormat = DateFormat('yyyy-MM-dd');
 
-  late Future<DeviceProfileInfo> deviceProfileFuture;
+  late Future<DeviceProfileInfo> deviceTypeFuture;
 
   @override
   void initState() {
     super.initState();
     if (widget.displayImage || !widget.listWidgetCard) {
-      deviceProfileFuture = Future.value(DeviceProfileManager.instance
-          .getDeviceProfileById(widget.deviceInfo.deviceProfileId!.id!));
+      deviceTypeFuture = Future.value(DeviceTypeManager.instance
+          .getDeviceTypeById(widget.deviceInfo.deviceProfileId!.id!));
     }
   }
 
@@ -224,8 +225,8 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
       var deviceInfo = widget.deviceInfo;
       if (oldDeviceProfile.deviceProfileId!.id! !=
           deviceInfo.deviceProfileId!.id!) {
-        deviceProfileFuture = Future.value(DeviceProfileManager.instance
-            .getDeviceProfileById(widget.deviceInfo.deviceProfileId!.id!));
+        deviceTypeFuture = Future.value(DeviceTypeManager.instance
+            .getDeviceTypeById(widget.deviceInfo.deviceProfileId!.id!));
       }
     }
   }
@@ -260,7 +261,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
           ),
         ),
         FutureBuilder<DeviceProfileInfo>(
-          future: deviceProfileFuture,
+          future: deviceTypeFuture,
           builder: (context, snapshot) {
             if (snapshot.hasData &&
                 snapshot.connectionState == ConnectionState.done) {
@@ -450,7 +451,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
               borderRadius: BorderRadius.horizontal(left: Radius.circular(4)),
             ),
             child: FutureBuilder<DeviceProfileInfo>(
-              future: deviceProfileFuture,
+              future: deviceTypeFuture,
               builder: (context, snapshot) {
                 if (snapshot.hasData &&
                     snapshot.connectionState == ConnectionState.done) {

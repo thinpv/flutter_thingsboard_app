@@ -4,6 +4,7 @@ import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
+import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
@@ -136,16 +137,15 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           ...entity.smartScene.ifConditions.map((condition) {
             var deviceInfo =
                 DeviceManager.instance.getDeviceById(condition.device);
-            var deviceProfileId = deviceInfo?.deviceProfileId?.id;
-            var deviceProfile = deviceProfileId != null
-                ? DeviceProfileManager.instance
-                    .getDeviceProfileById(deviceProfileId)
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
+            var deviceType = deviceTypeId != null
+                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
-            var hasImage = deviceProfile?.image != null;
+            var hasImage = deviceType?.image != null;
             Widget image;
             if (hasImage) {
               image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceProfile?.image);
+                  context, widget.tbContext.tbClient, deviceType?.image);
             } else {
               image = Icon(Icons.device_hub);
             }
@@ -192,16 +192,15 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           ...entity.smartScene.thenActions.map((action) {
             var deviceInfo =
                 DeviceManager.instance.getDeviceById(action.device);
-            var deviceProfileId = deviceInfo?.deviceProfileId?.id;
-            var deviceProfile = deviceProfileId != null
-                ? DeviceProfileManager.instance
-                    .getDeviceProfileById(deviceProfileId)
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
+            var deviceType = deviceTypeId != null
+                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
-            var hasImage = deviceProfile?.image != null;
+            var hasImage = deviceType?.image != null;
             Widget image;
             if (hasImage) {
               image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceProfile?.image);
+                  context, widget.tbContext.tbClient, deviceType?.image);
             } else {
               image = Icon(Icons.device_hub);
             }
