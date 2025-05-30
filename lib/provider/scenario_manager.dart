@@ -8,21 +8,25 @@ class ScenarioManager {
   static ScenarioManager? _instance;
 
   final ThingsboardClient tbClient;
-  List<Scenario>? _scenarioCache;
+  PageData<Scenario>? _scenarioCache;
   bool _isLoading = false;
 
   ScenarioManager._internal(this.tbClient);
 
   static Future<void> init(ThingsboardClient client) async {
     _instance = ScenarioManager._internal(client);
-    TbStorage storage = getIt();
-    String? jsonString = await storage.getItem('scenarios') as String?;
-    if (jsonString != null) {
-      List<AssetInfo>? assetInfoList = (jsonDecode(jsonString) as List)
-          .map((item) => AssetInfo.fromJson(item))
-          .toList();
-      ScenarioManager.instance._scenarioCache = await Future.wait(
-          assetInfoList.map((p) => Scenario.fromAssetInfo(p)));
+    try {
+      TbStorage storage = getIt();
+      String? jsonString = await storage.getItem('scenarios') as String?;
+      if (jsonString != null) {
+        List<Scenario> list = (jsonDecode(jsonString) as List)
+            .map((item) => Scenario.fromJson(item))
+            .toList();
+        ScenarioManager.instance._scenarioCache =
+            PageData<Scenario>(list, 1, list.length, false);
+      }
+    } catch (e) {
+      print('Read scenario cache err');
     }
   }
 
@@ -33,15 +37,19 @@ class ScenarioManager {
     return _instance!;
   }
 
-  Future<List<Scenario>> getScenariosAsync({bool forceRefresh = false}) async {
+  get scenariosPageLink => _scenarioCache;
+  get scenariosList => _scenarioCache?.data;
+
+  Future<PageData<Scenario>> getScenariosPageData(
+      {PageLink? pageLink, bool forceRefresh = false}) async {
     if (_scenarioCache != null && !forceRefresh) {
-      return _scenarioCache!;
+      return Future.value(_scenarioCache!);
     }
 
     int count = 3;
     while (_isLoading && count > 0) {
       await Future.delayed(const Duration(milliseconds: 100));
-      if (--count == 0) return [];
+      if (--count == 0) return Future.value(_scenarioCache!);
     }
 
     try {
@@ -51,61 +59,43 @@ class ScenarioManager {
       }
 
       final pageLink = PageLink(200);
-      final pageData = await tbClient
+      final _pageData = await tbClient
           .getAssetService()
           .getCustomerAssetInfos(customerId, pageLink, type: 'Scenario');
 
       List<Scenario> scenarios = await Future.wait(
-        pageData.data.map((asset) => Scenario.fromAssetInfo(asset)),
+        _pageData.data.map((asset) => Scenario.fromAssetInfo(asset)),
       );
 
-      PageData<Scenario> scenarioPageData = PageData(
+      PageData<Scenario> pageData = PageData(
         scenarios,
-        pageData.totalPages,
-        pageData.totalElements,
-        pageData.hasNext,
+        _pageData.totalPages,
+        _pageData.totalElements,
+        _pageData.hasNext,
       );
-
       if (forceRefresh) {
         TbStorage storage = getIt();
         String jsonString =
-            jsonEncode(scenarioPageData.data.map((d) => d.toJson()).toList());
+            jsonEncode(pageData.data.map((d) => d.toJson()).toList());
         storage.setItem('scenarios', jsonString);
       }
 
       _isLoading = true;
-      _scenarioCache = scenarioPageData.data;
-      return _scenarioCache!;
+      _scenarioCache = pageData;
+      return pageData;
     } finally {
       _isLoading = false;
     }
   }
 
-  Future<PageData<Scenario>> getScenarios(PageLink pageLink) async {
-    if (_scenarioCache != null) {
-      final searchText = pageLink.textSearch?.toLowerCase() ?? '';
-      final scenarios = _scenarioCache!
-          .where((scenario) => scenario.name.toLowerCase().contains(searchText))
-          .toList();
-      return PageData<Scenario>(
-        scenarios,
-        1,
-        scenarios.length,
-        false,
-      );
-    } else {
-      return PageData<Scenario>(
-        [],
-        0,
-        0,
-        false,
-      );
-    }
+  Future<List<Scenario>> getScenariosList({bool forceRefresh = false}) async {
+    await getScenariosPageData(forceRefresh: forceRefresh);
+    return _scenarioCache?.data ?? [];
   }
 
   Scenario? getScenarioByName(String name) {
     try {
-      return _scenarioCache?.firstWhere(
+      return _scenarioCache?.data.firstWhere(
         (scenario) => scenario.name == name,
       );
     } catch (e) {
@@ -115,7 +105,7 @@ class ScenarioManager {
 
   Scenario? getScenarioById(String id) {
     try {
-      return _scenarioCache?.firstWhere(
+      return _scenarioCache?.data.firstWhere(
         (scenario) => scenario.id?.id == id,
       );
     } catch (e) {
@@ -124,7 +114,7 @@ class ScenarioManager {
   }
 
   Future<void> refresh() async {
-    await getScenariosAsync(forceRefresh: true);
+    await getScenariosPageData(forceRefresh: true);
   }
 
   void clearCache() {

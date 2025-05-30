@@ -138,10 +138,10 @@ class TbContext implements PopEntry {
       await ScenarioManager.init(tbClient);
       // await EntityDeviceManager.init(tbClient);
 
-      await DeviceProfileManager.instance.getDeviceProfilesAsync(forceRefresh: true);
+      await DeviceProfileManager.instance.getDeviceProfilesPageData(forceRefresh: true);
       if (tbClient.getAuthUser()?.customerId != null) {
-        await DeviceManager.instance.getDevicesAsync(forceRefresh: true);
-        await ScenarioManager.instance.getScenariosAsync(forceRefresh: true);
+        await DeviceManager.instance.getDevicesPageData(forceRefresh: true);
+        await ScenarioManager.instance.getScenariosPageData(forceRefresh: true);
       }
       // await EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {

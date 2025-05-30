@@ -5,6 +5,8 @@ import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
+  bool refresh = false;
+
   @override
   String get title => 'Scenarios';
 
@@ -12,9 +14,17 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
   String get noItemsFoundText => 'No scenarios found';
 
   @override
-  Future<PageData<Scenario>> fetchEntities(PageLink pageLink) {
-    return ScenarioManager.instance
-        .getScenarios(pageLink);
+  Future<PageData<Scenario>> fetchEntities(PageLink pageLink) async {
+    var data = await ScenarioManager.instance
+        .getScenariosPageData(pageLink: pageLink, forceRefresh: refresh);
+    refresh = false;
+    return data;
+  }
+
+  @override
+  Future<void> onRefresh() {
+    refresh = true;
+    return Future.value();
   }
 
   @override

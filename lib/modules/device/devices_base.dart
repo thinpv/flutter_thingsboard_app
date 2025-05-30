@@ -15,6 +15,8 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
 mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
+  bool refresh = false;
+
   @override
   String get title => 'Devices';
 
@@ -22,8 +24,17 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
   String get noItemsFoundText => 'No devices found';
 
   @override
-  Future<PageData<DeviceInfo>> fetchEntities(PageLink pageLink) {
-    return DeviceManager.instance.getDevices(pageLink);
+  Future<PageData<DeviceInfo>> fetchEntities(PageLink pageLink) async {
+    var data = await DeviceManager.instance
+        .getDevicesPageData(pageLink: pageLink, forceRefresh: refresh);
+    refresh = false;
+    return data;
+  }
+
+  @override
+  Future<void> onRefresh() {
+    refresh = true;
+    return Future.value();
   }
 
   @override
@@ -46,11 +57,6 @@ mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
       navigateTo('/device/${deviceInfo.id?.id}');
     }
   }
-
-  // @override
-  // Future<void> onRefresh() {
-  //   return Future.value();
-  // }
 
   @override
   Widget buildEntityGridCard(
@@ -368,7 +374,8 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        widget.deviceInfo.deviceProfileName ?? '',
+                                        widget.deviceInfo.deviceProfileName ??
+                                            '',
                                         style: const TextStyle(
                                           color: Color(0xFFAFAFAF),
                                           fontSize: 12,

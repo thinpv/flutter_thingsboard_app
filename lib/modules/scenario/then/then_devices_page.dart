@@ -7,7 +7,7 @@ import 'component/then_page_switch_2.dart';
 class ThenDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final devices = DeviceManager.instance.devices;
+    final devices = DeviceManager.instance.devicesList;
     return Scaffold(
       appBar: AppBar(title: Text('Chọn thiết bị')),
       body: ListView.builder(
