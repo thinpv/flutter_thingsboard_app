@@ -62,7 +62,7 @@ class SmartScene {
 }
 
 class SceneCondition {
-  DeviceInfo device;
+  String device;
   String condition;
 
   SceneCondition(
@@ -71,20 +71,19 @@ class SceneCondition {
   );
 
   SceneCondition.fromJson(Map<String, dynamic> json)
-      : condition = json['condition'],
-        device = DeviceManager.instance.getDeviceById(json['device']) ??
-            (throw Exception('Device not found: ${json['device']}'));
+      : device = json['device'],
+        condition = json['condition'];
 
   Map<String, dynamic> toJson() {
     return {
-      'device': device.id?.id,
+      'device': device,
       'condition': condition,
     };
   }
 }
 
 class SceneAction {
-  DeviceInfo device;
+  String device;
   String action;
 
   SceneAction(
@@ -93,13 +92,12 @@ class SceneAction {
   );
 
   SceneAction.fromJson(Map<String, dynamic> json)
-      : action = json['action'],
-        device = DeviceManager.instance.getDeviceById(json['device']) ??
-            (throw Exception('Device not found: ${json['device']}'));
+      : device = json['device'],
+        action = json['action'];
 
   Map<String, dynamic> toJson() {
     return {
-      'device': device.id?.id,
+      'device': device,
       'action': action,
     };
   }

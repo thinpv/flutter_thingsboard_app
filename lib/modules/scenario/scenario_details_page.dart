@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/utils/utils.dart';
@@ -133,7 +134,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
           ...entity.smartScene.ifConditions.map((condition) {
-            var deviceProfileId = condition.device.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceById(condition.device);
+            var deviceProfileId = deviceInfo?.deviceProfileId?.id;
             var deviceProfile = deviceProfileId != null
                 ? DeviceProfileManager.instance
                     .getDeviceProfileById(deviceProfileId)
@@ -148,7 +151,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(condition.device.name),
+              title: Text(deviceInfo!.name),
               subtitle: Text(condition.condition),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -187,7 +190,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.smartScene.thenActions.map((action) {
-            var deviceProfileId = action.device.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceById(action.device);
+            var deviceProfileId = deviceInfo?.deviceProfileId?.id;
             var deviceProfile = deviceProfileId != null
                 ? DeviceProfileManager.instance
                     .getDeviceProfileById(deviceProfileId)
@@ -202,7 +207,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(action.device.name),
+              title: Text(deviceInfo!.name),
               subtitle: Text(action.action),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),

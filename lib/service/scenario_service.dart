@@ -12,8 +12,6 @@ void printLongString(String text) {
 }
 
 PageData<ScenarioInfo> parseScenarioInfoPageData(Map<String, dynamic> json) {
-  printLongString(
-      '----------------scenarioInfo: ${jsonEncode(json).toString()}');
   return PageData.fromJson(json, (json) => ScenarioInfo.fromJson(json));
 }
 

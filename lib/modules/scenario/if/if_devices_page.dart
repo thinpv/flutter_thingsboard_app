@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
+import 'package:thingsboard_client/thingsboard_client.dart';
 
 import 'component/if_page_switch_2.dart';
 
 class IfDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final devices = DeviceManager.instance.devicesList;
+    List<DeviceInfo> devices = DeviceManager.instance.devicesList;
     return Scaffold(
       appBar: AppBar(title: Text('Chọn thiết bị')),
       body: ListView.builder(
@@ -17,7 +18,7 @@ class IfDevicesPage extends StatelessWidget {
           return ListTile(
             title: Text(device.name),
             onTap: () async {
-              SceneCondition condition = SceneCondition(device, '');
+              SceneCondition condition = SceneCondition(device.id!.id!, '');
               final result = await Navigator.push<SceneCondition>(
                 context,
                 MaterialPageRoute(
