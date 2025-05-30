@@ -41,8 +41,9 @@ class DeviceProfileManager {
 
   Future<PageData<DeviceProfileInfo>> getDeviceProfilesPageData(
       {PageLink? pageLink, bool forceRefresh = false}) async {
+    final searchText = pageLink?.textSearch?.toLowerCase() ?? '';
     if (_deviceProfileCache != null && !forceRefresh) {
-      return Future.value(_deviceProfileCache!);
+      return Future.value(_deviceProfileCache!.filterByName(searchText));
     }
 
     int count = 3;
@@ -52,7 +53,7 @@ class DeviceProfileManager {
     }
 
     try {
-      final pageLink = PageLink(200);
+      pageLink ??= PageLink(200);
       final pageData = await tbClient
           .getDeviceProfileService()
           .getDeviceProfileInfos(pageLink);
@@ -127,5 +128,15 @@ extension on DeviceProfileInfo {
       'image': image,
       'tenantId': tenantId.toJson(),
     };
+  }
+}
+
+extension on PageData<DeviceProfileInfo> {
+  PageData<DeviceProfileInfo> filterByName(String searchText) {
+    final filtered = data
+        .where((deviceProfileInfo) =>
+            deviceProfileInfo.name.toLowerCase().contains(searchText))
+        .toList();
+    return PageData<DeviceProfileInfo>(filtered, 1, filtered.length, false);
   }
 }

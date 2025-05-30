@@ -42,8 +42,9 @@ class ScenarioManager {
 
   Future<PageData<Scenario>> getScenariosPageData(
       {PageLink? pageLink, bool forceRefresh = false}) async {
+    final searchText = pageLink?.textSearch?.toLowerCase() ?? '';
     if (_scenarioCache != null && !forceRefresh) {
-      return Future.value(_scenarioCache!);
+      return Future.value(_scenarioCache!.filterByName(searchText));
     }
 
     int count = 3;
@@ -58,7 +59,7 @@ class ScenarioManager {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 
-      final pageLink = PageLink(200);
+      pageLink ??= PageLink(200);
       final _pageData = await tbClient
           .getAssetService()
           .getCustomerAssetInfos(customerId, pageLink, type: 'Scenario');
@@ -119,5 +120,14 @@ class ScenarioManager {
 
   void clearCache() {
     _scenarioCache = null;
+  }
+}
+
+extension on PageData<Scenario> {
+  PageData<Scenario> filterByName(String searchText) {
+    final filtered = data
+        .where((scenario) => scenario.name.toLowerCase().contains(searchText))
+        .toList();
+    return PageData<Scenario>(filtered, 1, filtered.length, false);
   }
 }

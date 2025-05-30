@@ -41,8 +41,9 @@ class DeviceManager {
 
   Future<PageData<DeviceInfo>> getDevicesPageData(
       {PageLink? pageLink, bool forceRefresh = false}) async {
+    final searchText = pageLink?.textSearch?.toLowerCase() ?? '';
     if (_deviceCache != null && !forceRefresh) {
-      return Future.value(_deviceCache!);
+      return Future.value(_deviceCache!.filterByName(searchText));
     }
 
     int count = 3;
@@ -57,7 +58,7 @@ class DeviceManager {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 
-      final pageLink = PageLink(200);
+      pageLink ??= PageLink(200);
       final pageData = await tbClient
           .getDeviceService()
           .getCustomerDeviceInfos(customerId, pageLink);
@@ -108,5 +109,15 @@ class DeviceManager {
 
   void clearCache() {
     _deviceCache = null;
+  }
+}
+
+extension on PageData<DeviceInfo> {
+  PageData<DeviceInfo> filterByName(String searchText) {
+    final filtered = data
+        .where(
+            (deviceInfo) => deviceInfo.name.toLowerCase().contains(searchText))
+        .toList();
+    return PageData<DeviceInfo>(filtered, 1, filtered.length, false);
   }
 }
