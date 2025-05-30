@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/utils/utils.dart';
 
 import 'if/if_devices_page.dart';
 import 'then/then_devices_page.dart';
@@ -77,7 +80,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, controller.text),
-                    child: const Text('Lưu'),
+                    child: Text(S.of(context).save),
                   ),
                 ],
               ),
@@ -127,13 +130,35 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('If', 'Khi bất kỳ điều kiện nào được đáp ứng'),
+          _sectionTitle(
+              S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
           ...entity.smartScene.ifConditions.map((condition) {
+            var deviceProfileId = condition.device.deviceProfileId?.id;
+            var deviceProfile = deviceProfileId != null
+                ? DeviceProfileManager.instance
+                    .getDeviceProfileById(deviceProfileId)
+                : null;
+            var hasImage = deviceProfile?.image != null;
+            Widget image;
+            if (hasImage) {
+              image = Utils.imageFromTbImage(
+                  context, widget.tbContext.tbClient, deviceProfile?.image);
+            } else {
+              image = Icon(Icons.device_hub);
+            }
             return ListTile(
-              leading: const Icon(Icons.device_hub),
+              leading: image,
               title: Text(condition.device.name),
               subtitle: Text(condition.condition),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Xóa',
+                onPressed: () {
+                  entity.smartScene.ifConditions.remove(condition);
+                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  _refresh();
+                },
+              ),
             );
           }).toList(),
           _addButton(
@@ -160,13 +185,34 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle('Then', 'Thêm tác vụ khi điều kiện đúng'),
+          _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.smartScene.thenActions.map((action) {
+            var deviceProfileId = action.device.deviceProfileId?.id;
+            var deviceProfile = deviceProfileId != null
+                ? DeviceProfileManager.instance
+                    .getDeviceProfileById(deviceProfileId)
+                : null;
+            var hasImage = deviceProfile?.image != null;
+            Widget image;
+            if (hasImage) {
+              image = Utils.imageFromTbImage(
+                  context, widget.tbContext.tbClient, deviceProfile?.image);
+            } else {
+              image = Icon(Icons.device_hub);
+            }
             return ListTile(
-              leading: const Icon(Icons.device_hub),
+              leading: image,
               title: Text(action.device.name),
               subtitle: Text(action.action),
-              trailing: const Icon(Icons.arrow_forward_ios),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Xóa',
+                onPressed: () {
+                  entity.smartScene.thenActions.remove(action);
+                  entity.update(thenActions: entity.smartScene.thenActions);
+                  _refresh();
+                },
+              ),
             );
           }).toList(),
           _addButton(
@@ -211,11 +257,11 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           _refresh();
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
+          backgroundColor: Theme.of(context).primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: const Text('Lưu', style: TextStyle(fontSize: 16)),
+        child: Text(S.of(context).save, style: TextStyle(fontSize: 16)),
       ),
     );
   }
@@ -225,7 +271,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
-        icon: const Icon(Icons.add_circle, color: Colors.orange),
+        icon: Icon(Icons.add_circle, color: Theme.of(context).primaryColor),
         tooltip: tooltip,
         onPressed: onPressed,
       ),
