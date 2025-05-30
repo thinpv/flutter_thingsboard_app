@@ -20,6 +20,7 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/entity_device_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
 import 'package:thingsboard_app/utils/services/firebase/i_firebase_service.dart';
@@ -134,15 +135,21 @@ class TbContext implements PopEntry {
       await tbClient.init();
 
       await DeviceProfileManager.init(tbClient);
-      await DeviceManager.init(tbClient);
-      await ScenarioManager.init(tbClient);
-      // await EntityDeviceManager.init(tbClient);
+      await DeviceProfileManager.instance
+          .getDeviceProfilesPageData(forceRefresh: true);
 
-      await DeviceProfileManager.instance.getDeviceProfilesPageData(forceRefresh: true);
+      await DeviceManager.init(tbClient);
       if (tbClient.getAuthUser()?.customerId != null) {
         await DeviceManager.instance.getDevicesPageData(forceRefresh: true);
+      }
+
+      ScenarioService.init(tbClient);
+      await ScenarioManager.init(tbClient);
+      if (tbClient.getAuthUser()?.customerId != null) {
         await ScenarioManager.instance.getScenariosPageData(forceRefresh: true);
       }
+
+      // await EntityDeviceManager.init(tbClient);
       // await EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {
       log.error('Failed to init tbContext: $e', e, s);

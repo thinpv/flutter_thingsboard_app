@@ -85,6 +85,7 @@ class DeviceProfileManager {
         (deviceProfile) => deviceProfile.name == name,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }
@@ -95,6 +96,7 @@ class DeviceProfileManager {
         (deviceProfile) => deviceProfile.id.id == id,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }

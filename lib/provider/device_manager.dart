@@ -89,6 +89,7 @@ class DeviceManager {
         (device) => device.name == name,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }
@@ -99,6 +100,7 @@ class DeviceManager {
         (device) => device.id?.id == id,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }

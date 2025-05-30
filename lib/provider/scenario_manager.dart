@@ -2,16 +2,17 @@ import 'dart:convert';
 
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class ScenarioManager {
   static ScenarioManager? _instance;
 
-  final ThingsboardClient tbClient;
-  PageData<Scenario>? _scenarioCache;
+  final ThingsboardClient _tbClient;
+  PageData<ScenarioInfo>? _scenarioCache;
   bool _isLoading = false;
 
-  ScenarioManager._internal(this.tbClient);
+  ScenarioManager._internal(this._tbClient);
 
   static Future<void> init(ThingsboardClient client) async {
     _instance = ScenarioManager._internal(client);
@@ -19,14 +20,14 @@ class ScenarioManager {
       TbStorage storage = getIt();
       String? jsonString = await storage.getItem('scenarios') as String?;
       if (jsonString != null) {
-        List<Scenario> list = (jsonDecode(jsonString) as List)
-            .map((item) => Scenario.fromJson(item))
+        List<ScenarioInfo> list = (jsonDecode(jsonString) as List)
+            .map((item) => ScenarioInfo.fromJson(item))
             .toList();
         ScenarioManager.instance._scenarioCache =
-            PageData<Scenario>(list, 1, list.length, false);
+            PageData<ScenarioInfo>(list, 1, list.length, false);
       }
     } catch (e) {
-      print('Read scenario cache err');
+      print('Read scenarioInfo cache err');
     }
   }
 
@@ -40,7 +41,7 @@ class ScenarioManager {
   get scenariosPageLink => _scenarioCache;
   get scenariosList => _scenarioCache?.data;
 
-  Future<PageData<Scenario>> getScenariosPageData(
+  Future<PageData<ScenarioInfo>> getScenariosPageData(
       {PageLink? pageLink, bool forceRefresh = false}) async {
     final searchText = pageLink?.textSearch?.toLowerCase() ?? '';
     if (_scenarioCache != null && !forceRefresh) {
@@ -54,26 +55,16 @@ class ScenarioManager {
     }
 
     try {
-      final customerId = tbClient.getAuthUser()?.customerId;
+      final customerId = _tbClient.getAuthUser()?.customerId;
       if (customerId == null) {
         throw Exception("Không thể xác định customerId hợp lệ.");
       }
 
       pageLink ??= PageLink(200);
-      final _pageData = await tbClient
-          .getAssetService()
-          .getCustomerAssetInfos(customerId, pageLink, type: 'Scenario');
+      var pageData = await ScenarioService.instance
+          .getCustomerScenarioInfos(customerId, pageLink);
 
-      List<Scenario> scenarios = await Future.wait(
-        _pageData.data.map((asset) => Scenario.fromAssetInfo(asset)),
-      );
-
-      PageData<Scenario> pageData = PageData(
-        scenarios,
-        _pageData.totalPages,
-        _pageData.totalElements,
-        _pageData.hasNext,
-      );
+      //TODO: not need forceRefresh = true
       if (forceRefresh) {
         TbStorage storage = getIt();
         String jsonString =
@@ -89,27 +80,30 @@ class ScenarioManager {
     }
   }
 
-  Future<List<Scenario>> getScenariosList({bool forceRefresh = false}) async {
+  Future<List<ScenarioInfo>> getScenariosList(
+      {bool forceRefresh = false}) async {
     await getScenariosPageData(forceRefresh: forceRefresh);
     return _scenarioCache?.data ?? [];
   }
 
-  Scenario? getScenarioByName(String name) {
+  ScenarioInfo? getScenarioByName(String name) {
     try {
       return _scenarioCache?.data.firstWhere(
-        (scenario) => scenario.name == name,
+        (scenarioInfo) => scenarioInfo.name == name,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }
 
-  Scenario? getScenarioById(String id) {
+  ScenarioInfo? getScenarioById(String id) {
     try {
       return _scenarioCache?.data.firstWhere(
-        (scenario) => scenario.id?.id == id,
+        (scenarioInfo) => scenarioInfo.id?.id == id,
       );
     } catch (e) {
+      print('e: $e');
       return null;
     }
   }
@@ -123,11 +117,12 @@ class ScenarioManager {
   }
 }
 
-extension on PageData<Scenario> {
-  PageData<Scenario> filterByName(String searchText) {
+extension on PageData<ScenarioInfo> {
+  PageData<ScenarioInfo> filterByName(String searchText) {
     final filtered = data
-        .where((scenario) => scenario.name.toLowerCase().contains(searchText))
+        .where((scenarioInfo) =>
+            scenarioInfo.name.toLowerCase().contains(searchText))
         .toList();
-    return PageData<Scenario>(filtered, 1, filtered.length, false);
+    return PageData<ScenarioInfo>(filtered, 1, filtered.length, false);
   }
 }

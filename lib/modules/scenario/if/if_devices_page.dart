@@ -17,7 +17,7 @@ class IfDevicesPage extends StatelessWidget {
           return ListTile(
             title: Text(device.name),
             onTap: () async {
-              SceneCondition condition = SceneCondition.empty(device);
+              SceneCondition condition = SceneCondition(device, '');
               final result = await Navigator.push<SceneCondition>(
                 context,
                 MaterialPageRoute(

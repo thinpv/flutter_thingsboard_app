@@ -89,7 +89,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                 newName.trim().isNotEmpty &&
                 newName != entity.name) {
               entity.name = newName.trim();
-              entity.update(name: entity.name);
+              // entity.update(name: entity.name);
               _refresh();
             }
           },
@@ -155,7 +155,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                 tooltip: 'Xóa',
                 onPressed: () {
                   entity.smartScene.ifConditions.remove(condition);
-                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  // entity.update(ifConditions: entity.smartScene.ifConditions);
                   _refresh();
                 },
               ),
@@ -169,7 +169,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                 );
                 if (result != null) {
                   entity.smartScene.ifConditions.add(result);
-                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  // entity.update(ifConditions: entity.smartScene.ifConditions);
                   _refresh();
                 }
               },
@@ -209,7 +209,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                 tooltip: 'Xóa',
                 onPressed: () {
                   entity.smartScene.thenActions.remove(action);
-                  entity.update(thenActions: entity.smartScene.thenActions);
+                  // entity.update(thenActions: entity.smartScene.thenActions);
                   _refresh();
                 },
               ),
@@ -223,7 +223,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
                 );
                 if (result != null) {
                   entity.smartScene.thenActions.add(result);
-                  entity.update(thenActions: entity.smartScene.thenActions);
+                  // entity.update(thenActions: entity.smartScene.thenActions);
                   _refresh();
                 }
               },

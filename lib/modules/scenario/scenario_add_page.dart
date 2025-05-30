@@ -13,7 +13,7 @@ class ScenarioAddPage extends StatefulWidget {
   final TbContext tbContext;
   final ScenarioAdd scenarioAdd;
 
-  ScenarioAddPage(this.tbContext, {super.key}) : scenarioAdd = ScenarioAdd();
+  ScenarioAddPage(this.tbContext, {super.key}) : scenarioAdd = ScenarioAdd('Ten mac dinh');
 
   @override
   State<ScenarioAddPage> createState() => _ScenarioAddPageState();
@@ -89,7 +89,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 newName.trim().isNotEmpty &&
                 newName != entity.name) {
               entity.name = newName.trim();
-              entity.update(name: entity.name);
+              // entity.update(name: entity.name);
               _refresh();
             }
           },
@@ -155,7 +155,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 tooltip: 'Xóa',
                 onPressed: () {
                   entity.smartScene.ifConditions.remove(condition);
-                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  // entity.update(ifConditions: entity.smartScene.ifConditions);
                   _refresh();
                 },
               ),
@@ -169,7 +169,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 );
                 if (result != null) {
                   entity.smartScene.ifConditions.add(result);
-                  entity.update(ifConditions: entity.smartScene.ifConditions);
+                  // entity.update(ifConditions: entity.smartScene.ifConditions);
                   _refresh();
                 }
               },
@@ -209,7 +209,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 tooltip: 'Xóa',
                 onPressed: () {
                   entity.smartScene.thenActions.remove(action);
-                  entity.update(thenActions: entity.smartScene.thenActions);
+                  // entity.update(thenActions: entity.smartScene.thenActions);
                   _refresh();
                 },
               ),
@@ -223,7 +223,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 );
                 if (result != null) {
                   entity.smartScene.thenActions.add(result);
-                  entity.update(thenActions: entity.smartScene.thenActions);
+                  // entity.update(thenActions: entity.smartScene.thenActions);
                   _refresh();
                 }
               },

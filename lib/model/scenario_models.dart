@@ -1,178 +1,64 @@
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class Scenario extends AssetInfo {
-  late SmartScene smartScene;
+class Scenario extends Asset {
+  SmartScene smartScene;
 
-  Scenario.fromJson(super.json) : super.fromJson();
+  Scenario(String name)
+      : smartScene = SmartScene(),
+        super(name, 'Scenario');
 
-  static Future<Scenario> fromAssetInfo(AssetInfo assetInfo) async {
-    final scenario = Scenario.fromJson(assetInfo.toJson());
-    scenario.smartScene = await SmartScene.fromAssetInfo(assetInfo);
-    return scenario;
-  }
-
-  void update({
-    String? name,
-    bool? active,
-    List<SceneCondition>? ifConditions,
-    List<SceneAction>? thenActions,
-    ScenePrecondition? precondition,
-    List<String>? areaIds,
-  }) {
-    if (name != null) {
-      this.name = name;
-    }
-    additionalInfo ??= {};
-    if (active != null) {
-      smartScene.active = active;
-      additionalInfo?['active'] = active;
-    }
-    if (ifConditions != null) {
-      smartScene.ifConditions = ifConditions;
-      additionalInfo?['if'] = ifConditions.map((e) => e.toJson()).toList();
-    }
-    if (thenActions != null) {
-      smartScene.thenActions = thenActions;
-      additionalInfo?['then'] = thenActions.map((e) => e.toJson()).toList();
-    }
-    if (precondition != null) {
-      smartScene.precondition = precondition;
-      additionalInfo?['precondition'] = precondition.toJson();
-    }
-    if (areaIds != null) {
-      smartScene.areaIds = areaIds;
-      additionalInfo?['areaIds'] = areaIds;
-    }
-  }
+  Scenario.fromJson(Map<String, dynamic> json)
+      : smartScene = SmartScene.fromJson(json),
+        super.fromJson(json);
 
   @override
-  String toString() {
-    return 'Scenario{${assetString('assetProfileName: $assetProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    json['additionalInfo'] = smartScene;
+    return json;
   }
 }
 
-class ScenarioAdd {
-  String name = 'Tên kịch bản';
-  Map<String, dynamic>? additionalInfo;
-  SmartScene smartScene =
-      SmartScene(active: true, ifConditions: [], thenActions: []);
-
-  void update({
-    String? name,
-    bool? active,
-    List<SceneCondition>? ifConditions,
-    List<SceneAction>? thenActions,
-    ScenePrecondition? precondition,
-    List<String>? areaIds,
-  }) {
-    if (name != null) {
-      this.name = name;
-    }
-    additionalInfo ??= {};
-    if (active != null) {
-      smartScene.active = active;
-      additionalInfo?['active'] = active;
-    }
-    if (ifConditions != null) {
-      smartScene.ifConditions = ifConditions;
-      additionalInfo?['if'] = ifConditions.map((e) => e.toJson()).toList();
-    }
-    if (thenActions != null) {
-      smartScene.thenActions = thenActions;
-      additionalInfo?['then'] = thenActions.map((e) => e.toJson()).toList();
-    }
-    if (precondition != null) {
-      smartScene.precondition = precondition;
-      additionalInfo?['precondition'] = precondition.toJson();
-    }
-    if (areaIds != null) {
-      smartScene.areaIds = areaIds;
-      additionalInfo?['areaIds'] = areaIds;
-    }
-  }
-
-  // @override
-  // String toString() {
-  //   return 'ScenarioAdd{${assetString('assetProfileName: $assetProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
-  // }
+class ScenarioAdd extends Scenario {
+  ScenarioAdd(String name) : super(name);
 }
 
 class SmartScene {
-  late bool active;
-  late List<SceneCondition> ifConditions;
-  late List<SceneAction> thenActions;
+  bool active = true;
+  List<SceneCondition> ifConditions = [];
+  List<SceneAction> thenActions = [];
   ScenePrecondition? precondition;
   List<String>? areaIds;
 
-  SmartScene({
-    required this.active,
-    required this.ifConditions,
-    required this.thenActions,
-    this.precondition,
-    this.areaIds,
-  });
-  static Future<SmartScene> fromAssetInfo(AssetInfo assetInfo) async {
-    final active = assetInfo.additionalInfo != null
-        ? (assetInfo.additionalInfo?['active'] as bool? ?? false)
-        : false;
-    final ifConditionsRaw = assetInfo.additionalInfo?['if'] as List?;
-    final List<SceneCondition> ifConditions = [];
-    if (ifConditionsRaw != null) {
-      for (final e in ifConditionsRaw) {
-        if (e['device'] is String) {
-          final device =
-              await DeviceManager.instance.getDeviceById(e['device']);
-          if (device != null) {
-            ifConditions.add(SceneCondition(
-              device,
-              e['condition'] as String,
-            ));
-          }
-        }
-      }
-    }
-    final thenActionsRaw = assetInfo.additionalInfo?['then'] as List?;
-    final List<SceneAction> thenActions = [];
-    if (thenActionsRaw != null) {
-      for (final e in thenActionsRaw) {
-        if (e['device'] is String) {
-          final device =
-              await DeviceManager.instance.getDeviceById(e['device']);
-          if (device != null) {
-            thenActions.add(SceneAction(
-              device,
-              e['action'] as String,
-            ));
-          }
-        }
-      }
-    }
-    final precondition = assetInfo.additionalInfo?['precondition'] != null
-        ? ScenePrecondition(
-            assetInfo.additionalInfo!['precondition']['from'] as String,
-            assetInfo.additionalInfo!['precondition']['to'] as String)
-        : null;
-    final areaIds = (assetInfo.additionalInfo?['areaIds'] as List?)
-        ?.map((e) => e as String)
-        .toList();
+  SmartScene();
 
-    return SmartScene(
-      active: active,
-      ifConditions: ifConditions,
-      thenActions: thenActions,
-      precondition: precondition,
-      areaIds: areaIds,
-    );
+  SmartScene.fromJson(Map<String, dynamic> json) {
+    final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
+
+    active = info['active'] as bool? ?? true;
+    ifConditions = (info['if'] as List<dynamic>? ?? [])
+        .map((e) => SceneCondition.fromJson(e))
+        .toList();
+    thenActions = (info['then'] as List<dynamic>? ?? [])
+        .map((e) => SceneAction.fromJson(e))
+        .toList();
+    precondition = info['precondition'] != null
+        ? ScenePrecondition.fromJson(info['precondition'])
+        : null;
+    areaIds =
+        (info['areaIds'] as List<dynamic>?)?.map((e) => e as String).toList();
   }
 
-  Map<String, dynamic> toJson() => {
-        'active': active,
-        'if': ifConditions.map((e) => e.toJson()).toList(),
-        'then': thenActions.map((e) => e.toJson()).toList(),
-        if (precondition != null) 'precondition': precondition!.toJson(),
-        if (areaIds != null) 'areaIds': areaIds,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'active': active,
+      'if': ifConditions.map((e) => e.toJson()).toList(),
+      'then': thenActions.map((e) => e.toJson()).toList(),
+      if (precondition != null) 'precondition': precondition!.toJson(),
+      if (areaIds != null) 'areaIds': areaIds,
+    };
+  }
 }
 
 class SceneCondition {
@@ -184,12 +70,17 @@ class SceneCondition {
     this.condition,
   );
 
-  SceneCondition.empty(this.device) : condition = '';
+  SceneCondition.fromJson(Map<String, dynamic> json)
+      : condition = json['condition'],
+        device = DeviceManager.instance.getDeviceById(json['device']) ??
+            (throw Exception('Device not found: ${json['device']}'));
 
-  Map<String, dynamic> toJson() => {
-        'device': device.id?.id,
-        'condition': condition,
-      };
+  Map<String, dynamic> toJson() {
+    return {
+      'device': device.id?.id,
+      'condition': condition,
+    };
+  }
 }
 
 class SceneAction {
@@ -201,7 +92,10 @@ class SceneAction {
     this.action,
   );
 
-  SceneAction.empty(this.device) : action = '';
+  SceneAction.fromJson(Map<String, dynamic> json)
+      : action = json['action'],
+        device = DeviceManager.instance.getDeviceById(json['device']) ??
+            (throw Exception('Device not found: ${json['device']}'));
 
   Map<String, dynamic> toJson() {
     return {
@@ -217,9 +111,60 @@ class ScenePrecondition {
 
   ScenePrecondition(this.from, this.to);
 
+  ScenePrecondition.fromJson(Map<String, dynamic> json)
+      : from = json['from'],
+        to = json['to'];
+
   Map<String, dynamic> toJson() => {
         'type': 'time',
         'from': from,
         'to': to,
       };
+}
+
+class ScenarioInfo extends Scenario {
+  String? customerTitle;
+  bool? customerIsPublic;
+  String scenarioProfileName = 'Scenario';
+
+  ScenarioInfo.fromJson(Map<String, dynamic> json)
+      : customerTitle = json['customerTitle'],
+        customerIsPublic = json['customerIsPublic'],
+        super.fromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    if (customerTitle != null) json['customerTitle'] = customerTitle;
+    if (customerIsPublic != null) json['customerIsPublic'] = customerIsPublic;
+    json['assetProfileName'] = scenarioProfileName;
+    return json;
+  }
+
+  @override
+  String toString() {
+    return 'ScenarioInfo{${assetString('scenarioProfileName: $scenarioProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
+  }
+}
+
+class ScenarioSearchQuery extends EntitySearchQuery {
+  List<String> scenarioTypes;
+
+  ScenarioSearchQuery(
+      {required RelationsSearchParameters parameters,
+      required this.scenarioTypes,
+      String? relationType})
+      : super(parameters: parameters, relationType: relationType);
+
+  @override
+  Map<String, dynamic> toJson() {
+    var json = super.toJson();
+    json['scenarioTypes'] = scenarioTypes;
+    return json;
+  }
+
+  @override
+  String toString() {
+    return 'ScenarioSearchQuery{${entitySearchQueryString('scenarioTypes: $scenarioTypes')}}';
+  }
 }
