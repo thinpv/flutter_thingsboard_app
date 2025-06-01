@@ -90,7 +90,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="demo.thingsboard.io"
+                    android:host="34.126.108.182"
                     android:pathPrefix="/api/noauth/qr"
                     android:scheme="https" />
             </intent-filter>

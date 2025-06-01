@@ -3,9 +3,9 @@ import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
-import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
 import 'if/if_devices_page.dart';
@@ -257,7 +257,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          await widget.tbContext.tbClient.getAssetService().saveAsset(entity);
+          await ScenarioService.instance.saveScenario(entity);
           _refresh();
         },
         style: ElevatedButton.styleFrom(

@@ -136,28 +136,35 @@ class TbContext implements PopEntry {
       }
       await tbClient.init();
 
-      // await DeviceProfileManager.init(tbClient);
-      // await DeviceProfileManager.instance
-      //     .getDeviceProfilesPageData(forceRefresh: true);
+      try {
+        if (tbClient.getAuthUser() != null) {
+          // await DeviceProfileManager.init(tbClient);
+          // await DeviceProfileManager.instance
+          //     .getDeviceProfilesPageData(forceRefresh: true);
 
-      DeviceTypeService.init(tbClient);
-      await DeviceTypeManager.init(tbClient);
-      await DeviceTypeManager.instance
-          .getDeviceTypesPageData(forceRefresh: true);
+          DeviceTypeService.init(tbClient);
+          await DeviceTypeManager.init(tbClient);
+          await DeviceTypeManager.instance
+              .getDeviceTypesPageData(forceRefresh: true);
 
-      await DeviceManager.init(tbClient);
-      if (tbClient.getAuthUser()?.customerId != null) {
-        await DeviceManager.instance.getDevicesPageData(forceRefresh: true);
+          await DeviceManager.init(tbClient);
+          if (tbClient.getAuthUser()?.customerId != null) {
+            await DeviceManager.instance.getDevicesPageData(forceRefresh: true);
+          }
+
+          ScenarioService.init(tbClient);
+          await ScenarioManager.init(tbClient);
+          if (tbClient.getAuthUser()?.customerId != null) {
+            await ScenarioManager.instance
+                .getScenariosPageData(forceRefresh: true);
+          }
+
+          // await EntityDeviceManager.init(tbClient);
+          // await EntityDeviceManager.instance.getDevices(forceRefresh: true);
+        }
+      } catch (e, s) {
+        log.error('Failed to init manager: $e', e, s);
       }
-
-      ScenarioService.init(tbClient);
-      await ScenarioManager.init(tbClient);
-      if (tbClient.getAuthUser()?.customerId != null) {
-        await ScenarioManager.instance.getScenariosPageData(forceRefresh: true);
-      }
-
-      // await EntityDeviceManager.init(tbClient);
-      // await EntityDeviceManager.instance.getDevices(forceRefresh: true);
     } catch (e, s) {
       log.error('Failed to init tbContext: $e', e, s);
       await onFatalError(e);

@@ -9,14 +9,17 @@ class DeviceTypeInfo extends DeviceProfileInfo {
   Map<String, dynamic> actions = {};
 
   DeviceTypeInfo.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
-    final info = json['description'] as Map<String, dynamic>? ?? {};
-
-    conditions = info['conditions'] != null
-        ? Map<String, dynamic>.from(info['conditions'])
-        : {};
-    actions = info['actions'] != null
-        ? Map<String, dynamic>.from(info['actions'])
-        : {};
+    try {
+      final info = json['description'] as Map<String, dynamic>? ?? {};
+      conditions = info['conditions'] != null
+          ? Map<String, dynamic>.from(info['conditions'])
+          : {};
+      actions = info['actions'] != null
+          ? Map<String, dynamic>.from(info['actions'])
+          : {};
+    } catch (e) {
+      print('e: ${e}');
+    }
   }
 
   Map<String, dynamic> toJson() {

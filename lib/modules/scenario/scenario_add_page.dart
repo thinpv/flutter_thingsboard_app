@@ -3,8 +3,8 @@ import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
-import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
@@ -13,10 +13,8 @@ import 'then/then_devices_page.dart';
 
 class ScenarioAddPage extends StatefulWidget {
   final TbContext tbContext;
-  final ScenarioAdd scenarioAdd;
 
-  ScenarioAddPage(this.tbContext, {super.key})
-      : scenarioAdd = ScenarioAdd('Ten mac dinh');
+  ScenarioAddPage(this.tbContext, {super.key});
 
   @override
   State<ScenarioAddPage> createState() => _ScenarioAddPageState();
@@ -24,15 +22,17 @@ class ScenarioAddPage extends StatefulWidget {
 
 class _ScenarioAddPageState extends State<ScenarioAddPage> {
   late Future<ScenarioAdd?> _scenarioAddFuture;
+  late ScenarioAdd scenarioAdd;
 
   @override
   void initState() {
     super.initState();
+    scenarioAdd = ScenarioAdd('Ten mac dinh');
     _scenarioAddFuture = fetchEntity();
   }
 
   Future<ScenarioAdd?> fetchEntity() async {
-    return Future.value(widget.scenarioAdd);
+    return Future.value(scenarioAdd);
   }
 
   void _refresh() {
@@ -258,10 +258,17 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          Asset asset = Asset('name', 'Scenario');
-          asset.additionalInfo = entity.additionalInfo;
-          await widget.tbContext.tbClient.getAssetService().saveAsset(asset);
-          _refresh();
+          final customerId =
+              widget.tbContext.tbClient.getAuthUser()?.customerId;
+          if (customerId != null) {
+            entity.customerId = CustomerId(customerId);
+            await ScenarioService.instance.saveScenario(entity);
+            _refresh();
+          } else {
+            // Handle the case when customerId is null, e.g., show an error
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Customer ID is not available.')));
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).primaryColor,
