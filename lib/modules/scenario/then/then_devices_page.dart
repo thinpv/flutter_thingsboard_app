@@ -3,7 +3,7 @@ import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-import 'component/then_page_switch_2.dart';
+import 'component/then_page.dart';
 
 class ThenDevicesPage extends StatelessWidget {
   @override
@@ -22,7 +22,7 @@ class ThenDevicesPage extends StatelessWidget {
               final result = await Navigator.push<SceneAction>(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => ThenPageSwitch2(action)),
+                    builder: (context) => ThenPage(action)),
               );
               Navigator.pop(context, result);
             },

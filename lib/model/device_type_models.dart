@@ -12,10 +12,20 @@ class DeviceTypeInfo extends DeviceProfileInfo {
 
   DeviceTypeInfo.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     try {
-      Map<String, dynamic> description = jsonDecode(json['description']);
-      conditions =
-          List<Map<String, dynamic>>.from(description['conditions'] ?? []);
-      actions = List<Map<String, dynamic>>.from(description['actions'] ?? []);
+      Map<String, dynamic>? description;
+      if (json['description'] is String) {
+        var decoded = jsonDecode(json['description']);
+        if (decoded is Map<String, dynamic>) {
+          description = decoded;
+        }
+      } else if (json['description'] is Map<String, dynamic>) {
+        description = json['description'];
+      }
+      if (description != null) {
+        conditions =
+            List<Map<String, dynamic>>.from(description['conditions'] ?? []);
+        actions = List<Map<String, dynamic>>.from(description['actions'] ?? []);
+      }
     } catch (e) {
       print('DeviceTypeInfo.fromJson: ${e}');
     }

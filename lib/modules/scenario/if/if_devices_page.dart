@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_app/modules/scenario/if/component/if_page.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
+
+import 'component/if_page.dart';
 
 class IfDevicesPage extends StatelessWidget {
   @override

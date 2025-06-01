@@ -63,7 +63,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       appBar: AppBar(
         title: GestureDetector(
           onTap: () async {
-            final controller = TextEditingController(text: entity.name);
+            final controller = TextEditingController(text: entity.nameDisplay);
             final newName = await showDialog<String>(
               context: context,
               builder: (context) => AlertDialog(
@@ -89,13 +89,12 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.name) {
-              entity.name = newName.trim();
-              // entity.update(name: entity.name);
+                newName != entity.nameDisplay) {
+              entity.nameDisplay = newName.trim();
               _refresh();
             }
           },
-          child: Text(entity.name),
+          child: Text(entity.nameDisplay),
         ),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),

@@ -73,6 +73,7 @@ dependencies:
     git:
       url: git@github.com:ybeshkarov/plugin_wifi_connect.git
   toastification: ^2.3.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

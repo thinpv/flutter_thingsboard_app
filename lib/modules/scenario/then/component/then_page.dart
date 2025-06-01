@@ -6,13 +6,13 @@ import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class ThenPage extends StatelessWidget {
-  final SceneCondition condition;
-  ThenPage(this.condition, {super.key});
+  final SceneAction action;
+  ThenPage(this.action, {super.key});
 
   @override
   Widget build(BuildContext context) {
     DeviceInfo? deviceInfo =
-        DeviceManager.instance.getDeviceById(condition.device);
+        DeviceManager.instance.getDeviceById(action.device);
     DeviceTypeInfo? deviceType = deviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
             .getDeviceTypeById(deviceInfo!.deviceProfileId!.id!)
@@ -27,8 +27,8 @@ class ThenPage extends StatelessWidget {
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
-                    condition.condition = option['value'].toString();
-                    Navigator.pop(context, condition);
+                    action.action = option['value'].toString();
+                    Navigator.pop(context, action);
                   },
                 );
               },
