@@ -171,7 +171,7 @@ class ScenarioService {
 
   Future<PageData<ScenarioInfo>> getCustomerScenarioInfos(
       String customerId, PageLink pageLink,
-      {String type = '', RequestConfig? requestConfig}) async {
+      {String type = 'Scenario', RequestConfig? requestConfig}) async {
     var queryParams = pageLink.toQueryParameters();
     queryParams['type'] = type;
     var response = await _tbClient.get<Map<String, dynamic>>(
