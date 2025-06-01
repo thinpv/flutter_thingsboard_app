@@ -5,9 +5,9 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class IfPage extends StatelessWidget {
+class ThenPage extends StatelessWidget {
   final SceneCondition condition;
-  IfPage(this.condition, {super.key});
+  ThenPage(this.condition, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +18,12 @@ class IfPage extends StatelessWidget {
             .getDeviceTypeById(deviceInfo!.deviceProfileId!.id!)
         : null;
     return Scaffold(
-      appBar: AppBar(title: Text('Chọn thuộc tính')),
-      body: deviceType?.conditions != null
+      appBar: AppBar(title: Text('Chọn hành động')),
+      body: deviceType?.actions != null
           ? ListView.builder(
-              itemCount: deviceType!.conditions.length,
+              itemCount: deviceType!.actions.length,
               itemBuilder: (context, index) {
-                final option = deviceType.conditions[index];
+                final option = deviceType.actions[index];
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
@@ -33,7 +33,7 @@ class IfPage extends StatelessWidget {
                 );
               },
             )
-          : Center(child: Text('No conditions available')),
+          : Center(child: Text('No actions available')),
     );
   }
 }

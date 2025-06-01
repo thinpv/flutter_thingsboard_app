@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 class DeviceType extends DeviceProfile {
@@ -5,20 +7,17 @@ class DeviceType extends DeviceProfile {
 }
 
 class DeviceTypeInfo extends DeviceProfileInfo {
-  Map<String, dynamic> conditions = {};
-  Map<String, dynamic> actions = {};
+  List<Map<String, dynamic>> conditions = [];
+  List<Map<String, dynamic>> actions = [];
 
   DeviceTypeInfo.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     try {
-      final info = json['description'] as Map<String, dynamic>? ?? {};
-      conditions = info['conditions'] != null
-          ? Map<String, dynamic>.from(info['conditions'])
-          : {};
-      actions = info['actions'] != null
-          ? Map<String, dynamic>.from(info['actions'])
-          : {};
+      Map<String, dynamic> description = jsonDecode(json['description']);
+      conditions =
+          List<Map<String, dynamic>>.from(description['conditions'] ?? []);
+      actions = List<Map<String, dynamic>>.from(description['actions'] ?? []);
     } catch (e) {
-      print('e: ${e}');
+      print('DeviceTypeInfo.fromJson: ${e}');
     }
   }
 
@@ -32,11 +31,10 @@ class DeviceTypeInfo extends DeviceProfileInfo {
       'image': image,
       'tenantId': tenantId.toJson(),
     };
-
-    if (conditions.isNotEmpty) {
-      json['description']['conditions'] = conditions;
-    }
-    if (actions.isNotEmpty) json['description']['actions'] = actions;
+    json['description'] = {
+      'conditions': conditions,
+      'actions': actions,
+    };
     return json;
   }
 }
