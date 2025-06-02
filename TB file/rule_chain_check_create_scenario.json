@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 23,
+    "version": 67,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -161,32 +161,12 @@
         }
       },
       {
-        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCRequestNode",
-        "name": "call to device",
-        "debugSettings": {
-          "failuresEnabled": false,
-          "allEnabled": false,
-          "allEnabledUntil": 0
-        },
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "timeoutInSeconds": 60
-        },
-        "additionalInfo": {
-          "description": "",
-          "layoutX": 1409,
-          "layoutY": 608
-        }
-      },
-      {
         "type": "org.thingsboard.rule.engine.action.TbCreateRelationNode",
         "name": "create relation",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 0
+          "allEnabledUntil": 1748863559802
         },
         "singletonMode": false,
         "queueName": null,
@@ -203,8 +183,8 @@
         },
         "additionalInfo": {
           "description": "",
-          "layoutX": 1117,
-          "layoutY": 557
+          "layoutX": 1100,
+          "layoutY": 558
         }
       },
       {
@@ -213,7 +193,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 0
+          "allEnabledUntil": 1748861325654
         },
         "singletonMode": false,
         "queueName": null,
@@ -235,22 +215,22 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 0
+          "allEnabledUntil": 1748862412154
         },
         "singletonMode": false,
         "queueName": null,
         "configurationVersion": 1,
         "configuration": {
           "deleteForSingleEntity": false,
-          "direction": "TO",
+          "direction": "FROM",
           "entityType": "DEVICE",
           "entityNamePattern": "$[additionalInfo.deviceSaveName]",
           "relationType": "CheckScenario"
         },
         "additionalInfo": {
           "description": "",
-          "layoutX": 825,
-          "layoutY": 643
+          "layoutX": 1103,
+          "layoutY": 634
         }
       },
       {
@@ -259,7 +239,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 0
+          "allEnabledUntil": 1748861325654
         },
         "singletonMode": false,
         "queueName": null,
@@ -275,6 +255,117 @@
           "description": "",
           "layoutX": 824,
           "layoutY": 556
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbChangeOriginatorNode",
+        "name": "Get device check",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 1748862412154
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "originatorSource": "RELATED",
+          "entityType": null,
+          "entityNamePattern": null,
+          "relationsQuery": {
+            "fetchLastLevelOnly": false,
+            "direction": "TO",
+            "maxLevel": 1,
+            "filters": [
+              {
+                "relationType": "CheckScenario",
+                "entityTypes": [
+                  "DEVICE"
+                ]
+              }
+            ]
+          }
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 820,
+          "layoutY": 640
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetAttributesNode",
+        "name": "get scenarios from device",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 1748864578429
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "tellFailureIfAbsent": false,
+          "fetchTo": "METADATA",
+          "clientAttributeNames": [],
+          "sharedAttributeNames": [
+            "scenarios"
+          ],
+          "serverAttributeNames": [],
+          "latestTsKeyNames": [],
+          "getLatestValueWithTs": false
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1382,
+          "layoutY": 587
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "update scenarios",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 1748873577907
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "jsScript": "return {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": "var scenarios = JSON.parse(metadata.shared_scenarios);\nif (scenarios == null)\n    scenarios = {};\nif (scenarios != null) {\n    if (msg.additionalInfo['deviceSave'] == null) {\n        scenarios[msg.id.id] = null;\n    } else {\n        msg.additionalInfo['name'] = null;\n        msg.additionalInfo['description'] = null;\n        msg.additionalInfo['deviceSave'] = null;\n        msg.additionalInfo['deviceSaveName'] = null;\n        msg.additionalInfo['ts'] = Date.now();\n        scenarios[msg.id.id] = msg.additionalInfo;\n    }\n}\n\nreturn {\n    msg: {\n        scenarios: scenarios\n    },\n    metadata: metadata,\n    msgType: 'POST_ATTRIBUTES_REQUEST'\n};"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1653,
+          "layoutY": 581
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+        "name": "save scenarios to share attribute",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 1748863559802
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 3,
+        "configuration": {
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          },
+          "scope": "SHARED_SCOPE",
+          "notifyDevice": false,
+          "sendAttributesUpdatedNotification": false,
+          "updateAttributesOnlyOnValueChange": true
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1910,
+          "layoutY": 580
         }
       }
     ],
@@ -326,23 +417,28 @@
       },
       {
         "fromIndex": 7,
-        "toIndex": 10,
+        "toIndex": 9,
         "type": "Scenario"
       },
       {
-        "fromIndex": 9,
-        "toIndex": 8,
+        "fromIndex": 8,
+        "toIndex": 13,
         "type": "Success"
       },
       {
-        "fromIndex": 10,
+        "fromIndex": 9,
         "toIndex": 11,
+        "type": "True"
+      },
+      {
+        "fromIndex": 9,
+        "toIndex": 12,
         "type": "False"
       },
       {
         "fromIndex": 10,
-        "toIndex": 12,
-        "type": "True"
+        "toIndex": 13,
+        "type": "Success"
       },
       {
         "fromIndex": 11,
@@ -351,7 +447,17 @@
       },
       {
         "fromIndex": 12,
-        "toIndex": 9,
+        "toIndex": 10,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 14,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 14,
+        "toIndex": 15,
         "type": "Success"
       }
     ],
