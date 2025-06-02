@@ -12,7 +12,7 @@ class IfPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     DeviceInfo? deviceInfo =
-        DeviceManager.instance.getDeviceById(condition.device);
+        DeviceManager.instance.getMyDeviceInfoById(condition.device);
     DeviceTypeInfo? deviceType = deviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
             .getDeviceTypeById(deviceInfo!.deviceProfileId!.id!)

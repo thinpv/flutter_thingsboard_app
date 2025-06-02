@@ -12,7 +12,7 @@ class ThenPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     DeviceInfo? deviceInfo =
-        DeviceManager.instance.getDeviceById(action.device);
+        DeviceManager.instance.getMyDeviceInfoById(action.device);
     DeviceTypeInfo? deviceType = deviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
             .getDeviceTypeById(deviceInfo!.deviceProfileId!.id!)

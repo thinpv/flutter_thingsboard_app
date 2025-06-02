@@ -80,10 +80,10 @@ class DeviceTypeManager {
     return _deviceProfileCache?.data ?? [];
   }
 
-  DeviceTypeInfo? getDeviceTypeByName(String name) {
+  DeviceTypeInfo? getDeviceTypeByName(String displayName) {
     try {
       return _deviceProfileCache?.data.firstWhere(
-        (deviceProfile) => deviceProfile.name == name,
+        (deviceProfile) => deviceProfile.displayName == displayName,
       );
     } catch (e) {
       print('e: $e');
@@ -111,35 +111,19 @@ class DeviceTypeManager {
   }
 }
 
-extension on EntityId {
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'entityType': entityType.toString().split('.').last,
-    };
-  }
-}
-
-extension on DeviceTypeInfo {
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id.toJson(),
-      'name': name,
-      'type': type.toShortString(),
-      'transportType': transportType.toShortString(),
-      'defaultDashboardId': defaultDashboardId?.toJson(),
-      'image': image,
-      'tenantId': tenantId.toJson(),
-    };
-  }
-}
-
 extension on PageData<DeviceTypeInfo> {
   PageData<DeviceTypeInfo> filterByName(String searchText) {
-    final filtered = data
-        .where((deviceProfileInfo) =>
-            deviceProfileInfo.name.toLowerCase().contains(searchText))
-        .toList();
-    return PageData<DeviceTypeInfo>(filtered, 1, filtered.length, false);
+    if (searchText.isEmpty) {
+      return PageData<DeviceTypeInfo>(data, 1, data.length, false);
+    } else {
+      final filtered = data
+          .where((myDeviceInfoInfo) =>
+              myDeviceInfoInfo.displayName
+                  ?.toLowerCase()
+                  .contains(searchText) ??
+              false)
+          .toList();
+      return PageData<DeviceTypeInfo>(filtered, 1, filtered.length, false);
+    }
   }
 }

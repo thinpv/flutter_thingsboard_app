@@ -8,7 +8,7 @@ import 'component/then_page.dart';
 class ThenDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    List<DeviceInfo> devices = DeviceManager.instance.devicesList;
+    List<DeviceInfo> devices = DeviceManager.instance.myDeviceInfosList;
     return Scaffold(
       appBar: AppBar(title: Text('Chọn thiết bị')),
       body: ListView.builder(

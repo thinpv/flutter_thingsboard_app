@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
-import 'package:thingsboard_client/thingsboard_client.dart';
 
 class DeviceDetailsPage extends StatefulWidget {
   final TbContext tbContext;
@@ -14,7 +14,7 @@ class DeviceDetailsPage extends StatefulWidget {
 }
 
 class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
-  late Future<Device?> _deviceFuture;
+  late Future<MyDeviceInfo?> _deviceFuture;
 
   @override
   void initState() {
@@ -22,8 +22,8 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
     _deviceFuture = fetchEntity(widget.deviceId);
   }
 
-  Future<Device?> fetchEntity(String id) async {
-    return DeviceManager.instance.getDeviceById(id);
+  Future<MyDeviceInfo?> fetchEntity(String id) async {
+    return DeviceManager.instance.getMyDeviceInfoById(id);
   }
 
   void _refresh() {
@@ -34,7 +34,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Device?>(
+    return FutureBuilder<MyDeviceInfo?>(
       future: _deviceFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -50,11 +50,11 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
     );
   }
 
-  Widget _buildEntityDetails(BuildContext context, Device entity) {
+  Widget _buildEntityDetails(BuildContext context, MyDeviceInfo entity) {
     return Scaffold(
-      appBar: AppBar(title: Text(entity.name)),
+      appBar: AppBar(title: Text(entity.displayName ?? entity.name)),
       body: ListTile(
-        title: Text(entity.name),
+        title: Text(entity.displayName ?? entity.name),
         subtitle: Text(entity.type),
       ),
     );

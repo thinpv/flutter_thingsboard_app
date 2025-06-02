@@ -119,10 +119,17 @@ class ScenarioManager {
 
 extension on PageData<ScenarioInfo> {
   PageData<ScenarioInfo> filterByName(String searchText) {
-    final filtered = data
-        .where((scenarioInfo) =>
-            scenarioInfo.name.toLowerCase().contains(searchText))
-        .toList();
-    return PageData<ScenarioInfo>(filtered, 1, filtered.length, false);
+    if (searchText.isEmpty) {
+      return PageData<ScenarioInfo>(data, 1, data.length, false);
+    } else {
+      final filtered = data
+          .where((myDeviceInfoInfo) =>
+              myDeviceInfoInfo.displayName
+                  ?.toLowerCase()
+                  .contains(searchText) ??
+              false)
+          .toList();
+      return PageData<ScenarioInfo>(filtered, 1, filtered.length, false);
+    }
   }
 }

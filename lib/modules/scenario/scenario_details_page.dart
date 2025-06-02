@@ -63,7 +63,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       appBar: AppBar(
         title: GestureDetector(
           onTap: () async {
-            final controller = TextEditingController(text: entity.nameDisplay);
+            final controller = TextEditingController(text: entity.displayName);
             final newName = await showDialog<String>(
               context: context,
               builder: (context) => AlertDialog(
@@ -89,12 +89,12 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.nameDisplay) {
-              entity.nameDisplay = newName.trim();
+                newName != entity.displayName) {
+              entity.displayName = newName.trim();
               _refresh();
             }
           },
-          child: Text(entity.nameDisplay),
+          child: Text(entity.displayName ?? entity.name),
         ),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -134,9 +134,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
           ...entity.smartScene.ifConditions.map((condition) {
-            var deviceInfo =
-                DeviceManager.instance.getDeviceById(condition.device);
-            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
+            var myDeviceInfo =
+                DeviceManager.instance.getMyDeviceInfoById(condition.device);
+            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -150,7 +150,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(deviceInfo!.name),
+              title: Text(myDeviceInfo?.displayName ??
+                  myDeviceInfo?.name ??
+                  'Unknown Device'),
               subtitle: Text(condition.condition),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -189,9 +191,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.smartScene.thenActions.map((action) {
-            var deviceInfo =
-                DeviceManager.instance.getDeviceById(action.device);
-            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
+            var myDeviceInfo =
+                DeviceManager.instance.getMyDeviceInfoById(action.device);
+            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -205,7 +207,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(deviceInfo!.name),
+              title: Text(myDeviceInfo?.displayName ??
+                  myDeviceInfo?.name ??
+                  'Unknown Device'),
               subtitle: Text(action.action),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -256,6 +260,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
+          entity.smartScene.calculateDeviceSave();
           await ScenarioService.instance.saveScenario(entity);
           _refresh();
         },
