@@ -18,7 +18,7 @@ class ThenDevicesPage extends StatelessWidget {
           return ListTile(
             title: Text(device.displayName ?? device.name),
             onTap: () async {
-              SceneAction action = SceneAction(device.id!.id!, '');
+              SceneAction action = SceneAction(device.id!.id!, '', {});
               final result = await Navigator.push<SceneAction>(
                 context,
                 MaterialPageRoute(builder: (context) => ThenPage(action)),

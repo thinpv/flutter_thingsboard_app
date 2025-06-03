@@ -27,6 +27,7 @@ class ThenPage extends StatelessWidget {
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
+                    action.name = option['name'].toString();
                     final values = option['value'];
                     if (values.toString().contains('?')) {
                       final List<String> fieldNames = [];
@@ -37,7 +38,7 @@ class ThenPage extends StatelessWidget {
                           controllers.add(TextEditingController());
                         }
                       });
-                      final newValue = await showDialog<Map<String, String>>(
+                      final newValue = await showDialog<Map<String, dynamic>>(
                         context: context,
                         builder: (context) {
                           return AlertDialog(
@@ -81,9 +82,9 @@ class ThenPage extends StatelessWidget {
                           );
                         },
                       );
-                      action.action = newValue.toString();
+                      action.action = newValue ?? {};
                     } else {
-                      action.action = option['value'].toString();
+                      action.action = option['value'];
                     }
                     Navigator.pop(context, action);
                   },

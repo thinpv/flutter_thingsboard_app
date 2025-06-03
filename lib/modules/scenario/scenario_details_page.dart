@@ -153,7 +153,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
               title: Text(myDeviceInfo?.displayName ??
                   myDeviceInfo?.name ??
                   'Unknown Device'),
-              subtitle: Text(condition.condition),
+              subtitle: Text(condition.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 tooltip: 'Xóa',
@@ -210,7 +210,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
               title: Text(myDeviceInfo?.displayName ??
                   myDeviceInfo?.name ??
                   'Unknown Device'),
-              subtitle: Text(action.action),
+              subtitle: Text(action.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 tooltip: 'Xóa',

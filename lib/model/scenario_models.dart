@@ -114,21 +114,25 @@ class SmartScene {
 
 class SceneCondition {
   String device;
-  String condition;
+  String name;
+  Map<String, dynamic> condition;
 
   SceneCondition(
     this.device,
+    this.name,
     this.condition,
   );
 
   SceneCondition.fromJson(Map<String, dynamic> json)
       : device = json['device'],
+        name = json['name'],
         condition = json['condition'];
 
   Map<String, dynamic> toJson() {
     return {
       'device': device,
       'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
+      'name': name,
       'condition': condition,
     };
   }
@@ -136,21 +140,25 @@ class SceneCondition {
 
 class SceneAction {
   String device;
-  String action;
+  String name;
+  Map<String, dynamic> action;
 
   SceneAction(
     this.device,
+    this.name,
     this.action,
   );
 
   SceneAction.fromJson(Map<String, dynamic> json)
       : device = json['device'],
+        name = json['name'],
         action = json['action'];
 
   Map<String, dynamic> toJson() {
     return {
       'device': device,
       'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
+      'name': name,
       'action': action,
     };
   }

@@ -27,7 +27,8 @@ class IfPage extends StatelessWidget {
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
-                    condition.condition = option['value'].toString();
+                    condition.name = option['name'].toString();
+                    condition.condition = option['value'];
                     Navigator.pop(context, condition);
                   },
                 );
