@@ -27,7 +27,64 @@ class ThenPage extends StatelessWidget {
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
-                    action.action = option['value'].toString();
+                    final values = option['value'];
+                    if (values.toString().contains('?')) {
+                      final List<String> fieldNames = [];
+                      final List<TextEditingController> controllers = [];
+                      values.forEach((key, value) {
+                        if (value.toString().contains('?')) {
+                          fieldNames.add(key);
+                          controllers.add(TextEditingController());
+                        }
+                      });
+                      final newValue = await showDialog<Map<String, String>>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text('Nhập thông tin'),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children:
+                                    List.generate(fieldNames.length, (index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 4.0),
+                                    child: TextField(
+                                      controller: controllers[index],
+                                      decoration: InputDecoration(
+                                        labelText: fieldNames[index],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text('Hủy'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Lấy dữ liệu từ các TextField
+                                  Map<String, String> inputData = {};
+                                  for (var i = 0; i < fieldNames.length; i++) {
+                                    inputData[fieldNames[i]] =
+                                        controllers[i].text;
+                                  }
+                                  Navigator.pop(context, inputData);
+                                },
+                                child: Text('Lưu'),
+                              )
+                            ],
+                          );
+                        },
+                      );
+                      action.action = newValue.toString();
+                    } else {
+                      action.action = option['value'].toString();
+                    }
                     Navigator.pop(context, action);
                   },
                 );
