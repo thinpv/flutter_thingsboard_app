@@ -80,10 +80,10 @@ class DeviceTypeManager {
     return _deviceProfileCache?.data ?? [];
   }
 
-  DeviceTypeInfo? getDeviceTypeByName(String displayName) {
+  DeviceTypeInfo? getDeviceTypeByName(String name) {
     try {
       return _deviceProfileCache?.data.firstWhere(
-        (deviceProfile) => deviceProfile.displayName == displayName,
+        (deviceProfile) => deviceProfile.name == name,
       );
     } catch (e) {
       print('e: $e');

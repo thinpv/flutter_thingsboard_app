@@ -85,10 +85,10 @@ class DeviceManager {
     return _myDeviceInfoCache?.data ?? [];
   }
 
-  MyDeviceInfo? getMyDeviceInfoByName(String displayName) {
+  MyDeviceInfo? getMyDeviceInfoByName(String name) {
     try {
       return _myDeviceInfoCache?.data.firstWhere(
-        (myDeviceInfo) => myDeviceInfo.displayName == displayName,
+        (myDeviceInfo) => myDeviceInfo.name == name,
       );
     } catch (e) {
       print('e: $e');

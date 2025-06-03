@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 67,
+    "version": 82,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -166,7 +166,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748863559802
+          "allEnabledUntil": 1748932484631
         },
         "singletonMode": false,
         "queueName": null,
@@ -174,7 +174,7 @@
         "configuration": {
           "direction": "TO",
           "entityType": "DEVICE",
-          "entityNamePattern": "$[additionalInfo.deviceSaveName]",
+          "entityNamePattern": "$[additionalInfo.deviceCheckName]",
           "entityTypePattern": null,
           "relationType": "CheckScenario",
           "createEntityIfNotExists": false,
@@ -189,11 +189,11 @@
       },
       {
         "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
-        "name": "check have deviceSaveName",
+        "name": "check have deviceCheckName",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748861325654
+          "allEnabledUntil": 1748933432043
         },
         "singletonMode": false,
         "queueName": null,
@@ -201,7 +201,7 @@
         "configuration": {
           "scriptLang": "TBEL",
           "jsScript": "return msg.temperature > 20;",
-          "tbelScript": "return msg.additionalInfo != null && msg.additionalInfo.deviceSaveName != null && msg.additionalInfo.deviceSaveName != '';"
+          "tbelScript": "return msg.additionalInfo != null && msg.additionalInfo.deviceCheckName != null && msg.additionalInfo.deviceCheckName != '';"
         },
         "additionalInfo": {
           "description": "",
@@ -215,7 +215,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748862412154
+          "allEnabledUntil": 1748932484631
         },
         "singletonMode": false,
         "queueName": null,
@@ -224,7 +224,7 @@
           "deleteForSingleEntity": false,
           "direction": "FROM",
           "entityType": "DEVICE",
-          "entityNamePattern": "$[additionalInfo.deviceSaveName]",
+          "entityNamePattern": "$[additionalInfo.deviceCheckName]",
           "relationType": "CheckScenario"
         },
         "additionalInfo": {
@@ -239,7 +239,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748861325654
+          "allEnabledUntil": 1748932484631
         },
         "singletonMode": false,
         "queueName": null,
@@ -248,7 +248,7 @@
           "deleteForSingleEntity": false,
           "direction": "TO",
           "entityType": "DEVICE",
-          "entityNamePattern": "$[additionalInfo.deviceSaveName]",
+          "entityNamePattern": "$[additionalInfo.deviceCheckName]",
           "relationType": "CheckScenario"
         },
         "additionalInfo": {
@@ -263,7 +263,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748862412154
+          "allEnabledUntil": 1748932484631
         },
         "singletonMode": false,
         "queueName": null,
@@ -298,7 +298,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748864578429
+          "allEnabledUntil": 1748933432043
         },
         "singletonMode": false,
         "queueName": null,
@@ -326,7 +326,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748873577907
+          "allEnabledUntil": 1748933432043
         },
         "singletonMode": false,
         "queueName": null,
@@ -334,7 +334,7 @@
         "configuration": {
           "scriptLang": "TBEL",
           "jsScript": "return {msg: msg, metadata: metadata, msgType: msgType};",
-          "tbelScript": "var scenarios = JSON.parse(metadata.shared_scenarios);\nif (scenarios == null)\n    scenarios = {};\nif (scenarios != null) {\n    if (msg.additionalInfo['deviceSave'] == null) {\n        scenarios[msg.id.id] = null;\n    } else {\n        msg.additionalInfo['name'] = null;\n        msg.additionalInfo['description'] = null;\n        msg.additionalInfo['deviceSave'] = null;\n        msg.additionalInfo['deviceSaveName'] = null;\n        msg.additionalInfo['ts'] = Date.now();\n        scenarios[msg.id.id] = msg.additionalInfo;\n    }\n}\n\nreturn {\n    msg: {\n        scenarios: scenarios\n    },\n    metadata: metadata,\n    msgType: 'POST_ATTRIBUTES_REQUEST'\n};"
+          "tbelScript": "var scenarios = JSON.parse(metadata.shared_scenarios);\nif (scenarios == null)\n    scenarios = {};\nif (scenarios != null) {\n    if (msg.additionalInfo['deviceCheck'] == null) {\n        scenarios[msg.id.id] = null;\n    } else {\n        msg.additionalInfo['name'] = null;\n        msg.additionalInfo['description'] = null;\n        msg.additionalInfo['deviceCheck'] = null;\n        msg.additionalInfo['ts'] = Date.now();\n        scenarios[msg.id.id] = msg.additionalInfo;\n    }\n}\n\nreturn {\n    msg: {\n        scenarios: scenarios\n    },\n    metadata: metadata,\n    msgType: 'POST_ATTRIBUTES_REQUEST'\n};"
         },
         "additionalInfo": {
           "description": "",
@@ -348,7 +348,7 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 1748863559802
+          "allEnabledUntil": 1748933432043
         },
         "singletonMode": false,
         "queueName": null,

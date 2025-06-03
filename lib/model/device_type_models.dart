@@ -10,23 +10,23 @@ class DeviceTypeInfo extends DeviceProfileInfo {
   String? displayName;
   List<Map<String, dynamic>> conditions = [];
   List<Map<String, dynamic>> actions = [];
+  Map<String, dynamic>? description;
 
   DeviceTypeInfo.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     try {
-      Map<String, dynamic>? description;
-      if (json['description'] is String) {
-        var decoded = jsonDecode(json['description']);
-        if (decoded is Map<String, dynamic>) {
-          description = decoded;
+      if (json['description'] != null) {
+        if (json['description'] is String) {
+          description = jsonDecode(json['description']);
+        } else if (json['description'] is Map<String, dynamic>) {
+          description = json['description'];
         }
-      } else if (json['description'] is Map<String, dynamic>) {
-        description = json['description'];
-      }
-      if (description != null) {
-        displayName = description['name'];
-        conditions =
-            List<Map<String, dynamic>>.from(description['conditions'] ?? []);
-        actions = List<Map<String, dynamic>>.from(description['actions'] ?? []);
+        if (description != null) {
+          displayName = description?['name'];
+          conditions =
+              List<Map<String, dynamic>>.from(description?['conditions'] ?? []);
+          actions =
+              List<Map<String, dynamic>>.from(description?['actions'] ?? []);
+        }
       }
     } catch (e) {
       print('DeviceTypeInfo.fromJson: ${e}');
@@ -34,6 +34,10 @@ class DeviceTypeInfo extends DeviceProfileInfo {
   }
 
   Map<String, dynamic> toJson() {
+    description ??= {};
+    if (displayName != null) description!['name'] = displayName;
+    description!['conditions'] = conditions;
+    description!['actions'] = actions;
     Map<String, dynamic> json = {
       'id': id.toJson(),
       'name': name,
@@ -42,11 +46,7 @@ class DeviceTypeInfo extends DeviceProfileInfo {
       'defaultDashboardId': defaultDashboardId?.toJson(),
       'image': image,
       'tenantId': tenantId.toJson(),
-    };
-    json['description'] = {
-      if (displayName != null) 'name': displayName,
-      'conditions': conditions,
-      'actions': actions,
+      'description': description,
     };
     return json;
   }

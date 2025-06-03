@@ -21,13 +21,15 @@ class MyDeviceInfo extends DeviceInfo {
 
   @override
   Map<String, dynamic> toJson() {
-    final json = super.toJson();
-    json['additionalInfo'] = {
-      if (displayName != null) 'name': displayName,
-      'description': displayName,
-      if (gatewayId != null) 'lastConnectedGateway': gatewayId,
-    };
-    return json;
+    additionalInfo ??= {};
+    if (displayName != null) {
+      additionalInfo!['name'] = displayName;
+      additionalInfo!['description'] = displayName;
+    }
+    if (gatewayId != null) {
+      additionalInfo!['lastConnectedGateway'] = gatewayId;
+    }
+    return super.toJson();
   }
 }
 

@@ -20,11 +20,10 @@ class Scenario extends Asset {
 
   @override
   Map<String, dynamic> toJson() {
-    final json = super.toJson();
-    json['additionalInfo'] = smartScene.toJson();
-    json['additionalInfo']['name'] = displayName;
-    json['additionalInfo']['description'] = displayName;
-    return json;
+    additionalInfo = smartScene.toJson(additionalInfo);
+    additionalInfo!['name'] = displayName;
+    additionalInfo!['description'] = displayName;
+    return super.toJson();
   }
 }
 
@@ -38,7 +37,7 @@ class SmartScene {
   List<SceneAction> thenActions = [];
   ScenePrecondition? precondition;
   List<String>? areaIds;
-  String? deviceSave; // the device which will check the rule
+  String? deviceCheck; // the device which will check the rule
 
   SmartScene();
 
@@ -57,35 +56,41 @@ class SmartScene {
         : null;
     areaIds =
         (info['areaIds'] as List<dynamic>?)?.map((e) => e as String).toList();
-    deviceSave = info['deviceSave'] as String?;
+    deviceCheck = info['deviceCheck'] as String?;
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'active': active,
-      'if': ifConditions.map((e) => e.toJson()).toList(),
-      'then': thenActions.map((e) => e.toJson()).toList(),
-      if (precondition != null) 'precondition': precondition!.toJson(),
-      if (areaIds != null) 'areaIds': areaIds,
-      if (deviceSave != null) 'deviceSave': deviceSave,
-      if (deviceSave != null) 'deviceSaveName': DeviceManager.instance.getMyDeviceInfoById(deviceSave!)?.name,
-    };
+  Map<String, dynamic> toJson(Map<String, dynamic>? additionalInfo) {
+    additionalInfo ??= {};
+    additionalInfo['active'] = active;
+    additionalInfo['if'] = ifConditions.map((e) => e.toJson()).toList();
+    additionalInfo['then'] = thenActions.map((e) => e.toJson()).toList();
+    if (precondition != null) {
+      additionalInfo['precondition'] = precondition!.toJson();
+    }
+    if (areaIds != null) additionalInfo['areaIds'] = areaIds;
+    if (deviceCheck != null) {
+      additionalInfo['deviceCheck'] = deviceCheck;
+      final deviceInfo =
+          DeviceManager.instance.getMyDeviceInfoById(deviceCheck!);
+      additionalInfo['deviceCheckName'] = deviceInfo?.name;
+    }
+    return additionalInfo;
   }
 
   void calculateDeviceSave() {
-    String? deviceSaveId;
+    deviceCheck = null;
     for (var ifCondition in ifConditions) {
       final myDevice =
           DeviceManager.instance.getMyDeviceInfoById(ifCondition.device);
       String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
       if (deviceId == null) {
-        deviceSave = null;
+        deviceCheck = null;
         return;
       }
-      if (deviceSaveId == null) {
-        deviceSaveId = deviceId;
-      } else if (deviceId != deviceSaveId) {
-        deviceSave = null;
+      if (deviceCheck == null) {
+        deviceCheck = deviceId;
+      } else if (deviceCheck != deviceId) {
+        deviceCheck = null;
         return;
       }
     }
@@ -94,17 +99,16 @@ class SmartScene {
           DeviceManager.instance.getMyDeviceInfoById(thenAction.device);
       String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
       if (deviceId == null) {
-        deviceSave = null;
+        deviceCheck = null;
         return;
       }
-      if (deviceSaveId == null) {
-        deviceSaveId = deviceId;
-      } else if (deviceId != deviceSaveId) {
-        deviceSave = null;
+      if (deviceCheck == null) {
+        deviceCheck = deviceId;
+      } else if (deviceCheck != deviceId) {
+        deviceCheck = null;
         return;
       }
     }
-    deviceSave = deviceSaveId;
   }
 }
 
@@ -124,6 +128,7 @@ class SceneCondition {
   Map<String, dynamic> toJson() {
     return {
       'device': device,
+      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
       'condition': condition,
     };
   }
@@ -145,6 +150,7 @@ class SceneAction {
   Map<String, dynamic> toJson() {
     return {
       'device': device,
+      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
       'action': action,
     };
   }
