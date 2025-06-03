@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:thingsboard_app/model/device_type_models.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
@@ -32,10 +33,12 @@ class ThenPage extends StatelessWidget {
                     if (values.toString().contains('?')) {
                       final List<String> fieldNames = [];
                       final List<TextEditingController> controllers = [];
+                      final Map<String, dynamic> inputData = {};
                       values.forEach((key, value) {
                         if (value.toString().contains('?')) {
                           fieldNames.add(key);
                           controllers.add(TextEditingController());
+                          inputData[key] = value;
                         }
                       });
                       final newValue = await showDialog<Map<String, dynamic>>(
@@ -56,6 +59,20 @@ class ThenPage extends StatelessWidget {
                                       decoration: InputDecoration(
                                         labelText: fieldNames[index],
                                       ),
+                                      keyboardType: values[fieldNames[index]]
+                                                  .toLowerCase() ==
+                                              '?number'
+                                          ? TextInputType.number
+                                          : TextInputType.text,
+                                      inputFormatters: values[fieldNames[index]]
+                                                  .toLowerCase() ==
+                                              '?number'
+                                          ? [
+                                              FilteringTextInputFormatter.allow(
+                                                RegExp(r'^\d+\.?\d{0,2}'),
+                                              ),
+                                            ]
+                                          : null,
                                     ),
                                   );
                                 }),
@@ -68,11 +85,16 @@ class ThenPage extends StatelessWidget {
                               ),
                               ElevatedButton(
                                 onPressed: () {
-                                  // Lấy dữ liệu từ các TextField
-                                  Map<String, String> inputData = {};
                                   for (var i = 0; i < fieldNames.length; i++) {
-                                    inputData[fieldNames[i]] =
-                                        controllers[i].text;
+                                    String dataType = values[fieldNames[i]];
+                                    if (dataType.toLowerCase() == '?string') {
+                                      inputData[fieldNames[i]] =
+                                          controllers[i].text;
+                                    } else if (dataType.toLowerCase() ==
+                                        '?number') {
+                                      inputData[fieldNames[i]] =
+                                          double.parse(controllers[i].text);
+                                    }
                                   }
                                   Navigator.pop(context, inputData);
                                 },
