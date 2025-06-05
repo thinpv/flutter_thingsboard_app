@@ -177,7 +177,7 @@ class PageKeyValue<P> {
 }
 
 class PageLinkController extends PageKeyController<PageLink> {
-  PageLinkController({int pageSize = 20, String? searchText})
+  PageLinkController({int pageSize = 100, String? searchText})
       : super(
           PageLink(
             pageSize,

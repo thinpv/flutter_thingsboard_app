@@ -122,11 +122,12 @@ extension on PageData<MyDeviceInfo> {
       return PageData<MyDeviceInfo>(data, 1, data.length, false);
     } else {
       final filtered = data
-          .where((myDeviceInfoInfo) =>
-              myDeviceInfoInfo.displayName
-                  ?.toLowerCase()
-                  .contains(searchText) ??
-              false)
+          .where(
+            (myDeviceInfoInfo) =>
+                (myDeviceInfoInfo.displayName ?? myDeviceInfoInfo.name)
+                    .toLowerCase()
+                    .contains(searchText),
+          )
           .toList();
       return PageData<MyDeviceInfo>(filtered, 1, filtered.length, false);
     }
