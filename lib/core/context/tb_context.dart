@@ -20,9 +20,13 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_profile_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/entity_device_manager.dart';
+import 'package:thingsboard_app/provider/home_manager.dart';
+import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/service/device_type_service.dart';
+import 'package:thingsboard_app/service/home_service.dart';
 import 'package:thingsboard_app/service/my_device_service.dart';
+import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
@@ -153,6 +157,18 @@ class TbContext implements PopEntry {
           if (tbClient.getAuthUser()?.customerId != null) {
             await DeviceManager.instance
                 .getMyDeviceInfosPageData(forceRefresh: true);
+          }
+
+          HomeService.init(tbClient);
+          await HomeManager.init(tbClient);
+          if (tbClient.getAuthUser()?.customerId != null) {
+            await HomeManager.instance.getHomesPageData(forceRefresh: true);
+          }
+
+          RoomService.init(tbClient);
+          await RoomManager.init(tbClient);
+          if (tbClient.getAuthUser()?.customerId != null) {
+            await RoomManager.instance.getRoomsPageData(forceRefresh: true);
           }
 
           ScenarioService.init(tbClient);
