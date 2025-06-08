@@ -8,14 +8,13 @@ import 'devices_base.dart';
 
 class DevicesList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
     with DevicesBase, EntitiesListStateBase {
-  final bool displayDeviceImage;
   DevicesList(
     TbContext tbContext,
     PageKeyController<PageLink> pageKeyController, {
     super.key,
-    this.displayDeviceImage = false,
-  }) : super(tbContext, pageKeyController);
+    searchMode = false,
+  }) : super(tbContext, pageKeyController, searchMode: searchMode);
 
   @override
-  bool displayCardImage(bool listWidgetCard) => displayDeviceImage;
+  bool displayCardImage(bool listWidgetCard) => true;
 }

@@ -3,8 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:thingsboard_app/config/routes/router.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 
-import 'room_add_page.dart';
-import 'room_details_page.dart';
+import 'device_in_room/room_details_page.dart';
 import 'rooms_page.dart';
 
 class RoomRoutes extends TbRoutes {
@@ -15,15 +14,17 @@ class RoomRoutes extends TbRoutes {
     },
   );
 
-  late var roomAddHandler = Handler(
-    handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
-      return RoomAddPage(tbContext);
-    },
-  );
+  // late var roomAddHandler = Handler(
+  //   handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
+  //     return RoomAddPage(tbContext);
+  //   },
+  // );
 
   late var roomDetailsHandler = Handler(
     handlerFunc: (BuildContext? context, Map<String, dynamic> params) {
-      return RoomDetailsPage(tbContext, params['id'][0]);
+      var searchMode = params['search']?.first == 'true';
+      return RoomDetailsPage(tbContext, params['id'][0],
+          searchMode: searchMode);
     },
   );
 
@@ -32,7 +33,7 @@ class RoomRoutes extends TbRoutes {
   @override
   void doRegisterRoutes(router) {
     router.define('/rooms', handler: roomsHandler);
-    router.define('/room', handler: roomAddHandler);
+    // router.define('/room', handler: roomAddHandler);
     router.define('/room/:id', handler: roomDetailsHandler);
   }
 }

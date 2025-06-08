@@ -4,30 +4,33 @@ import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 
-import 'devices_list.dart';
+import 'devices_in_room_list.dart';
 
-class DevicesListPage extends TbContextWidget {
+class RoomDetailsPage extends TbContextWidget {
   final bool searchMode;
+  final String roomId;
 
-  DevicesListPage(
-    TbContext tbContext, {
+  RoomDetailsPage(
+    TbContext tbContext,
+    this.roomId, {
     this.searchMode = false,
     super.key,
   }) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _DevicesListPageState();
+  State<StatefulWidget> createState() => _RoomDetailsPageState();
 }
 
-class _DevicesListPageState extends TbContextState<DevicesListPage> {
+class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
   @override
   Widget build(BuildContext context) {
-    final devicesList = DevicesList(
+    final roomDetailsList = DevicesInRoomList(
       tbContext,
       _pageLinkController,
       searchMode: widget.searchMode,
+      displayDeviceImage: true,
     );
     PreferredSizeWidget appBar;
     if (widget.searchMode) {
@@ -38,18 +41,18 @@ class _DevicesListPageState extends TbContextState<DevicesListPage> {
     } else {
       appBar = TbAppBar(
         tbContext,
-        title: Text(devicesList.title),
+        title: Text(roomDetailsList.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              navigateTo('/deviceList?search=true');
+              navigateTo('/room/?id=${widget.roomId}&search=true');
             },
           ),
         ],
       );
     }
-    return Scaffold(appBar: appBar, body: devicesList);
+    return Scaffold(appBar: appBar, body: roomDetailsList);
   }
 
   @override

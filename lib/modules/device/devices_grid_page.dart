@@ -16,10 +16,10 @@ class DevicesGridPage extends TbContextWidget {
   DevicesGridPage(TbContext tbContext, {super.key}) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _DevicesMainPageState();
+  State<StatefulWidget> createState() => _DevicesGridPageState();
 }
 
-class _DevicesMainPageState extends TbContextState<DevicesGridPage>
+class _DevicesGridPageState extends TbContextState<DevicesGridPage>
     with AutomaticKeepAliveClientMixin<DevicesGridPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
