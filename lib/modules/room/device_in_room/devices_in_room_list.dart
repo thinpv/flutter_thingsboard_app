@@ -8,10 +8,13 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 
 class DevicesInRoomList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
     with DevicesBase, EntitiesListStateBase {
+  final String roomId;
   final bool displayDeviceImage;
+
   DevicesInRoomList(
     TbContext tbContext,
-    PageKeyController<PageLink> pageKeyController, {
+    PageKeyController<PageLink> pageKeyController,
+    this.roomId, {
     super.key,
     searchMode = false,
     this.displayDeviceImage = false,
@@ -22,10 +25,18 @@ class DevicesInRoomList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
 
   @override
   Future<PageData<MyDeviceInfo>> fetchEntities(PageLink pageLink) async {
-    pageLink.textSearch = '2458';
-    var data = await DeviceManager.instance
-        .getMyDeviceInfosPageData(pageLink: pageLink, forceRefresh: refresh);
     refresh = false;
-    return data;
+    AssetId assetId = AssetId(roomId);
+    final listRelation =
+        await tbClient.getEntityRelationService().findInfoByFrom(assetId);
+    List<MyDeviceInfo> list = [];
+    for (final relation in listRelation) {
+      final device =
+          DeviceManager.instance.getMyDeviceInfoByName(relation.toName);
+      if (device != null) {
+        list.add(device);
+      }
+    }
+    return PageData<MyDeviceInfo>(list, 1, list.length, false);
   }
 }

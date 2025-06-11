@@ -29,6 +29,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     final roomDetailsList = DevicesInRoomList(
       tbContext,
       _pageLinkController,
+      widget.roomId,
       searchMode: widget.searchMode,
       displayDeviceImage: true,
     );
