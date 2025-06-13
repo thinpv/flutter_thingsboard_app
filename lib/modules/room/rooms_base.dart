@@ -44,7 +44,7 @@ mixin RoomsBase on EntitiesBase<Room, PageLink> {
 
   @override
   Widget buildEntityGridCard(BuildContext context, Room room) {
-    return Text(room.displayName ?? room.name);
+    return Text(room.getDisplayName());
   }
 
   Widget _buildCard(context, Room room) {
@@ -73,7 +73,7 @@ mixin RoomsBase on EntitiesBase<Room, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                room.displayName ?? room.name,
+                                room.getDisplayName(),
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -142,7 +142,7 @@ mixin RoomsBase on EntitiesBase<Room, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          room.displayName ?? room.name,
+                          room.getDisplayName(),
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,

@@ -5,15 +5,10 @@ class MyDevice extends Device {
 }
 
 class MyDeviceInfo extends DeviceInfo {
-  String? displayName;
   String? gatewayId;
 
   MyDeviceInfo.fromJson(Map<String, dynamic> json)
-      : displayName = json['additionalInfo'] != null &&
-                json['additionalInfo']['name'] != null
-            ? json['additionalInfo']['name']
-            : null,
-        gatewayId = json['additionalInfo'] != null &&
+      : gatewayId = json['additionalInfo'] != null &&
                 json['additionalInfo']['lastConnectedGateway'] != null
             ? json['additionalInfo']['lastConnectedGateway']
             : null,
@@ -22,14 +17,18 @@ class MyDeviceInfo extends DeviceInfo {
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
-    if (displayName != null) {
-      additionalInfo!['name'] = displayName;
-      additionalInfo!['description'] = displayName;
-    }
     if (gatewayId != null) {
       additionalInfo!['lastConnectedGateway'] = gatewayId;
     }
     return super.toJson();
+  }
+
+  String getDisplayName() {
+    if (label != null && label!.isNotEmpty) {
+      return label!;
+    } else {
+      return name;
+    }
   }
 }
 

@@ -123,10 +123,9 @@ extension on PageData<MyDeviceInfo> {
     } else {
       final filtered = data
           .where(
-            (myDeviceInfoInfo) =>
-                (myDeviceInfoInfo.displayName ?? myDeviceInfoInfo.name)
-                    .toLowerCase()
-                    .contains(searchText),
+            (myDeviceInfo) => (myDeviceInfo.getDisplayName())
+                .toLowerCase()
+                .contains(searchText),
           )
           .toList();
       return PageData<MyDeviceInfo>(filtered, 1, filtered.length, false);

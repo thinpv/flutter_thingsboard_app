@@ -24,7 +24,7 @@ class _HomeAddPageState extends State<HomeAddPage> {
   @override
   void initState() {
     super.initState();
-    homeAdd = HomeAdd('Ten mac dinh');
+    homeAdd = HomeAdd();
     _homeAddFuture = fetchEntity();
   }
 
@@ -61,7 +61,8 @@ class _HomeAddPageState extends State<HomeAddPage> {
       appBar: AppBar(
         title: GestureDetector(
           onTap: () async {
-            final controller = TextEditingController(text: entity.displayName);
+            final controller =
+                TextEditingController(text: entity.getDisplayName());
             final newName = await showDialog<String>(
               context: context,
               builder: (context) => AlertDialog(
@@ -87,12 +88,12 @@ class _HomeAddPageState extends State<HomeAddPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.displayName) {
-              entity.displayName = newName.trim();
+                newName != entity.name) {
+              entity.name = newName.trim();
               _refresh();
             }
           },
-          child: Text(entity.displayName ?? entity.name),
+          child: Text(entity.getDisplayName()),
         ),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -148,9 +149,7 @@ class _HomeAddPageState extends State<HomeAddPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.displayName ??
-                  myDeviceInfo?.name ??
-                  'Unknown Device'),
+              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(condition.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -192,9 +191,7 @@ class _HomeAddPageState extends State<HomeAddPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.displayName ??
-                  myDeviceInfo?.name ??
-                  'Unknown Device'),
+              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(action.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),

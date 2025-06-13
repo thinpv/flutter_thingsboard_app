@@ -16,7 +16,7 @@ class IfDevicesPage extends StatelessWidget {
         itemBuilder: (context, index) {
           final device = devices[index];
           return ListTile(
-            title: Text(device.displayName ?? device.name),
+            title: Text(device.getDisplayName()),
             onTap: () async {
               SceneCondition condition = SceneCondition(device.id!.id!, '', {});
               final result = await Navigator.push<SceneCondition>(

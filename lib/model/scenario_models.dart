@@ -3,32 +3,33 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Scenario extends Asset {
-  String? displayName;
   SmartScene smartScene;
 
-  Scenario(this.displayName)
+  Scenario()
       : smartScene = SmartScene(),
         super(const Uuid().v4(), 'Scenario');
 
   Scenario.fromJson(Map<String, dynamic> json)
-      : displayName = json['additionalInfo'] != null &&
-                json['additionalInfo']['name'] != null
-            ? json['additionalInfo']['name']
-            : null,
-        smartScene = SmartScene.fromJson(json),
+      : smartScene = SmartScene.fromJson(json),
         super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {
     additionalInfo = smartScene.toJson(additionalInfo);
-    additionalInfo!['name'] = displayName;
-    additionalInfo!['description'] = displayName;
     return super.toJson();
+  }
+
+  String getDisplayName() {
+    if (label != null && label!.isNotEmpty) {
+      return label!;
+    } else {
+      return name;
+    }
   }
 }
 
 class ScenarioAdd extends Scenario {
-  ScenarioAdd(String displayName) : super(displayName);
+  ScenarioAdd() : super();
 }
 
 class SmartScene {

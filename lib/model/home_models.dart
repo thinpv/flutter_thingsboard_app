@@ -3,32 +3,33 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Home extends Asset {
-  String? displayName;
   SmartScene smartScene;
 
-  Home(this.displayName)
+  Home()
       : smartScene = SmartScene(),
         super(const Uuid().v4(), 'Home');
 
   Home.fromJson(Map<String, dynamic> json)
-      : displayName = json['additionalInfo'] != null &&
-                json['additionalInfo']['name'] != null
-            ? json['additionalInfo']['name']
-            : null,
-        smartScene = SmartScene.fromJson(json),
+      : smartScene = SmartScene.fromJson(json),
         super.fromJson(json);
 
   @override
   Map<String, dynamic> toJson() {
     additionalInfo = smartScene.toJson(additionalInfo);
-    additionalInfo!['name'] = displayName;
-    additionalInfo!['description'] = displayName;
     return super.toJson();
+  }
+
+  String getDisplayName() {
+    if (label != null && label!.isNotEmpty) {
+      return label!;
+    } else {
+      return name;
+    }
   }
 }
 
 class HomeAdd extends Home {
-  HomeAdd(String displayName) : super(displayName);
+  HomeAdd() : super();
 }
 
 class SmartScene {

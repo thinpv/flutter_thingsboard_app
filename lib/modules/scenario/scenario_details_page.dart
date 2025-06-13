@@ -63,7 +63,8 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
       appBar: AppBar(
         title: GestureDetector(
           onTap: () async {
-            final controller = TextEditingController(text: entity.displayName);
+            final controller =
+                TextEditingController(text: entity.getDisplayName());
             final newName = await showDialog<String>(
               context: context,
               builder: (context) => AlertDialog(
@@ -89,12 +90,12 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.displayName) {
-              entity.displayName = newName.trim();
+                newName != entity.name) {
+              entity.name = newName.trim();
               _refresh();
             }
           },
-          child: Text(entity.displayName ?? entity.name),
+          child: Text(entity.getDisplayName()),
         ),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -150,9 +151,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.displayName ??
-                  myDeviceInfo?.name ??
-                  'Unknown Device'),
+              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(condition.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -207,9 +206,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.displayName ??
-                  myDeviceInfo?.name ??
-                  'Unknown Device'),
+              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(action.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),

@@ -46,12 +46,12 @@ mixin DevicesBase on EntitiesBase<MyDeviceInfo, PageLink> {
       var dashboardId = deviceType?.defaultDashboardId!.id!;
       var state = Utils.createDashboardEntityState(
         myDeviceInfo.id,
-        entityName: myDeviceInfo.displayName ?? myDeviceInfo.name,
+        entityName: myDeviceInfo.getDisplayName(),
         entityLabel: myDeviceInfo.label,
       );
       navigateToDashboard(
         dashboardId!,
-        dashboardTitle: myDeviceInfo.displayName ?? myDeviceInfo.name,
+        dashboardTitle: myDeviceInfo.getDisplayName(),
         state: state,
       );
     } else {
@@ -166,7 +166,7 @@ class _DeviceGridCardState extends TbContextState<DeviceGridCard> {
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Center(
                 child: AutoSizeText(
-                  entity.name,
+                  entity.getDisplayName(),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   minFontSize: 12,
@@ -340,8 +340,8 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                           fit: BoxFit.scaleDown,
                                           alignment: Alignment.centerLeft,
                                           child: Text(
-                                            widget.myDeviceInfo.displayName ??
-                                                widget.myDeviceInfo.name,
+                                            widget.myDeviceInfo
+                                                .getDisplayName(),
                                             style: const TextStyle(
                                               color: Color(
                                                 0xFF282828,
@@ -519,8 +519,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                       fit: BoxFit.fitWidth,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        widget.myDeviceInfo.displayName ??
-                            widget.myDeviceInfo.name,
+                        widget.myDeviceInfo.getDisplayName(),
                         style: const TextStyle(
                           color: Color(0xFF282828),
                           fontSize: 14,

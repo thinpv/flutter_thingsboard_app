@@ -16,7 +16,7 @@ class ThenDevicesPage extends StatelessWidget {
         itemBuilder: (context, index) {
           final device = devices[index];
           return ListTile(
-            title: Text(device.displayName ?? device.name),
+            title: Text(device.getDisplayName()),
             onTap: () async {
               SceneAction action = SceneAction(device.id!.id!, '', {});
               final result = await Navigator.push<SceneAction>(

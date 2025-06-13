@@ -7,7 +7,6 @@ class DeviceType extends DeviceProfile {
 }
 
 class DeviceTypeInfo extends DeviceProfileInfo {
-  String? displayName;
   List<Map<String, dynamic>> conditions = [];
   List<Map<String, dynamic>> actions = [];
   Map<String, dynamic>? description;
@@ -21,7 +20,6 @@ class DeviceTypeInfo extends DeviceProfileInfo {
           description = json['description'];
         }
         if (description != null) {
-          displayName = description?['name'];
           conditions =
               List<Map<String, dynamic>>.from(description?['conditions'] ?? []);
           actions =
@@ -35,7 +33,6 @@ class DeviceTypeInfo extends DeviceProfileInfo {
 
   Map<String, dynamic> toJson() {
     description ??= {};
-    if (displayName != null) description!['name'] = displayName;
     description!['conditions'] = conditions;
     description!['actions'] = actions;
     Map<String, dynamic> json = {

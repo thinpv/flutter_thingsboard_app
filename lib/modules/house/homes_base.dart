@@ -44,7 +44,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
 
   @override
   Widget buildEntityGridCard(BuildContext context, Home home) {
-    return Text(home.displayName ?? home.name);
+    return Text(home.getDisplayName());
   }
 
   Widget _buildCard(context, Home home) {
@@ -73,7 +73,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                home.displayName ?? home.name,
+                                home.getDisplayName(),
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -142,7 +142,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          home.displayName ?? home.name,
+                          home.getDisplayName(),
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,

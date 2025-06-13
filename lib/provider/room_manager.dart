@@ -122,11 +122,8 @@ extension on PageData<RoomInfo> {
       return PageData<RoomInfo>(data, 1, data.length, false);
     } else {
       final filtered = data
-          .where((myDeviceInfoInfo) =>
-              myDeviceInfoInfo.displayName
-                  ?.toLowerCase()
-                  .contains(searchText) ??
-              false)
+          .where((myDeviceInfo) =>
+              myDeviceInfo.getDisplayName().toLowerCase().contains(searchText))
           .toList();
       return PageData<RoomInfo>(filtered, 1, filtered.length, false);
     }

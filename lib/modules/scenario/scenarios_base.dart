@@ -44,7 +44,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
 
   @override
   Widget buildEntityGridCard(BuildContext context, Scenario scenario) {
-    return Text(scenario.displayName ?? scenario.name);
+    return Text(scenario.getDisplayName());
   }
 
   Widget _buildCard(context, Scenario scenario) {
@@ -73,7 +73,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                scenario.displayName ?? scenario.name,
+                                scenario.getDisplayName(),
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -142,7 +142,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          scenario.displayName ?? scenario.name,
+                          scenario.getDisplayName(),
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,
