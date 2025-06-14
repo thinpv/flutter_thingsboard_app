@@ -1,15 +1,14 @@
 import 'dart:convert';
 
 import 'package:thingsboard_app/locator.dart';
-import 'package:thingsboard_app/model/my_device_models.dart';
-import 'package:thingsboard_app/service/my_device_service.dart';
+import 'package:thingsboard_app/model/device_models.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class DeviceManager {
   static DeviceManager? _instance;
 
   final ThingsboardClient tbClient;
-  PageData<MyDeviceInfo>? _myDeviceInfoCache;
+  PageData<DeviceInfo>? _deviceInfoCache;
   bool _isLoading = false;
 
   DeviceManager._internal(this.tbClient);
@@ -20,14 +19,14 @@ class DeviceManager {
       TbStorage storage = getIt();
       String? jsonString = await storage.getItem('devices') as String?;
       if (jsonString != null) {
-        List<MyDeviceInfo> list = (jsonDecode(jsonString) as List)
-            .map((item) => MyDeviceInfo.fromJson(item))
+        List<DeviceInfo> list = (jsonDecode(jsonString) as List)
+            .map((item) => DeviceInfo.fromJson(item))
             .toList();
-        DeviceManager.instance._myDeviceInfoCache =
-            PageData<MyDeviceInfo>(list, 1, list.length, false);
+        DeviceManager.instance._deviceInfoCache =
+            PageData<DeviceInfo>(list, 1, list.length, false);
       }
     } catch (e) {
-      print('Read myDeviceInfos cache err');
+      print('Read deviceInfos cache err');
     }
   }
 
@@ -38,20 +37,20 @@ class DeviceManager {
     return _instance!;
   }
 
-  get myDeviceInfosPageLink => _myDeviceInfoCache;
-  get myDeviceInfosList => _myDeviceInfoCache?.data;
+  get deviceInfosPageLink => _deviceInfoCache;
+  get deviceInfosList => _deviceInfoCache?.data;
 
-  Future<PageData<MyDeviceInfo>> getMyDeviceInfosPageData(
+  Future<PageData<DeviceInfo>> getDeviceInfosPageData(
       {PageLink? pageLink, bool forceRefresh = false}) async {
     final searchText = pageLink?.textSearch?.toLowerCase() ?? '';
-    if (_myDeviceInfoCache != null && !forceRefresh) {
-      return Future.value(_myDeviceInfoCache!.filterByName(searchText));
+    if (_deviceInfoCache != null && !forceRefresh) {
+      return Future.value(_deviceInfoCache!.filterByName(searchText));
     }
 
     int count = 3;
     while (_isLoading && count > 0) {
       await Future.delayed(const Duration(milliseconds: 100));
-      if (--count == 0) return Future.value(_myDeviceInfoCache!);
+      if (--count == 0) return Future.value(_deviceInfoCache!);
     }
 
     try {
@@ -61,8 +60,9 @@ class DeviceManager {
       }
 
       pageLink ??= PageLink(200);
-      final pageData = await MyDeviceService.instance
-          .getCustomerMyDeviceInfos(customerId, pageLink);
+      final pageData = await tbClient
+          .getDeviceService()
+          .getCustomerDeviceInfos(customerId, pageLink);
 
       if (forceRefresh) {
         TbStorage storage = getIt();
@@ -72,23 +72,23 @@ class DeviceManager {
       }
 
       _isLoading = true;
-      _myDeviceInfoCache = pageData;
+      _deviceInfoCache = pageData;
       return pageData;
     } finally {
       _isLoading = false;
     }
   }
 
-  Future<List<MyDeviceInfo>> getMyDeviceInfosList(
+  Future<List<DeviceInfo>> getDeviceInfosList(
       {bool forceRefresh = false}) async {
-    await getMyDeviceInfosPageData(forceRefresh: forceRefresh);
-    return _myDeviceInfoCache?.data ?? [];
+    await getDeviceInfosPageData(forceRefresh: forceRefresh);
+    return _deviceInfoCache?.data ?? [];
   }
 
-  MyDeviceInfo? getMyDeviceInfoByName(String name) {
+  DeviceInfo? getDeviceInfoByName(String name) {
     try {
-      return _myDeviceInfoCache?.data.firstWhere(
-        (myDeviceInfo) => myDeviceInfo.name == name,
+      return _deviceInfoCache?.data.firstWhere(
+        (deviceInfo) => deviceInfo.name == name,
       );
     } catch (e) {
       print('e: $e');
@@ -96,10 +96,10 @@ class DeviceManager {
     }
   }
 
-  MyDeviceInfo? getMyDeviceInfoById(String id) {
+  DeviceInfo? getDeviceInfoById(String id) {
     try {
-      return _myDeviceInfoCache?.data.firstWhere(
-        (myDeviceInfo) => myDeviceInfo.id?.id == id,
+      return _deviceInfoCache?.data.firstWhere(
+        (deviceInfo) => deviceInfo.id?.id == id,
       );
     } catch (e) {
       print('e: $e');
@@ -108,27 +108,27 @@ class DeviceManager {
   }
 
   Future<void> refresh() async {
-    await getMyDeviceInfosPageData(forceRefresh: true);
+    await getDeviceInfosPageData(forceRefresh: true);
   }
 
   void clearCache() {
-    _myDeviceInfoCache = null;
+    _deviceInfoCache = null;
   }
 }
 
-extension on PageData<MyDeviceInfo> {
-  PageData<MyDeviceInfo> filterByName(String searchText) {
+extension on PageData<DeviceInfo> {
+  PageData<DeviceInfo> filterByName(String searchText) {
     if (searchText.isEmpty) {
-      return PageData<MyDeviceInfo>(data, 1, data.length, false);
+      return PageData<DeviceInfo>(data, 1, data.length, false);
     } else {
       final filtered = data
           .where(
-            (myDeviceInfo) => (myDeviceInfo.getDisplayName())
+            (deviceInfo) => (deviceInfo.getDisplayName())
                 .toLowerCase()
                 .contains(searchText),
           )
           .toList();
-      return PageData<MyDeviceInfo>(filtered, 1, filtered.length, false);
+      return PageData<DeviceInfo>(filtered, 1, filtered.length, false);
     }
   }
 }

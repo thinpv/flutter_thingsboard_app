@@ -2,6 +2,8 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
+import 'device_models.dart';
+
 class Scenario extends Asset {
   SmartScene smartScene;
 
@@ -71,8 +73,7 @@ class SmartScene {
     if (areaIds != null) additionalInfo['areaIds'] = areaIds;
     if (deviceCheck != null) {
       additionalInfo['deviceCheck'] = deviceCheck;
-      final deviceInfo =
-          DeviceManager.instance.getMyDeviceInfoById(deviceCheck!);
+      final deviceInfo = DeviceManager.instance.getDeviceInfoById(deviceCheck!);
       additionalInfo['deviceCheckName'] = deviceInfo?.name;
     }
     return additionalInfo;
@@ -82,8 +83,8 @@ class SmartScene {
     deviceCheck = null;
     for (var ifCondition in ifConditions) {
       final myDevice =
-          DeviceManager.instance.getMyDeviceInfoById(ifCondition.device);
-      String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
+          DeviceManager.instance.getDeviceInfoById(ifCondition.device);
+      String? deviceId = myDevice?.getGatewayId() ?? myDevice?.id?.id;
       if (deviceId == null) {
         deviceCheck = null;
         return;
@@ -97,8 +98,8 @@ class SmartScene {
     }
     for (var thenAction in thenActions) {
       final myDevice =
-          DeviceManager.instance.getMyDeviceInfoById(thenAction.device);
-      String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
+          DeviceManager.instance.getDeviceInfoById(thenAction.device);
+      String? deviceId = myDevice?.getGatewayId() ?? myDevice?.id?.id;
       if (deviceId == null) {
         deviceCheck = null;
         return;
@@ -132,7 +133,7 @@ class SceneCondition {
   Map<String, dynamic> toJson() {
     return {
       'device': device,
-      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
+      'deviceName': DeviceManager.instance.getDeviceInfoById(device)?.name,
       'name': name,
       'condition': condition,
     };
@@ -158,7 +159,7 @@ class SceneAction {
   Map<String, dynamic> toJson() {
     return {
       'device': device,
-      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
+      'deviceName': DeviceManager.instance.getDeviceInfoById(device)?.name,
       'name': name,
       'action': action,
     };

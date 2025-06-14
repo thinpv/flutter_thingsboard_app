@@ -1,6 +1,6 @@
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-extension on EntityId {
+extension EntityIdExtension on EntityId {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -9,7 +9,7 @@ extension on EntityId {
   }
 }
 
-extension on DeviceProfileInfo {
+extension DeviceProfileInfoExtension on DeviceProfileInfo {
   Map<String, dynamic> toJson() {
     return {
       'id': id.toJson(),
@@ -41,7 +41,7 @@ extension on ComparisonTsValue {
   }
 }
 
-extension on EntityData {
+extension EntityDataExtension on EntityData {
   Map<String, dynamic> toJson() {
     return {
       'entityId': entityId.toJson(),

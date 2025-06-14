@@ -1,12 +1,11 @@
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/core/entity/entities_list.dart';
-import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/modules/device/devices_base.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-class DevicesInRoomList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
+class DevicesInRoomList extends BaseEntitiesWidget<DeviceInfo, PageLink>
     with DevicesBase, EntitiesListStateBase {
   final String roomId;
   final bool displayDeviceImage;
@@ -24,19 +23,19 @@ class DevicesInRoomList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
   bool displayCardImage(bool listWidgetCard) => displayDeviceImage;
 
   @override
-  Future<PageData<MyDeviceInfo>> fetchEntities(PageLink pageLink) async {
+  Future<PageData<DeviceInfo>> fetchEntities(PageLink pageLink) async {
     refresh = false;
     AssetId assetId = AssetId(roomId);
     final listRelation =
         await tbClient.getEntityRelationService().findInfoByFrom(assetId);
-    List<MyDeviceInfo> list = [];
+    List<DeviceInfo> list = [];
     for (final relation in listRelation) {
       final device =
-          DeviceManager.instance.getMyDeviceInfoByName(relation.toName);
+          DeviceManager.instance.getDeviceInfoByName(relation.toName);
       if (device != null) {
         list.add(device);
       }
     }
-    return PageData<MyDeviceInfo>(list, 1, list.length, false);
+    return PageData<DeviceInfo>(list, 1, list.length, false);
   }
 }

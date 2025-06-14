@@ -9,13 +9,13 @@ import 'package:thingsboard_app/constants/assets_path.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
-import 'package:thingsboard_app/model/my_device_models.dart';
+import 'package:thingsboard_app/model/device_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
-mixin DevicesBase on EntitiesBase<MyDeviceInfo, PageLink> {
+mixin DevicesBase on EntitiesBase<DeviceInfo, PageLink> {
   bool refresh = false;
 
   @override
@@ -25,9 +25,9 @@ mixin DevicesBase on EntitiesBase<MyDeviceInfo, PageLink> {
   String get noItemsFoundText => 'No devices found';
 
   @override
-  Future<PageData<MyDeviceInfo>> fetchEntities(PageLink pageLink) async {
+  Future<PageData<DeviceInfo>> fetchEntities(PageLink pageLink) async {
     var data = await DeviceManager.instance
-        .getMyDeviceInfosPageData(pageLink: pageLink, forceRefresh: refresh);
+        .getDeviceInfosPageData(pageLink: pageLink, forceRefresh: refresh);
     refresh = false;
     return data;
   }
@@ -39,60 +39,60 @@ mixin DevicesBase on EntitiesBase<MyDeviceInfo, PageLink> {
   }
 
   @override
-  void onEntityTap(MyDeviceInfo myDeviceInfo) {
+  void onEntityTap(DeviceInfo deviceInfo) {
     var deviceType = DeviceTypeManager.instance
-        .getDeviceTypeById(myDeviceInfo.deviceProfileId!.id!);
+        .getDeviceTypeById(deviceInfo.deviceProfileId!.id!);
     if (deviceType?.defaultDashboardId != null) {
       var dashboardId = deviceType?.defaultDashboardId!.id!;
       var state = Utils.createDashboardEntityState(
-        myDeviceInfo.id,
-        entityName: myDeviceInfo.getDisplayName(),
-        entityLabel: myDeviceInfo.label,
+        deviceInfo.id,
+        entityName: deviceInfo.getDisplayName(),
+        entityLabel: deviceInfo.label,
       );
       navigateToDashboard(
         dashboardId!,
-        dashboardTitle: myDeviceInfo.getDisplayName(),
+        dashboardTitle: deviceInfo.getDisplayName(),
         state: state,
       );
     } else {
-      navigateTo('/device/${myDeviceInfo.id?.id}');
+      navigateTo('/device/${deviceInfo.id?.id}');
     }
   }
 
   @override
   Widget buildEntityGridCard(
     BuildContext context,
-    MyDeviceInfo myDeviceInfo,
+    DeviceInfo deviceInfo,
   ) {
-    return DeviceGridCard(tbContext, myDeviceInfo);
+    return DeviceGridCard(tbContext, deviceInfo);
   }
 
   @override
   Widget buildEntityListCard(
     BuildContext context,
-    MyDeviceInfo myDeviceInfo,
+    DeviceInfo deviceInfo,
   ) {
-    return _buildEntityListCard(context, myDeviceInfo, false);
+    return _buildEntityListCard(context, deviceInfo, false);
   }
 
   @override
   Widget buildEntityListWidgetCard(
     BuildContext context,
-    MyDeviceInfo myDeviceInfo,
+    DeviceInfo deviceInfo,
   ) {
-    return _buildEntityListCard(context, myDeviceInfo, true);
+    return _buildEntityListCard(context, deviceInfo, true);
   }
 
   bool displayCardImage(bool listWidgetCard) => listWidgetCard;
 
   Widget _buildEntityListCard(
     BuildContext context,
-    MyDeviceInfo myDeviceInfo,
+    DeviceInfo deviceInfo,
     bool listWidgetCard,
   ) {
     return DeviceListCard(
       tbContext,
-      myDeviceInfo: myDeviceInfo,
+      deviceInfo: deviceInfo,
       listWidgetCard: listWidgetCard,
       displayImage: displayCardImage(listWidgetCard),
     );
@@ -105,9 +105,9 @@ mixin DevicesBase on EntitiesBase<MyDeviceInfo, PageLink> {
 }
 
 class DeviceGridCard extends TbContextWidget {
-  final MyDeviceInfo myDeviceInfo;
+  final DeviceInfo deviceInfo;
 
-  DeviceGridCard(TbContext tbContext, this.myDeviceInfo, {super.key})
+  DeviceGridCard(TbContext tbContext, this.deviceInfo, {super.key})
       : super(tbContext);
 
   @override
@@ -117,7 +117,7 @@ class DeviceGridCard extends TbContextWidget {
 class _DeviceGridCardState extends TbContextState<DeviceGridCard> {
   @override
   Widget build(BuildContext context) {
-    var entity = widget.myDeviceInfo;
+    var entity = widget.deviceInfo;
     var deviceType = DeviceTypeManager.instance
         .getDeviceTypeById(entity.deviceProfileId!.id!);
     var hasImage = deviceType?.image != null;
@@ -187,14 +187,14 @@ class _DeviceGridCardState extends TbContextState<DeviceGridCard> {
 }
 
 class DeviceListCard extends TbContextWidget {
-  final MyDeviceInfo myDeviceInfo;
+  final DeviceInfo deviceInfo;
   final bool listWidgetCard;
   final bool displayImage;
 
   DeviceListCard(
     TbContext tbContext, {
     super.key,
-    required this.myDeviceInfo,
+    required this.deviceInfo,
     this.listWidgetCard = false,
     this.displayImage = false,
   }) : super(tbContext);
@@ -213,7 +213,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
     super.initState();
     if (widget.displayImage || !widget.listWidgetCard) {
       deviceTypeFuture = Future.value(DeviceTypeManager.instance
-          .getDeviceTypeById(widget.myDeviceInfo.deviceProfileId!.id!));
+          .getDeviceTypeById(widget.deviceInfo.deviceProfileId!.id!));
     }
   }
 
@@ -221,12 +221,12 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
   void didUpdateWidget(DeviceListCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.displayImage || !widget.listWidgetCard) {
-      var oldDeviceProfile = oldWidget.myDeviceInfo;
-      var myDeviceInfo = widget.myDeviceInfo;
+      var oldDeviceProfile = oldWidget.deviceInfo;
+      var deviceInfo = widget.deviceInfo;
       if (oldDeviceProfile.deviceProfileId!.id! !=
-          myDeviceInfo.deviceProfileId!.id!) {
+          deviceInfo.deviceProfileId!.id!) {
         deviceTypeFuture = Future.value(DeviceTypeManager.instance
-            .getDeviceTypeById(widget.myDeviceInfo.deviceProfileId!.id!));
+            .getDeviceTypeById(widget.deviceInfo.deviceProfileId!.id!));
       }
     }
   }
@@ -249,7 +249,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
             child: Container(
               width: 4,
               decoration: BoxDecoration(
-                color: (widget.myDeviceInfo.active ?? false)
+                color: (widget.deviceInfo.active ?? false)
                     ? const Color(0xFF008A00)
                     : const Color(0xFFAFAFAF),
                 borderRadius: const BorderRadius.only(
@@ -340,7 +340,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                           fit: BoxFit.scaleDown,
                                           alignment: Alignment.centerLeft,
                                           child: Text(
-                                            widget.myDeviceInfo
+                                            widget.deviceInfo
                                                 .getDisplayName(),
                                             style: const TextStyle(
                                               color: Color(
@@ -357,7 +357,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                       Text(
                                         entityDateFormat.format(
                                           DateTime.fromMillisecondsSinceEpoch(
-                                            widget.myDeviceInfo.createdTime!,
+                                            widget.deviceInfo.createdTime!,
                                           ),
                                         ),
                                         style: const TextStyle(
@@ -376,7 +376,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        widget.myDeviceInfo.deviceProfileName ??
+                                        widget.deviceInfo.deviceProfileName ??
                                             '',
                                         style: const TextStyle(
                                           color: Color(0xFFAFAFAF),
@@ -386,11 +386,11 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                                         ),
                                       ),
                                       Text(
-                                        widget.myDeviceInfo.active ?? false
+                                        widget.deviceInfo.active ?? false
                                             ? S.of(context).active
                                             : S.of(context).inactive,
                                         style: TextStyle(
-                                          color: widget.myDeviceInfo.active ??
+                                          color: widget.deviceInfo.active ??
                                                   false
                                               ? const Color(0xFF008A00)
                                               : const Color(0xFFAFAFAF),
@@ -519,7 +519,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                       fit: BoxFit.fitWidth,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        widget.myDeviceInfo.getDisplayName(),
+                        widget.deviceInfo.getDisplayName(),
                         style: const TextStyle(
                           color: Color(0xFF282828),
                           fontSize: 14,
@@ -536,7 +536,7 @@ class _DeviceListCardState extends TbContextState<DeviceListCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.myDeviceInfo.deviceProfileId!.id!,
+                      widget.deviceInfo.deviceProfileId!.id!,
                       style: const TextStyle(
                         color: Color(0xFFAFAFAF),
                         fontSize: 12,

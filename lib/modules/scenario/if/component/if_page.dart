@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:thingsboard_app/model/device_type_models.dart';
-import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_client/thingsboard_client.dart';
 
 class IfPage extends StatelessWidget {
   final SceneCondition condition;
@@ -12,11 +12,11 @@ class IfPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    MyDeviceInfo? myDeviceInfo =
-        DeviceManager.instance.getMyDeviceInfoById(condition.device);
-    DeviceTypeInfo? deviceType = myDeviceInfo?.deviceProfileId?.id != null
+    DeviceInfo? deviceInfo =
+        DeviceManager.instance.getDeviceInfoById(condition.device);
+    DeviceTypeInfo? deviceType = deviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
-            .getDeviceTypeById(myDeviceInfo!.deviceProfileId!.id!)
+            .getDeviceTypeById(deviceInfo!.deviceProfileId!.id!)
         : null;
     return Scaffold(
       appBar: AppBar(title: Text('Chọn thuộc tính')),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/model/device_models.dart';
 import 'package:thingsboard_app/model/scenario_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
@@ -135,9 +136,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
           ...entity.smartScene.ifConditions.map((condition) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(condition.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceInfoById(condition.device);
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -151,7 +152,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+              title: Text(deviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(condition.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -190,9 +191,9 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.smartScene.thenActions.map((action) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(action.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceInfoById(action.device);
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -206,7 +207,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+              title: Text(deviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(action.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),

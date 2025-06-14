@@ -123,8 +123,8 @@ extension on PageData<ScenarioInfo> {
       return PageData<ScenarioInfo>(data, 1, data.length, false);
     } else {
       final filtered = data
-          .where((myDeviceInfo) =>
-              myDeviceInfo.getDisplayName().toLowerCase().contains(searchText))
+          .where((deviceInfo) =>
+              deviceInfo.getDisplayName().toLowerCase().contains(searchText))
           .toList();
       return PageData<ScenarioInfo>(filtered, 1, filtered.length, false);
     }

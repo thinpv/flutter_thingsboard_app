@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/home_models.dart';
+import 'package:thingsboard_app/model/device_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/service/home_service.dart';
@@ -133,9 +134,9 @@ class _HomeAddPageState extends State<HomeAddPage> {
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
           ...entity.smartScene.ifConditions.map((condition) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(condition.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceInfoById(condition.device);
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -149,7 +150,7 @@ class _HomeAddPageState extends State<HomeAddPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+              title: Text(deviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(condition.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -175,9 +176,9 @@ class _HomeAddPageState extends State<HomeAddPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.smartScene.thenActions.map((action) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(action.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+            var deviceInfo =
+                DeviceManager.instance.getDeviceInfoById(action.device);
+            var deviceTypeId = deviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
                 : null;
@@ -191,7 +192,7 @@ class _HomeAddPageState extends State<HomeAddPage> {
             }
             return ListTile(
               leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+              title: Text(deviceInfo?.getDisplayName() ?? 'Unknown Device'),
               subtitle: Text(action.name),
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
@@ -233,7 +234,6 @@ class _HomeAddPageState extends State<HomeAddPage> {
               widget.tbContext.tbClient.getAuthUser()?.customerId;
           if (customerId != null) {
             entity.customerId = CustomerId(customerId);
-            entity.smartScene.calculateDeviceSave();
             await HomeService.instance.saveHome(entity);
             _refresh();
           } else {

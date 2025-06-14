@@ -25,7 +25,7 @@ import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/provider/scenario_manager.dart';
 import 'package:thingsboard_app/service/device_type_service.dart';
 import 'package:thingsboard_app/service/home_service.dart';
-import 'package:thingsboard_app/service/my_device_service.dart';
+// import 'package:thingsboard_app/service/my_device_service.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/service/scenario_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -152,11 +152,11 @@ class TbContext implements PopEntry {
           await DeviceTypeManager.instance
               .getDeviceTypesPageData(forceRefresh: true);
 
-          MyDeviceService.init(tbClient);
+          // DeviceService.init(tbClient);
           await DeviceManager.init(tbClient);
           if (tbClient.getAuthUser()?.customerId != null) {
             await DeviceManager.instance
-                .getMyDeviceInfosPageData(forceRefresh: true);
+                .getDeviceInfosPageData(forceRefresh: true);
           }
 
           HomeService.init(tbClient);

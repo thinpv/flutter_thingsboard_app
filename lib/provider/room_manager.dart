@@ -1,11 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class RoomManager {
+class RoomManager with ChangeNotifier {
   static RoomManager? _instance;
 
   final ThingsboardClient _tbClient;
@@ -20,11 +21,14 @@ class RoomManager {
       TbStorage storage = getIt();
       String? jsonString = await storage.getItem('rooms') as String?;
       if (jsonString != null) {
+        print('----------------_jsonString: $jsonString');
         List<RoomInfo> list = (jsonDecode(jsonString) as List)
             .map((item) => RoomInfo.fromJson(item))
             .toList();
         RoomManager.instance._roomCache =
             PageData<RoomInfo>(list, 1, list.length, false);
+        print('----------------_roomCache: ${RoomManager.instance._roomCache}');
+        RoomManager.instance.notifyListeners();
       }
     } catch (e) {
       print('Read roomInfo cache err');
@@ -70,10 +74,12 @@ class RoomManager {
         String jsonString =
             jsonEncode(pageData.data.map((d) => d.toJson()).toList());
         storage.setItem('rooms', jsonString);
+        print('----------------write jsonString: $jsonString');
       }
 
       _isLoading = true;
       _roomCache = pageData;
+      notifyListeners();
       return pageData;
     } finally {
       _isLoading = false;
@@ -122,8 +128,8 @@ extension on PageData<RoomInfo> {
       return PageData<RoomInfo>(data, 1, data.length, false);
     } else {
       final filtered = data
-          .where((myDeviceInfo) =>
-              myDeviceInfo.getDisplayName().toLowerCase().contains(searchText))
+          .where((deviceInfo) =>
+              deviceInfo.getDisplayName().toLowerCase().contains(searchText))
           .toList();
       return PageData<RoomInfo>(filtered, 1, filtered.length, false);
     }
