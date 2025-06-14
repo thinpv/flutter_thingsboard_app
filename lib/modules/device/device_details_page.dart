@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/device/lumi_plug_models.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
-import 'package:thingsboard_app/modules/device/device_details/lumi_plug_widget.dart';
+import 'package:thingsboard_app/modules/device/lumi_plug/lumi_plug_control_page.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
 import 'package:provider/provider.dart';
@@ -67,7 +67,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
           child,
         ) {
           if (myDeviceInfo is LumiPlug) {
-            return LumiPlugWidget(lumiPlug: myDeviceInfo);
+            return LumiPlugControlPage(lumiPlug: myDeviceInfo);
           } else {
             return ListTile(
               title: Text(myDeviceInfo.getDisplayName()),
