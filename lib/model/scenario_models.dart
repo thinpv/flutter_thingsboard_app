@@ -18,6 +18,7 @@ class Scenario extends Asset {
   @override
   Map<String, dynamic> toJson() {
     additionalInfo = smartScene.toJson(additionalInfo);
+    additionalInfo!['name'] = name;
     return super.toJson();
   }
 
