@@ -20,11 +20,8 @@ class DeviceManager {
       TbStorage storage = getIt();
       String? jsonString = await storage.getItem('devices') as String?;
       if (jsonString != null) {
-        List<MyDeviceInfo> list = (jsonDecode(jsonString) as List)
-            .map((item) => MyDeviceInfo.fromJson(item))
-            .toList();
         DeviceManager.instance._myDeviceInfoCache =
-            PageData<MyDeviceInfo>(list, 1, list.length, false);
+            parseMyDeviceInfoPageData(jsonDecode(jsonString));
       }
     } catch (e) {
       print('Read myDeviceInfos cache err');

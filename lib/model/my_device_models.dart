@@ -1,11 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 class MyDevice extends Device {
   MyDevice.fromJson(Map<String, dynamic> json) : super.fromJson(json);
 }
 
-class MyDeviceInfo extends DeviceInfo {
+class MyDeviceInfo extends DeviceInfo with ChangeNotifier {
   String? gatewayId;
+  TelemetrySubscriber? subscription;
 
   MyDeviceInfo.fromJson(Map<String, dynamic> json)
       : gatewayId = json['additionalInfo'] != null &&
@@ -29,6 +31,67 @@ class MyDeviceInfo extends DeviceInfo {
     } else {
       return name;
     }
+  }
+
+  void subscribe(ThingsboardClient tbClient) {
+    print('-----------subscribe to MyDevice: $name');
+    var entityFilter =
+        EntityNameFilter(entityType: EntityType.DEVICE, entityNameFilter: name);
+    var deviceFields = <EntityKey>[
+      EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'name'),
+      EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'type'),
+      EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'createdTime')
+    ];
+    var deviceTelemetry = <EntityKey>[
+      EntityKey(type: EntityKeyType.TIME_SERIES, key: 'temperature'),
+      EntityKey(type: EntityKeyType.TIME_SERIES, key: 'humidity')
+    ];
+
+    var devicesQuery = EntityDataQuery(
+        entityFilter: entityFilter,
+        entityFields: deviceFields,
+        latestValues: deviceTelemetry,
+        pageLink: EntityDataPageLink(
+            pageSize: 10,
+            sortOrder: EntityDataSortOrder(
+                key: EntityKey(
+                    type: EntityKeyType.ENTITY_FIELD, key: 'createdTime'),
+                direction: EntityDataSortOrderDirection.DESC)));
+
+    var currentTime = DateTime.now().millisecondsSinceEpoch;
+    var timeWindow = Duration(hours: 1).inMilliseconds;
+
+    var tsCmd = TimeSeriesCmd(
+        keys: ['temperature', 'humidity'],
+        startTs: currentTime - timeWindow,
+        timeWindow: timeWindow);
+
+    var cmd = EntityDataCmd(query: devicesQuery, tsCmd: tsCmd);
+
+    var telemetryService = tbClient.getTelemetryService();
+
+    subscription = TelemetrySubscriber(telemetryService, [cmd]);
+    if (subscription != null) {
+      subscription!.entityDataStream.listen((entityDataUpdate) {
+        print(
+            '[WebSocket Data]: Received entity data update: $entityDataUpdate');
+      });
+      subscription!.subscribe();
+    }
+  }
+
+  void unsubscribe() {
+    if (subscription != null) {
+      print('-----------unsubscribe from MyDevice: $name');
+      subscription!.unsubscribe();
+      subscription = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    unsubscribe();
+    super.dispose();
   }
 }
 

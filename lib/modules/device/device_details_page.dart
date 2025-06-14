@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/model/device/lumi_plug_models.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
+import 'package:thingsboard_app/modules/device/device_details/lumi_plug_widget.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
+
+import 'package:provider/provider.dart';
 
 class DeviceDetailsPage extends StatefulWidget {
   final TbContext tbContext;
@@ -39,11 +43,13 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
-              body: Center(child: Text('Không tìm thấy thiết bị')));
+            body: Center(child: Text('Không tìm thấy thiết bị')),
+          );
         }
         return _buildEntityDetails(context, snapshot.data!);
       },
@@ -51,11 +57,24 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
   }
 
   Widget _buildEntityDetails(BuildContext context, MyDeviceInfo entity) {
-    return Scaffold(
-      appBar: AppBar(title: Text(entity.getDisplayName())),
-      body: ListTile(
-        title: Text(entity.getDisplayName()),
-        subtitle: Text(entity.type),
+    return ChangeNotifierProvider<MyDeviceInfo>(
+      create: (_) => LumiPlug.fromJson(entity.toJson())
+        ..subscribe(widget.tbContext.tbClient),
+      child: Consumer<MyDeviceInfo>(
+        builder: (
+          context,
+          myDeviceInfo,
+          child,
+        ) {
+          if (myDeviceInfo is LumiPlug) {
+            return LumiPlugWidget(lumiPlug: myDeviceInfo);
+          } else {
+            return ListTile(
+              title: Text(myDeviceInfo.getDisplayName()),
+              subtitle: Text(myDeviceInfo.type + myDeviceInfo.toString()),
+            );
+          }
+        },
       ),
     );
   }

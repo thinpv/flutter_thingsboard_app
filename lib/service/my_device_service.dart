@@ -1,10 +1,18 @@
 import 'dart:convert';
 
+import 'package:thingsboard_app/model/device/lumi_plug_models.dart';
+import 'package:thingsboard_app/model/device/minihub_v1_models.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 PageData<MyDeviceInfo> parseMyDeviceInfoPageData(Map<String, dynamic> json) {
-  return PageData.fromJson(json, (json) => MyDeviceInfo.fromJson(json));
+  return PageData.fromJson(json, (json) {
+    if (json['type'] == 'lumi.plug') return LumiPlug.fromJson(json);
+    if (json['type'] == 'Minihub V1') {
+      return MinihubV1Models.fromJson(json);
+    }
+    return MyDeviceInfo.fromJson(json);
+  });
 }
 
 PageData<MyDevice> parseMyDevicePageData(Map<String, dynamic> json) {
