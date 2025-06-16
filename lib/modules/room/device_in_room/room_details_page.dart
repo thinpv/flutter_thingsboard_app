@@ -231,9 +231,9 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              _buildDevicesBlock(context, entity),
-              const SizedBox(height: 16),
               _buildControlBlock(context, entity),
+              const SizedBox(height: 16),
+              _buildDevicesBlock(context, entity),
             ],
           ),
         ),
@@ -331,6 +331,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           onChanged: (value) => setState(() => dim = value),
           onChangeEnd: (value) {
             setState(() => dim = value);
+            setState(() => onoff = dim > 0);
             controlGroup(entity, {
               'dim': dim.toInt(),
             });
