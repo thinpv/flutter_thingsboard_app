@@ -37,9 +37,9 @@ class RoomDetailsPage extends TbContextWidget {
 class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
   late Future<Room?> _roomFuture;
   final PageLinkController _pageLinkController = PageLinkController();
-  bool lightOn = true;
-  double brightness = 80;
-  double cct = 4000;
+  bool onoff = true;
+  double dim = 100;
+  double cct = 100;
   Color currentColor = const Color(0xFFFFAA33);
 
   @override
@@ -140,18 +140,12 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     RoomService.instance.saveRoom(entity);
   }
 
-  Future<void> controlGroup(Room entity) async {
+  Future<void> controlGroup(Room entity, Map<String, dynamic> data) async {
     final rpcBody = {
       'method': 'controlGroup',
       'params': {
         'id': widget.roomId,
-        'data': {
-          'onoff': lightOn ? 1 : 0,
-          'brightness': brightness.toInt(),
-          'cct': cct.toInt(),
-          'color':
-              '#${currentColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
-        },
+        'data': data,
       },
     };
 
@@ -197,13 +191,6 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
   }
 
   Widget _buildEntityDetails(BuildContext context, Room entity) {
-    final roomDetailsList = DevicesInRoomList(
-      tbContext,
-      _pageLinkController,
-      widget.roomId,
-      searchMode: widget.searchMode,
-      displayDeviceImage: true,
-    );
     PreferredSizeWidget appBar;
     if (widget.searchMode) {
       appBar = TbAppSearchBar(
@@ -317,45 +304,52 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Đèn: ${lightOn ? 'Bật' : 'Tắt'}',
+              'Đèn: ${onoff ? 'Bật' : 'Tắt'}',
               style: const TextStyle(fontSize: 18),
             ),
             Switch(
-              value: lightOn,
+              value: onoff,
               onChanged: (value) {
-                setState(() => lightOn = value);
-                controlGroup(entity);
+                setState(() => onoff = value);
+                controlGroup(entity, {
+                  'onoff': onoff ? 1 : 0,
+                });
               },
             ),
           ],
         ),
         const SizedBox(height: 20),
         Text(
-          'Độ sáng: ${brightness.toInt()}%',
+          'Độ sáng: ${dim.toInt()}%',
           style: const TextStyle(fontSize: 16),
         ),
         Slider(
           min: 0,
           max: 100,
           divisions: 100,
-          value: brightness,
-          onChanged: (value) => setState(() => brightness = value),
+          value: dim,
+          onChanged: (value) => setState(() => dim = value),
           onChangeEnd: (value) {
-            setState(() => brightness = value);
-            controlGroup(entity);
+            setState(() => dim = value);
+            controlGroup(entity, {
+              'dim': dim.toInt(),
+            });
           },
         ),
         const SizedBox(height: 20),
-        Text('CCT: ${cct.toInt()}K', style: const TextStyle(fontSize: 16)),
+        Text('CCT: ${cct.toInt() * 38 + 2700}K',
+            style: const TextStyle(fontSize: 16)),
         Slider(
-          min: 2700,
-          max: 6500,
+          min: 0,
+          max: 100,
           divisions: 38,
           value: cct,
           onChanged: (value) => setState(() => cct = value),
           onChangeEnd: (value) {
             setState(() => cct = value);
-            controlGroup(entity);
+            controlGroup(entity, {
+              'cct': cct.toInt(),
+            });
           },
         ),
         const SizedBox(height: 20),
