@@ -36,7 +36,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
   bool lightOn = true;
   double brightness = 80;
   double cct = 4000;
-  Color currentColor = Color(0xFFFFAA33);
+  Color currentColor = const Color(0xFFFFAA33);
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Chọn màu'),
+        title: const Text('Chọn màu'),
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor: currentColor,
@@ -69,7 +69,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
         ),
         actions: [
           ElevatedButton(
-            child: Text('Xong'),
+            child: const Text('Xong'),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -142,11 +142,13 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
-              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+            body: Center(child: Text('Không tìm thấy ngữ cảnh')),
+          );
         }
         return _buildEntityDetails(context, snapshot.data!);
       },
@@ -170,7 +172,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     } else {
       appBar = TbAppBar(
         tbContext,
-        title: Text(roomDetailsList.title),
+        title: Text(entity.getDisplayName()),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -181,13 +183,11 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              // navigateTo('/room_add_device?id=${widget.roomId}');
               final result = await Navigator.push<Device>(
                 context,
                 MaterialPageRoute(builder: (context) => ListDevicesPage()),
               );
               if (result != null) {
-                print('---- Device selected: ${result.name}');
                 entity.addDevice(result.id!.id!);
                 _refresh();
               }
@@ -230,9 +230,12 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
             Widget image;
             if (hasImage) {
               image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
+                context,
+                widget.tbContext.tbClient,
+                deviceType?.image,
+              );
             } else {
-              image = Icon(Icons.device_hub);
+              image = const Icon(Icons.device_hub);
             }
             return ListTile(
               leading: image,
@@ -248,19 +251,19 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
               ),
             );
           }).toList(),
-          // _addButton(
-          //     onPressed: () async {
-          //       final result = await Navigator.push<SceneCondition>(
-          //         context,
-          //         MaterialPageRoute(builder: (context) => IfDevicesPage()),
-          //       );
-          //       if (result != null) {
-          //         entity.smartScene.ifConditions.add(result);
-          //         // entity.update(ifConditions: entity.smartScene.ifConditions);
-          //         _refresh();
-          //       }
-          //     },
-          //     tooltip: 'Thêm điều kiện'),
+          _addButton(
+            onPressed: () async {
+              final result = await Navigator.push<Device>(
+                context,
+                MaterialPageRoute(builder: (context) => ListDevicesPage()),
+              );
+              if (result != null) {
+                entity.addDevice(result.id!.id!);
+                _refresh();
+              }
+            },
+            tooltip: 'Thêm thiết bị',
+          ),
         ],
       ),
     );
@@ -272,40 +275,51 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Đèn: ${lightOn ? 'Bật' : 'Tắt'}',
-                style: TextStyle(fontSize: 18)),
+            Text(
+              'Đèn: ${lightOn ? 'Bật' : 'Tắt'}',
+              style: const TextStyle(fontSize: 18),
+            ),
             Switch(
               value: lightOn,
               onChanged: (value) {
                 setState(() => lightOn = value);
                 controlGroup();
-              }
+              },
             ),
           ],
         ),
-        SizedBox(height: 20),
-        Text('Độ sáng: ${brightness.toInt()}%', style: TextStyle(fontSize: 16)),
+        const SizedBox(height: 20),
+        Text('Độ sáng: ${brightness.toInt()}%',
+            style: const TextStyle(fontSize: 16)),
         Slider(
           min: 0,
           max: 100,
           divisions: 100,
           value: brightness,
           onChanged: (value) => setState(() => brightness = value),
+          onChangeEnd: (value) {
+            setState(() => brightness = value);
+            controlGroup();
+          },
         ),
-        SizedBox(height: 20),
-        Text('CCT: ${cct.toInt()}K', style: TextStyle(fontSize: 16)),
+        const SizedBox(height: 20),
+        Text('CCT: ${cct.toInt()}K', style: const TextStyle(fontSize: 16)),
         Slider(
           min: 2700,
           max: 6500,
           divisions: 38,
           value: cct,
           onChanged: (value) => setState(() => cct = value),
+          onChangeEnd: (value) {
+            setState(() => cct = value);
+            controlGroup();
+          },
         ),
-        SizedBox(height: 20),
+        const SizedBox(height: 20),
         Row(
           children: [
-            Text('Màu RGB:', style: TextStyle(fontSize: 16)),
-            SizedBox(width: 12),
+            const Text('Màu RGB:', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 12),
             Container(
               width: 30,
               height: 30,
@@ -315,24 +329,36 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
                 border: Border.all(color: Colors.black),
               ),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             ElevatedButton(
               onPressed: pickColor,
-              child: Text('Chọn màu'),
+              child: const Text('Chọn màu'),
             ),
           ],
         ),
         // Spacer(),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         ElevatedButton.icon(
-          icon: Icon(Icons.send),
-          label: Text('Lưu cấu hình'),
+          icon: const Icon(Icons.send),
+          label: const Text('Lưu cấu hình'),
           onPressed: () => saveRoom(entity),
           style: ElevatedButton.styleFrom(
-            minimumSize: Size(double.infinity, 50),
+            minimumSize: const Size(double.infinity, 50),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _addButton(
+      {required VoidCallback onPressed, required String tooltip}) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: IconButton(
+        icon: Icon(Icons.add_circle, color: Theme.of(context).primaryColor),
+        tooltip: tooltip,
+        onPressed: onPressed,
+      ),
     );
   }
 
@@ -342,7 +368,10 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
         const BoxShadow(
-            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
       ],
     );
   }
