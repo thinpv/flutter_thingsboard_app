@@ -135,7 +135,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
         children: [
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
-          ...entity.smartScene.ifConditions.map((condition) {
+          ...entity.ifConditions.map((condition) {
             var myDeviceInfo =
                 DeviceManager.instance.getMyDeviceInfoById(condition.device);
             var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
@@ -158,8 +158,8 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 icon: const Icon(Icons.delete),
                 tooltip: 'Xóa',
                 onPressed: () {
-                  entity.smartScene.ifConditions.remove(condition);
-                  // entity.update(ifConditions: entity.smartScene.ifConditions);
+                  entity.ifConditions.remove(condition);
+                  // entity.update(ifConditions: entity.ifConditions);
                   _refresh();
                 },
               ),
@@ -172,8 +172,8 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                   MaterialPageRoute(builder: (context) => IfDevicesPage()),
                 );
                 if (result != null) {
-                  entity.smartScene.ifConditions.add(result);
-                  // entity.update(ifConditions: entity.smartScene.ifConditions);
+                  entity.ifConditions.add(result);
+                  // entity.update(ifConditions: entity.ifConditions);
                   _refresh();
                 }
               },
@@ -190,7 +190,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
-          ...entity.smartScene.thenActions.map((action) {
+          ...entity.thenActions.map((action) {
             var myDeviceInfo =
                 DeviceManager.instance.getMyDeviceInfoById(action.device);
             var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
@@ -213,8 +213,8 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                 icon: const Icon(Icons.delete),
                 tooltip: 'Xóa',
                 onPressed: () {
-                  entity.smartScene.thenActions.remove(action);
-                  // entity.update(thenActions: entity.smartScene.thenActions);
+                  entity.thenActions.remove(action);
+                  // entity.update(thenActions: entity.thenActions);
                   _refresh();
                 },
               ),
@@ -227,8 +227,8 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
                   MaterialPageRoute(builder: (context) => ThenDevicesPage()),
                 );
                 if (result != null) {
-                  entity.smartScene.thenActions.add(result);
-                  // entity.update(thenActions: entity.smartScene.thenActions);
+                  entity.thenActions.add(result);
+                  // entity.update(thenActions: entity.thenActions);
                   _refresh();
                 }
               },
@@ -262,7 +262,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
               widget.tbContext.tbClient.getAuthUser()?.customerId;
           if (customerId != null) {
             entity.customerId = CustomerId(customerId);
-            entity.smartScene.calculateDeviceSave();
+            entity.calculateDeviceSave();
             await ScenarioService.instance.saveScenario(entity);
             _refresh();
           } else {

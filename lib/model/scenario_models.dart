@@ -3,49 +3,17 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Scenario extends Asset {
-  SmartScene smartScene;
-
-  Scenario()
-      : smartScene = SmartScene(),
-        super(const Uuid().v4(), 'Scenario');
-
-  Scenario.fromJson(Map<String, dynamic> json)
-      : smartScene = SmartScene.fromJson(json),
-        super.fromJson(json);
-
-  @override
-  Map<String, dynamic> toJson() {
-    additionalInfo = smartScene.toJson(additionalInfo);
-    additionalInfo!['name'] = name;
-    return super.toJson();
-  }
-
-  String getDisplayName() {
-    if (label != null && label!.isNotEmpty) {
-      return label!;
-    } else {
-      return name;
-    }
-  }
-}
-
-class ScenarioAdd extends Scenario {
-  ScenarioAdd() : super();
-}
-
-class SmartScene {
   bool active = true;
   List<SceneCondition> ifConditions = [];
   List<SceneAction> thenActions = [];
   ScenePrecondition? precondition;
   List<String>? areaIds;
-  String? deviceCheck; // the device which will check the rule
+  String? deviceCheck;
 
-  SmartScene();
+  Scenario() : super(const Uuid().v4(), 'Scenario');
 
-  SmartScene.fromJson(Map<String, dynamic> json) {
+  Scenario.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
-
     active = info['active'] as bool? ?? true;
     ifConditions = (info['if'] as List<dynamic>? ?? [])
         .map((e) => SceneCondition.fromJson(e))
@@ -61,22 +29,32 @@ class SmartScene {
     deviceCheck = info['deviceCheck'] as String?;
   }
 
-  Map<String, dynamic> toJson(Map<String, dynamic>? additionalInfo) {
+  @override
+  Map<String, dynamic> toJson() {
     additionalInfo ??= {};
-    additionalInfo['active'] = active;
-    additionalInfo['if'] = ifConditions.map((e) => e.toJson()).toList();
-    additionalInfo['then'] = thenActions.map((e) => e.toJson()).toList();
+    additionalInfo!['name'] = name;
+    additionalInfo!['active'] = active;
+    additionalInfo!['if'] = ifConditions.map((e) => e.toJson()).toList();
+    additionalInfo!['then'] = thenActions.map((e) => e.toJson()).toList();
     if (precondition != null) {
-      additionalInfo['precondition'] = precondition!.toJson();
+      additionalInfo!['precondition'] = precondition!.toJson();
     }
-    if (areaIds != null) additionalInfo['areaIds'] = areaIds;
+    if (areaIds != null) additionalInfo!['areaIds'] = areaIds;
     if (deviceCheck != null) {
-      additionalInfo['deviceCheck'] = deviceCheck;
+      additionalInfo!['deviceCheck'] = deviceCheck;
       final deviceInfo =
           DeviceManager.instance.getMyDeviceInfoById(deviceCheck!);
-      additionalInfo['deviceCheckName'] = deviceInfo?.name;
+      additionalInfo!['deviceCheckName'] = deviceInfo?.name;
     }
-    return additionalInfo;
+    return super.toJson();
+  }
+
+  String getDisplayName() {
+    if (label != null && label!.isNotEmpty) {
+      return label!;
+    } else {
+      return name;
+    }
   }
 
   void calculateDeviceSave() {
@@ -112,6 +90,10 @@ class SmartScene {
       }
     }
   }
+}
+
+class ScenarioAdd extends Scenario {
+  ScenarioAdd() : super();
 }
 
 class SceneCondition {
