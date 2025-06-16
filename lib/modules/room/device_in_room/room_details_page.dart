@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
@@ -8,6 +10,7 @@ import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/room_manager.dart';
+import 'package:thingsboard_app/service/my_device_service.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
@@ -80,6 +83,60 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
 
   Future<void> saveRoom(Room entity) async {
     entity.updateGatewayList();
+    Map<String, dynamic> gatewayData = {}; // Prepare gateway data if needed;
+    for (final deviceId in entity.deviceIds) {
+      final device = DeviceManager.instance.getMyDeviceInfoById(deviceId);
+      if (device != null) {
+        if (device.gatewayId != null) {
+          gatewayData[device.gatewayId!] ??= [];
+          gatewayData[device.gatewayId!]!.add(device.name);
+        }
+        if (device.isGateway) {
+          gatewayData[deviceId] ??= [];
+          gatewayData[deviceId]!.add(device.name);
+        }
+      }
+    }
+
+    gatewayData.forEach((gatewayId, deviceNames) async {
+      List<dynamic> devicesInfo = [];
+      for (final deviceName in deviceNames) {
+        devicesInfo.add(
+          {'name': deviceName},
+        );
+      }
+      final groupData = {
+        'devices': devicesInfo,
+        'addr': 10,
+        'ts': DateTime.now().millisecondsSinceEpoch,
+      };
+      try {
+        Map<String, dynamic> groups = {};
+        final groupsReq =
+            await tbClient.getAttributeService().getAttributesByScope(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          ['groups'],
+        );
+        if (groupsReq.isNotEmpty) {
+          final value = groupsReq.first.getValue();
+          if (value is String) {
+            groups = jsonDecode(value) as Map<String, dynamic>;
+          } else if (value is Map<String, dynamic>) {
+            groups = value;
+          }
+        }
+        groups[widget.roomId] = groupData;
+        await tbClient.getAttributeService().saveEntityAttributesV1(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          {'groups': groups},
+        );
+      } catch (e) {
+        print('Error saving attributes for gateway $gatewayId: $e');
+      }
+    });
+
     RoomService.instance.saveRoom(entity);
   }
 
@@ -273,8 +330,10 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           ],
         ),
         const SizedBox(height: 20),
-        Text('Độ sáng: ${brightness.toInt()}%',
-            style: const TextStyle(fontSize: 16)),
+        Text(
+          'Độ sáng: ${brightness.toInt()}%',
+          style: const TextStyle(fontSize: 16),
+        ),
         Slider(
           min: 0,
           max: 100,
@@ -334,8 +393,10 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     );
   }
 
-  Widget _addButton(
-      {required VoidCallback onPressed, required String tooltip}) {
+  Widget _addButton({
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(

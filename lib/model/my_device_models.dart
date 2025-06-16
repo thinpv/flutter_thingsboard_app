@@ -6,6 +6,7 @@ class MyDevice extends Device {
 }
 
 class MyDeviceInfo extends DeviceInfo with ChangeNotifier {
+  bool isGateway = false;
   String? gatewayId;
   TelemetrySubscriber? subscription;
 
@@ -14,6 +15,8 @@ class MyDeviceInfo extends DeviceInfo with ChangeNotifier {
                 json['additionalInfo']['lastConnectedGateway'] != null
             ? json['additionalInfo']['lastConnectedGateway']
             : null,
+        isGateway = json['additionalInfo'] != null &&
+            json['additionalInfo']['gateway'] != null,
         super.fromJson(json);
 
   @override

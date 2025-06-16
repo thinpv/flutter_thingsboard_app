@@ -44,11 +44,13 @@ class _HomeDetailsPageState extends State<HomeDetailsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
-              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+            body: Center(child: Text('Không tìm thấy ngữ cảnh')),
+          );
         }
         return _buildEntityDetails(context, snapshot.data!);
       },
@@ -105,180 +107,17 @@ class _HomeDetailsPageState extends State<HomeDetailsPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: const SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             children: [
-              _buildIfBlock(context, entity),
-              const SizedBox(height: 16),
-              _buildThenBlock(context, entity),
-              const SizedBox(height: 16),
-              _buildPreconditionDisplayArea(entity),
-              _buildSaveButton(context, entity),
+              SizedBox(height: 16),
+              SizedBox(height: 16),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildIfBlock(BuildContext context, Home entity) {
-    return Container(
-      decoration: _cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(
-              S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
-          ...entity.smartScene.ifConditions.map((condition) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(condition.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
-            } else {
-              image = Icon(Icons.device_hub);
-            }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(condition.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.smartScene.ifConditions.remove(condition);
-                  // entity.update(ifConditions: entity.smartScene.ifConditions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThenBlock(BuildContext context, Home entity) {
-    return Container(
-      decoration: _cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
-          ...entity.smartScene.thenActions.map((action) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(action.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
-            } else {
-              image = Icon(Icons.device_hub);
-            }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(action.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.smartScene.thenActions.remove(action);
-                  // entity.update(thenActions: entity.smartScene.thenActions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreconditionDisplayArea(Home entity) {
-    return Column(
-      children: [
-        ListTile(
-          title: const Text('Precondition'),
-          trailing: const Text('Cả ngày'),
-        ),
-        ListTile(
-          title: const Text('Display Area'),
-          trailing: const Icon(Icons.arrow_forward_ios),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSaveButton(BuildContext context, Home entity) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () async {
-          entity.smartScene.calculateDeviceSave();
-          await HomeService.instance.saveHome(entity);
-          _refresh();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: Text(S.of(context).save, style: TextStyle(fontSize: 16)),
-      ),
-    );
-  }
-
-  Widget _addButton(
-      {required VoidCallback onPressed, required String tooltip}) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: IconButton(
-        icon: Icon(Icons.add_circle, color: Theme.of(context).primaryColor),
-        tooltip: tooltip,
-        onPressed: onPressed,
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        const BoxShadow(
-            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
-      ],
     );
   }
 }
