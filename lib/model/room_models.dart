@@ -1,33 +1,62 @@
+import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Room extends Asset {
-  late List<String> deviceIds;
+  List<String> _deviceIds = [];
+  List<String> _gatewayIds = [];
 
   Room() : super(const Uuid().v4(), 'Room');
 
   Room.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
-    deviceIds = (info['deviceIds'] as List<dynamic>?)
+    _deviceIds = (info['deviceIds'] as List<dynamic>?)
             ?.map((e) => e as String)
-            .toList() ?? [];
+            .toList() ??
+        [];
+    _gatewayIds = (info['gatewayIds'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        [];
   }
 
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
-    additionalInfo!['deviceIds'] = deviceIds;
-      return super.toJson();
+    additionalInfo!['deviceIds'] = _deviceIds;
+    additionalInfo!['gatewayIds'] = _gatewayIds;
+    return super.toJson();
   }
 
+  List<String> get deviceIds => _deviceIds;
+  List<String> get gatewayIds => _gatewayIds;
+
   void addDevice(String deviceId) {
-    if (!deviceIds.contains(deviceId)) {
-      deviceIds.add(deviceId);
+    if (!_deviceIds.contains(deviceId)) {
+      _deviceIds.add(deviceId);
+      updateGatewayList();
     }
   }
 
   void removeDevice(String deviceId) {
-    deviceIds.remove(deviceId);
+    if (_deviceIds.contains(deviceId)) {
+      _deviceIds.remove(deviceId);
+      updateGatewayList();
+    }
+  }
+
+  void updateGatewayList() {
+    _gatewayIds.clear();
+    for (final deviceId in _deviceIds) {
+      final device = DeviceManager.instance.getMyDeviceInfoById(deviceId);
+      if (device != null) {
+        String id = device.id!.id ?? '';
+        if (device.gatewayId != null) id = device.gatewayId!;
+        if (!_gatewayIds.contains(id)) {
+          _gatewayIds.add(id);
+        }
+      }
+    }
   }
 
   String getDisplayName() {

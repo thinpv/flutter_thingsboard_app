@@ -3,6 +3,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
+import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
@@ -78,10 +79,11 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
   }
 
   Future<void> saveRoom(Room entity) async {
+    entity.updateGatewayList();
     RoomService.instance.saveRoom(entity);
   }
 
-  Future<void> controlGroup() async {
+  Future<void> controlGroup(Room entity) async {
     final rpcBody = {
       'method': 'controlGroup',
       'params': {
@@ -96,26 +98,11 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       },
     };
 
-    AssetId assetId = AssetId(widget.roomId);
-    final listRelation =
-        await tbClient.getEntityRelationService().findInfoByFrom(assetId);
-
-    List<String> deviceIds = [];
-    for (final relation in listRelation) {
-      final device =
-          DeviceManager.instance.getMyDeviceInfoByName(relation.toName);
-      if (device != null) {
-        String deviceId = device.id!.id ?? '';
-        if (device.gatewayId != null) deviceId = device.gatewayId!;
-        if (!deviceIds.contains(deviceId) && (device.active ?? false)) {
-          deviceIds.add(deviceId);
-        }
-      }
-    }
-
-    if (deviceIds.isNotEmpty) {
-      for (final deviceId in deviceIds) {
-        try {
+    for (final deviceId in entity.gatewayIds) {
+      try {
+        MyDeviceInfo? deviceInfo =
+            DeviceManager.instance.getMyDeviceInfoById(deviceId);
+        if (deviceInfo != null && deviceInfo.active == true) {
           RequestConfig requestConfig = RequestConfig(
             ignoreLoading: true,
             ignoreErrors: true,
@@ -125,13 +112,10 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
                 rpcBody,
                 requestConfig: requestConfig,
               );
-        } catch (e) {
-          print('Error sending RPC to device $deviceId: $e');
         }
+      } catch (e) {
+        print('Error sending RPC to device $deviceId: $e');
       }
-      // showSuccessSnackbar('Cấu hình đã được gửi thành công!');
-    } else {
-      // showErrorSnackbar('Không tìm thấy thiết bị trong phòng này.');
     }
   }
 
@@ -283,7 +267,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
               value: lightOn,
               onChanged: (value) {
                 setState(() => lightOn = value);
-                controlGroup();
+                controlGroup(entity);
               },
             ),
           ],
@@ -299,7 +283,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           onChanged: (value) => setState(() => brightness = value),
           onChangeEnd: (value) {
             setState(() => brightness = value);
-            controlGroup();
+            controlGroup(entity);
           },
         ),
         const SizedBox(height: 20),
@@ -312,7 +296,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           onChanged: (value) => setState(() => cct = value),
           onChangeEnd: (value) {
             setState(() => cct = value);
-            controlGroup();
+            controlGroup(entity);
           },
         ),
         const SizedBox(height: 20),
