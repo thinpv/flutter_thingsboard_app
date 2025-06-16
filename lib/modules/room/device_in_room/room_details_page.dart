@@ -3,11 +3,17 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
+import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
+import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_app/provider/room_manager.dart';
+import 'package:thingsboard_app/service/room_service.dart';
+import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 import 'devices_in_room_list.dart';
+import 'list_devices_page.dart';
 
 class RoomDetailsPage extends TbContextWidget {
   final bool searchMode;
@@ -25,11 +31,28 @@ class RoomDetailsPage extends TbContextWidget {
 }
 
 class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
+  late Future<Room?> _roomFuture;
   final PageLinkController _pageLinkController = PageLinkController();
   bool lightOn = true;
   double brightness = 80;
   double cct = 4000;
   Color currentColor = Color(0xFFFFAA33);
+
+  @override
+  void initState() {
+    super.initState();
+    _roomFuture = fetchEntity(widget.roomId);
+  }
+
+  Future<Room?> fetchEntity(String id) async {
+    return RoomManager.instance.getRoomById(id);
+  }
+
+  void _refresh() {
+    setState(() {
+      _roomFuture = fetchEntity(widget.roomId);
+    });
+  }
 
   void pickColor() {
     showDialog(
@@ -54,7 +77,11 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     );
   }
 
-  Future<void> sendConfig() async {
+  Future<void> saveRoom(Room entity) async {
+    RoomService.instance.saveRoom(entity);
+  }
+
+  Future<void> controlGroup() async {
     final rpcBody = {
       'method': 'controlGroup',
       'params': {
@@ -110,6 +137,23 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<Room?>(
+      future: _roomFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const Scaffold(
+              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+        }
+        return _buildEntityDetails(context, snapshot.data!);
+      },
+    );
+  }
+
+  Widget _buildEntityDetails(BuildContext context, Room entity) {
     final roomDetailsList = DevicesInRoomList(
       tbContext,
       _pageLinkController,
@@ -136,8 +180,17 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              navigateTo('/room_add_device?id=${widget.roomId}');
+            onPressed: () async {
+              // navigateTo('/room_add_device?id=${widget.roomId}');
+              final result = await Navigator.push<Device>(
+                context,
+                MaterialPageRoute(builder: (context) => ListDevicesPage()),
+              );
+              if (result != null) {
+                print('---- Device selected: ${result.name}');
+                entity.addDevice(result.id!.id!);
+                _refresh();
+              }
             },
           ),
         ],
@@ -145,74 +198,152 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     }
     return Scaffold(
       appBar: appBar,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Đèn: ${lightOn ? 'Bật' : 'Tắt'}',
-                    style: TextStyle(fontSize: 18)),
-                Switch(
-                  value: lightOn,
-                  onChanged: (value) => setState(() => lightOn = value),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            Text('Độ sáng: ${brightness.toInt()}%',
-                style: TextStyle(fontSize: 16)),
-            Slider(
-              min: 0,
-              max: 100,
-              divisions: 100,
-              value: brightness,
-              onChanged: (value) => setState(() => brightness = value),
-            ),
-            SizedBox(height: 20),
-            Text('CCT: ${cct.toInt()}K', style: TextStyle(fontSize: 16)),
-            Slider(
-              min: 2700,
-              max: 6500,
-              divisions: 38,
-              value: cct,
-              onChanged: (value) => setState(() => cct = value),
-            ),
-            SizedBox(height: 20),
-            Row(
-              children: [
-                Text('Màu RGB:', style: TextStyle(fontSize: 16)),
-                SizedBox(width: 12),
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: currentColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black),
-                  ),
-                ),
-                SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: pickColor,
-                  child: Text('Chọn màu'),
-                ),
-              ],
-            ),
-            Spacer(),
-            ElevatedButton.icon(
-              icon: Icon(Icons.send),
-              label: Text('Lưu cấu hình'),
-              onPressed: sendConfig,
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50),
-              ),
-            ),
-            Expanded(child: roomDetailsList),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildDevicesBlock(context, entity),
+              const SizedBox(height: 16),
+              _buildControlBlock(context, entity),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDevicesBlock(BuildContext context, Room entity) {
+    return Container(
+      decoration: _cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...entity.deviceIds.map((deviceId) {
+            var myDeviceInfo =
+                DeviceManager.instance.getMyDeviceInfoById(deviceId);
+            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+            var deviceType = deviceTypeId != null
+                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
+                : null;
+            var hasImage = deviceType?.image != null;
+            Widget image;
+            if (hasImage) {
+              image = Utils.imageFromTbImage(
+                  context, widget.tbContext.tbClient, deviceType?.image);
+            } else {
+              image = Icon(Icons.device_hub);
+            }
+            return ListTile(
+              leading: image,
+              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+              subtitle: Text(myDeviceInfo?.type ?? 'Unknown Type'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Xóa',
+                onPressed: () {
+                  entity.removeDevice(deviceId);
+                  _refresh();
+                },
+              ),
+            );
+          }).toList(),
+          // _addButton(
+          //     onPressed: () async {
+          //       final result = await Navigator.push<SceneCondition>(
+          //         context,
+          //         MaterialPageRoute(builder: (context) => IfDevicesPage()),
+          //       );
+          //       if (result != null) {
+          //         entity.smartScene.ifConditions.add(result);
+          //         // entity.update(ifConditions: entity.smartScene.ifConditions);
+          //         _refresh();
+          //       }
+          //     },
+          //     tooltip: 'Thêm điều kiện'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlBlock(BuildContext context, Room entity) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Đèn: ${lightOn ? 'Bật' : 'Tắt'}',
+                style: TextStyle(fontSize: 18)),
+            Switch(
+              value: lightOn,
+              onChanged: (value) {
+                setState(() => lightOn = value);
+                controlGroup();
+              }
+            ),
+          ],
+        ),
+        SizedBox(height: 20),
+        Text('Độ sáng: ${brightness.toInt()}%', style: TextStyle(fontSize: 16)),
+        Slider(
+          min: 0,
+          max: 100,
+          divisions: 100,
+          value: brightness,
+          onChanged: (value) => setState(() => brightness = value),
+        ),
+        SizedBox(height: 20),
+        Text('CCT: ${cct.toInt()}K', style: TextStyle(fontSize: 16)),
+        Slider(
+          min: 2700,
+          max: 6500,
+          divisions: 38,
+          value: cct,
+          onChanged: (value) => setState(() => cct = value),
+        ),
+        SizedBox(height: 20),
+        Row(
+          children: [
+            Text('Màu RGB:', style: TextStyle(fontSize: 16)),
+            SizedBox(width: 12),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: currentColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black),
+              ),
+            ),
+            SizedBox(width: 12),
+            ElevatedButton(
+              onPressed: pickColor,
+              child: Text('Chọn màu'),
+            ),
+          ],
+        ),
+        // Spacer(),
+        SizedBox(height: 24),
+        ElevatedButton.icon(
+          icon: Icon(Icons.send),
+          label: Text('Lưu cấu hình'),
+          onPressed: () => saveRoom(entity),
+          style: ElevatedButton.styleFrom(
+            minimumSize: Size(double.infinity, 50),
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        const BoxShadow(
+            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+      ],
     );
   }
 
