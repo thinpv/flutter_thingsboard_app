@@ -3,6 +3,7 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Room extends Asset {
+  int? addr;
   List<DeviceInRoom> _deviceInRooms = [];
   List<String> _gatewayIds = [];
 
@@ -10,6 +11,7 @@ class Room extends Asset {
 
   Room.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
+    addr = info['addr'] as int?;
     _deviceInRooms = (info['devices'] as List<dynamic>?)
             ?.map(
               (e) =>
@@ -27,6 +29,7 @@ class Room extends Asset {
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
+    additionalInfo!['addr'] = addr;
     additionalInfo!['devices'] = _deviceInRooms;
     additionalInfo!['gatewayIds'] = _gatewayIds;
     return super.toJson();
@@ -35,7 +38,7 @@ class Room extends Asset {
   List<DeviceInRoom> get deviceInRooms => _deviceInRooms;
   List<String> get gatewayIds => _gatewayIds;
 
-  DeviceInRoom? findDevice(String deviceId, int epId) {
+  DeviceInRoom? findDevice(String deviceId, int? epId) {
     for (final deviceInRoom in _deviceInRooms) {
       if (deviceInRoom.deviceId == deviceId && deviceInRoom.epId == epId) {
         return deviceInRoom;
@@ -67,7 +70,7 @@ class Room extends Asset {
   }
 
   void removeDeviceInRoom(DeviceInRoom deviceInRoom) {
-    if (findDevice(deviceInRoom.deviceId, deviceInRoom.epId ?? 0) != null) {
+    if (findDevice(deviceInRoom.deviceId, deviceInRoom.epId) != null) {
       _deviceInRooms.remove(deviceInRoom);
       updateGatewayList();
     }
@@ -155,6 +158,11 @@ class DeviceInRoom {
       if (epId != null) 'epId': epId,
       if (epName != null) 'epName': epName,
     };
+  }
+
+  @override
+  toString() {
+    return toJson().toString();
   }
 }
 

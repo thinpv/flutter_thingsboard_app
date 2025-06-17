@@ -114,6 +114,11 @@ class HomeManager {
   void clearCache() {
     _homeCache = null;
   }
+
+  HomeInfo? getCurrentHome()
+  {
+    return _homeCache?.data.first;
+  }
 }
 
 extension on PageData<HomeInfo> {

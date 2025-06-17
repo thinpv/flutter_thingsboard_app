@@ -9,6 +9,7 @@ import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_app/provider/home_manager.dart';
 import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
@@ -102,10 +103,14 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       for (final deviceInRoom in deviceInRooms) {
         devicesInfo.add(deviceInRoom.buildRoom());
       }
+      if (entity.addr == null) {
+        entity.addr = HomeManager.instance.getCurrentHome()!.nextGroupAddr;
+        HomeManager.instance.getCurrentHome()!.increaseGroupAddr();
+      }
       final groupData = {
         'name': entity.getDisplayName(),
         'devices': devicesInfo,
-        'addr': 10,
+        'addr': entity.addr,
         'ts': DateTime.now().millisecondsSinceEpoch,
       };
       try {
@@ -281,12 +286,24 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
             onPressed: () async {
               final result = await Navigator.push<DeviceInRoom>(
                 context,
-                MaterialPageRoute(builder: (context) => ListDevicesPage()),
+                MaterialPageRoute(builder: (context) => const ListDevicesPage()),
               );
               if (result != null) {
                 entity.addDeviceInRoom(result);
                 _refresh();
               }
+
+              // final deviceInRooms = await Navigator.push<List<DeviceInRoom>>(
+              //   context,
+              //   MaterialPageRoute(
+              //       builder: (context) => const ListDevicesPage()),
+              // );
+              // if (deviceInRooms != null) {
+              //   for (DeviceInRoom deviceInRoom in deviceInRooms) {
+              //     entity.addDeviceInRoom(deviceInRoom);
+              //   }
+              //   _refresh();
+              // }
             },
             tooltip: 'Thêm thiết bị',
           ),

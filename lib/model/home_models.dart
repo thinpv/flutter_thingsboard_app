@@ -1,20 +1,24 @@
+import 'package:thingsboard_app/service/home_service.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Home extends Asset {
   int nextGroupAddr = 1;
+  int nextSceneAddr = 1;
 
   Home() : super(const Uuid().v4(), 'Home');
 
   Home.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
     nextGroupAddr = info['nextGroupAddr'] as int? ?? 1;
+    nextSceneAddr = info['nextSceneAddr'] as int? ?? 1;
   }
 
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
     additionalInfo!['nextGroupAddr'] = nextGroupAddr;
+    additionalInfo!['nextSceneAddr'] = nextSceneAddr;
     return super.toJson();
   }
 
@@ -24,6 +28,16 @@ class Home extends Asset {
     } else {
       return name;
     }
+  }
+
+  void increaseGroupAddr() {
+    nextGroupAddr++;
+    HomeService.instance.saveHome(this);
+  }
+
+  void increaseSceneAddr() {
+    nextSceneAddr++;
+    HomeService.instance.saveHome(this);
   }
 }
 
