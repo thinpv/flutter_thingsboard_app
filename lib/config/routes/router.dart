@@ -9,7 +9,7 @@ import 'package:thingsboard_app/modules/asset/asset_routes.dart';
 import 'package:thingsboard_app/modules/audit_log/audit_logs_routes.dart';
 import 'package:thingsboard_app/modules/device/device_routes.dart';
 import 'package:thingsboard_app/modules/room/room_routes.dart';
-import 'package:thingsboard_app/modules/scenario/scenario_routes.dart';
+import 'package:thingsboard_app/modules/rule/rule_routes.dart';
 import 'package:thingsboard_app/modules/customer/customer_routes.dart';
 import 'package:thingsboard_app/modules/dashboard/dashboard_routes.dart';
 // import 'package:thingsboard_app/modules/device_profile/device_routes.dart';
@@ -48,7 +48,7 @@ class ThingsboardAppRouter {
     RoomRoutes(_tbContext).registerRoutes();
     ProfileRoutes(_tbContext).registerRoutes();
     AssetRoutes(_tbContext).registerRoutes();
-    ScenarioRoutes(_tbContext).registerRoutes();
+    RuleRoutes(_tbContext).registerRoutes();
     DeviceRoutes(_tbContext).registerRoutes();
     AlarmRoutes(_tbContext).registerRoutes();
     DashboardRoutes(_tbContext).registerRoutes();

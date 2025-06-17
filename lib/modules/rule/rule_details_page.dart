@@ -1,49 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
-import 'package:thingsboard_app/provider/scenario_manager.dart';
-import 'package:thingsboard_app/service/scenario_service.dart';
+import 'package:thingsboard_app/provider/rule_manager.dart';
+import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
 import 'if/if_devices_page.dart';
 import 'then/then_devices_page.dart';
 
-class ScenarioDetailsPage extends StatefulWidget {
+class RuleDetailsPage extends StatefulWidget {
   final TbContext tbContext;
-  final String scenarioId;
+  final String ruleId;
 
-  const ScenarioDetailsPage(this.tbContext, this.scenarioId, {super.key});
+  const RuleDetailsPage(this.tbContext, this.ruleId, {super.key});
 
   @override
-  State<ScenarioDetailsPage> createState() => _ScenarioDetailsPageState();
+  State<RuleDetailsPage> createState() => _RuleDetailsPageState();
 }
 
-class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
-  late Future<Scenario?> _scenarioFuture;
+class _RuleDetailsPageState extends State<RuleDetailsPage> {
+  late Future<Rule?> _ruleFuture;
 
   @override
   void initState() {
     super.initState();
-    _scenarioFuture = fetchEntity(widget.scenarioId);
+    _ruleFuture = fetchEntity(widget.ruleId);
   }
 
-  Future<Scenario?> fetchEntity(String id) async {
-    return ScenarioManager.instance.getScenarioById(id);
+  Future<Rule?> fetchEntity(String id) async {
+    return RuleManager.instance.getRuleById(id);
   }
 
   void _refresh() {
     setState(() {
-      _scenarioFuture = fetchEntity(widget.scenarioId);
+      _ruleFuture = fetchEntity(widget.ruleId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Scenario?>(
-      future: _scenarioFuture,
+    return FutureBuilder<Rule?>(
+      future: _ruleFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -58,7 +58,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     );
   }
 
-  Widget _buildEntityDetails(BuildContext context, Scenario entity) {
+  Widget _buildEntityDetails(BuildContext context, Rule entity) {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -126,7 +126,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     );
   }
 
-  Widget _buildIfBlock(BuildContext context, Scenario entity) {
+  Widget _buildIfBlock(BuildContext context, Rule entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -182,7 +182,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     );
   }
 
-  Widget _buildThenBlock(BuildContext context, Scenario entity) {
+  Widget _buildThenBlock(BuildContext context, Rule entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -237,7 +237,7 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     );
   }
 
-  Widget _buildPreconditionDisplayArea(Scenario entity) {
+  Widget _buildPreconditionDisplayArea(Rule entity) {
     return Column(
       children: [
         ListTile(
@@ -252,13 +252,13 @@ class _ScenarioDetailsPageState extends State<ScenarioDetailsPage> {
     );
   }
 
-  Widget _buildSaveButton(BuildContext context, Scenario entity) {
+  Widget _buildSaveButton(BuildContext context, Rule entity) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
           entity.calculateDeviceSave();
-          await ScenarioService.instance.saveScenario(entity);
+          await RuleService.instance.saveRule(entity);
           _refresh();
         },
         style: ElevatedButton.styleFrom(

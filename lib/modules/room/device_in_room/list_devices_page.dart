@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
 class ListDevicesPage extends StatelessWidget {

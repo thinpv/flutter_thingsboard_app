@@ -1,50 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
-import 'package:thingsboard_app/service/scenario_service.dart';
+import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 import 'if/if_devices_page.dart';
 import 'then/then_devices_page.dart';
 
-class ScenarioAddPage extends StatefulWidget {
+class RuleAddPage extends StatefulWidget {
   final TbContext tbContext;
 
-  ScenarioAddPage(this.tbContext, {super.key});
+  RuleAddPage(this.tbContext, {super.key});
 
   @override
-  State<ScenarioAddPage> createState() => _ScenarioAddPageState();
+  State<RuleAddPage> createState() => _RuleAddPageState();
 }
 
-class _ScenarioAddPageState extends State<ScenarioAddPage> {
-  late Future<ScenarioAdd?> _scenarioAddFuture;
-  late ScenarioAdd scenarioAdd;
+class _RuleAddPageState extends State<RuleAddPage> {
+  late Future<RuleAdd?> _ruleAddFuture;
+  late RuleAdd ruleAdd;
 
   @override
   void initState() {
     super.initState();
-    scenarioAdd = ScenarioAdd();
-    _scenarioAddFuture = fetchEntity();
+    ruleAdd = RuleAdd();
+    _ruleAddFuture = fetchEntity();
   }
 
-  Future<ScenarioAdd?> fetchEntity() async {
-    return Future.value(scenarioAdd);
+  Future<RuleAdd?> fetchEntity() async {
+    return Future.value(ruleAdd);
   }
 
   void _refresh() {
     setState(() {
-      _scenarioAddFuture = fetchEntity();
+      _ruleAddFuture = fetchEntity();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<ScenarioAdd?>(
-      future: _scenarioAddFuture,
+    return FutureBuilder<RuleAdd?>(
+      future: _ruleAddFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -59,7 +59,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
     );
   }
 
-  Widget _buildEntityDetails(BuildContext context, ScenarioAdd entity) {
+  Widget _buildEntityDetails(BuildContext context, RuleAdd entity) {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -127,7 +127,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
     );
   }
 
-  Widget _buildIfBlock(BuildContext context, ScenarioAdd entity) {
+  Widget _buildIfBlock(BuildContext context, RuleAdd entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -183,7 +183,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
     );
   }
 
-  Widget _buildThenBlock(BuildContext context, ScenarioAdd entity) {
+  Widget _buildThenBlock(BuildContext context, RuleAdd entity) {
     return Container(
       decoration: _cardDecoration(),
       child: Column(
@@ -238,7 +238,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
     );
   }
 
-  Widget _buildPreconditionDisplayArea(ScenarioAdd entity) {
+  Widget _buildPreconditionDisplayArea(RuleAdd entity) {
     return Column(
       children: [
         ListTile(
@@ -253,7 +253,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
     );
   }
 
-  Widget _buildSaveButton(BuildContext context, ScenarioAdd entity) {
+  Widget _buildSaveButton(BuildContext context, RuleAdd entity) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -263,7 +263,7 @@ class _ScenarioAddPageState extends State<ScenarioAddPage> {
           if (customerId != null) {
             entity.customerId = CustomerId(customerId);
             entity.calculateDeviceSave();
-            await ScenarioService.instance.saveScenario(entity);
+            await RuleService.instance.saveRule(entity);
             _refresh();
           } else {
             // Handle the case when customerId is null, e.g., show an error

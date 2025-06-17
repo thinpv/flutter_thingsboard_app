@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
+import 'package:thingsboard_app/provider/rule_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
+mixin RulesBase on EntitiesBase<Rule, PageLink> {
   bool refresh = false;
 
   @override
-  String get title => 'Scenarios';
+  String get title => 'Rules';
 
   @override
-  String get noItemsFoundText => 'No scenarios found';
+  String get noItemsFoundText => 'No rules found';
 
   @override
-  Future<PageData<Scenario>> fetchEntities(PageLink pageLink) async {
-    var data = await ScenarioManager.instance
-        .getScenariosPageData(pageLink: pageLink, forceRefresh: refresh);
+  Future<PageData<Rule>> fetchEntities(PageLink pageLink) async {
+    var data = await RuleManager.instance
+        .getRulesPageData(pageLink: pageLink, forceRefresh: refresh);
     refresh = false;
     return data;
   }
@@ -28,26 +28,26 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
   }
 
   @override
-  void onEntityTap(Scenario scenario) {
-    navigateTo('/scenario/${scenario.id!.id}');
+  void onEntityTap(Rule rule) {
+    navigateTo('/rule/${rule.id!.id}');
   }
 
   @override
-  Widget buildEntityListCard(BuildContext context, Scenario scenario) {
-    return _buildCard(context, scenario);
+  Widget buildEntityListCard(BuildContext context, Rule rule) {
+    return _buildCard(context, rule);
   }
 
   @override
-  Widget buildEntityListWidgetCard(BuildContext context, Scenario scenario) {
-    return _buildListWidgetCard(context, scenario);
+  Widget buildEntityListWidgetCard(BuildContext context, Rule rule) {
+    return _buildListWidgetCard(context, rule);
   }
 
   @override
-  Widget buildEntityGridCard(BuildContext context, Scenario scenario) {
-    return Text(scenario.getDisplayName());
+  Widget buildEntityGridCard(BuildContext context, Rule rule) {
+    return Text(rule.getDisplayName());
   }
 
-  Widget _buildCard(context, Scenario scenario) {
+  Widget _buildCard(context, Rule rule) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -73,7 +73,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                scenario.getDisplayName(),
+                                rule.getDisplayName(),
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -86,7 +86,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                           Text(
                             entityDateFormat.format(
                               DateTime.fromMillisecondsSinceEpoch(
-                                scenario.createdTime!,
+                                rule.createdTime!,
                               ),
                             ),
                             style: const TextStyle(
@@ -100,7 +100,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        scenario.type,
+                        rule.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,
@@ -122,7 +122,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
     );
   }
 
-  Widget _buildListWidgetCard(BuildContext context, Scenario scenario) {
+  Widget _buildListWidgetCard(BuildContext context, Rule rule) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -142,7 +142,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          scenario.getDisplayName(),
+                          rule.getDisplayName(),
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,
@@ -152,7 +152,7 @@ mixin ScenariosBase on EntitiesBase<Scenario, PageLink> {
                         ),
                       ),
                       Text(
-                        scenario.type,
+                        rule.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,

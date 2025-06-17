@@ -2,7 +2,7 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
-class Scenario extends Asset {
+class Rule extends Asset {
   bool active = true;
   List<SceneCondition> ifConditions = [];
   List<SceneAction> thenActions = [];
@@ -10,9 +10,9 @@ class Scenario extends Asset {
   List<String>? areaIds;
   String? deviceCheck;
 
-  Scenario() : super(const Uuid().v4(), 'Scenario');
+  Rule() : super(const Uuid().v4(), 'Rule');
 
-  Scenario.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
+  Rule.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
     active = info['active'] as bool? ?? true;
     ifConditions = (info['if'] as List<dynamic>? ?? [])
@@ -92,8 +92,8 @@ class Scenario extends Asset {
   }
 }
 
-class ScenarioAdd extends Scenario {
-  ScenarioAdd() : super();
+class RuleAdd extends Rule {
+  RuleAdd() : super();
 }
 
 class SceneCondition {
@@ -165,12 +165,12 @@ class ScenePrecondition {
       };
 }
 
-class ScenarioInfo extends Scenario {
+class RuleInfo extends Rule {
   String? customerTitle;
   bool? customerIsPublic;
-  String scenarioProfileName = 'Scenario';
+  String ruleProfileName = 'Rule';
 
-  ScenarioInfo.fromJson(Map<String, dynamic> json)
+  RuleInfo.fromJson(Map<String, dynamic> json)
       : customerTitle = json['customerTitle'],
         customerIsPublic = json['customerIsPublic'],
         super.fromJson(json);
@@ -180,34 +180,34 @@ class ScenarioInfo extends Scenario {
     final json = super.toJson();
     if (customerTitle != null) json['customerTitle'] = customerTitle;
     if (customerIsPublic != null) json['customerIsPublic'] = customerIsPublic;
-    json['assetProfileName'] = scenarioProfileName;
+    json['assetProfileName'] = ruleProfileName;
     return json;
   }
 
   @override
   String toString() {
-    return 'ScenarioInfo{${assetString('scenarioProfileName: $scenarioProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
+    return 'RuleInfo{${assetString('ruleProfileName: $ruleProfileName, customerTitle: $customerTitle, customerIsPublic: $customerIsPublic')}}';
   }
 }
 
-class ScenarioSearchQuery extends EntitySearchQuery {
-  List<String> scenarioTypes;
+class RuleSearchQuery extends EntitySearchQuery {
+  List<String> ruleTypes;
 
-  ScenarioSearchQuery(
+  RuleSearchQuery(
       {required RelationsSearchParameters parameters,
-      required this.scenarioTypes,
+      required this.ruleTypes,
       String? relationType})
       : super(parameters: parameters, relationType: relationType);
 
   @override
   Map<String, dynamic> toJson() {
     var json = super.toJson();
-    json['scenarioTypes'] = scenarioTypes;
+    json['ruleTypes'] = ruleTypes;
     return json;
   }
 
   @override
   String toString() {
-    return 'ScenarioSearchQuery{${entitySearchQueryString('scenarioTypes: $scenarioTypes')}}';
+    return 'RuleSearchQuery{${entitySearchQueryString('ruleTypes: $ruleTypes')}}';
   }
 }

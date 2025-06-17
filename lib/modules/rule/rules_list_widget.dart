@@ -1,11 +1,11 @@
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/entity/entities_list_widget.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
-import 'package:thingsboard_app/modules/scenario/scenarios_base.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
+import 'package:thingsboard_app/modules/rule/rules_base.dart';
 
-class ScenariosListWidget extends EntitiesListPageLinkWidget<Scenario>
-    with ScenariosBase {
-  ScenariosListWidget(
+class RulesListWidget extends EntitiesListPageLinkWidget<Rule>
+    with RulesBase {
+  RulesListWidget(
     TbContext tbContext, {
     super.key,
     EntitiesListWidgetController? controller,
@@ -13,6 +13,6 @@ class ScenariosListWidget extends EntitiesListPageLinkWidget<Scenario>
 
   @override
   void onViewAll() {
-    navigateTo('/scenarios');
+    navigateTo('/rules');
   }
 }

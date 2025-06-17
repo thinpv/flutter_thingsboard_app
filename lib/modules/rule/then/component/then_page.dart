@@ -2,33 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:thingsboard_app/model/device_type_models.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 
-class IfPage extends StatelessWidget {
-  final SceneCondition condition;
-  IfPage(this.condition, {super.key});
+class ThenPage extends StatelessWidget {
+  final SceneAction action;
+  ThenPage(this.action, {super.key});
 
   @override
   Widget build(BuildContext context) {
     MyDeviceInfo? myDeviceInfo =
-        DeviceManager.instance.getMyDeviceInfoById(condition.device);
+        DeviceManager.instance.getMyDeviceInfoById(action.device);
     DeviceTypeInfo? deviceType = myDeviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
             .getDeviceTypeById(myDeviceInfo!.deviceProfileId!.id!)
         : null;
     return Scaffold(
-      appBar: AppBar(title: Text('Chọn thuộc tính')),
-      body: deviceType?.conditions != null
+      appBar: AppBar(title: Text('Chọn hành động')),
+      body: deviceType?.actions != null
           ? ListView.builder(
-              itemCount: deviceType!.conditions.length,
+              itemCount: deviceType!.actions.length,
               itemBuilder: (context, index) {
-                final option = deviceType.conditions[index];
+                final option = deviceType.actions[index];
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
-                    condition.name = option['name'].toString();
+                    action.name = option['name'].toString();
                     final values = option['value'];
                     if (values.toString().contains('?')) {
                       final List<String> fieldNames = [];
@@ -104,16 +104,16 @@ class IfPage extends StatelessWidget {
                           );
                         },
                       );
-                      condition.condition = newValue ?? {};
+                      action.action = newValue ?? {};
                     } else {
-                      condition.condition = option['value'];
+                      action.action = option['value'];
                     }
-                    Navigator.pop(context, condition);
+                    Navigator.pop(context, action);
                   },
                 );
               },
             )
-          : Center(child: Text('No conditions available')),
+          : Center(child: Text('No actions available')),
     );
   }
 }

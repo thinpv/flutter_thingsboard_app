@@ -1,13 +1,13 @@
 {
   "ruleChain": {
-    "name": "Rule Chain check create Scenario",
+    "name": "Rule Chain check create Rule",
     "type": "CORE",
     "firstRuleNodeId": null,
     "root": false,
     "debugMode": false,
     "configuration": null,
     "additionalInfo": {
-      "description": "Check device will check this Scenario, create relation and send rpc to the device"
+      "description": "Check device will check this Rule, create relation and send rpc to the device"
     }
   },
   "metadata": {
@@ -142,7 +142,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.filter.TbAssetTypeSwitchNode",
-        "name": "Check asset is a scenario",
+        "name": "Check asset is a rule",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -176,7 +176,7 @@
           "entityType": "DEVICE",
           "entityNamePattern": "$[additionalInfo.deviceCheckName]",
           "entityTypePattern": null,
-          "relationType": "CheckScenario",
+          "relationType": "CheckRule",
           "createEntityIfNotExists": false,
           "removeCurrentRelations": false,
           "changeOriginatorToRelatedEntity": true
@@ -211,7 +211,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.action.TbDeleteRelationNode",
-        "name": "delete relation from Scenario and device save",
+        "name": "delete relation from Rule and device save",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -225,7 +225,7 @@
           "direction": "FROM",
           "entityType": "DEVICE",
           "entityNamePattern": "$[additionalInfo.deviceCheckName]",
-          "relationType": "CheckScenario"
+          "relationType": "CheckRule"
         },
         "additionalInfo": {
           "description": "",
@@ -249,7 +249,7 @@
           "direction": "TO",
           "entityType": "DEVICE",
           "entityNamePattern": "$[additionalInfo.deviceCheckName]",
-          "relationType": "CheckScenario"
+          "relationType": "CheckRule"
         },
         "additionalInfo": {
           "description": "",
@@ -278,7 +278,7 @@
             "maxLevel": 1,
             "filters": [
               {
-                "relationType": "CheckScenario",
+                "relationType": "CheckRule",
                 "entityTypes": [
                   "DEVICE"
                 ]
@@ -294,7 +294,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.metadata.TbGetAttributesNode",
-        "name": "get scenarios from device",
+        "name": "get rules from device",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -308,7 +308,7 @@
           "fetchTo": "METADATA",
           "clientAttributeNames": [],
           "sharedAttributeNames": [
-            "scenarios"
+            "rules"
           ],
           "serverAttributeNames": [],
           "latestTsKeyNames": [],
@@ -322,7 +322,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-        "name": "update scenarios",
+        "name": "update rules",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -334,7 +334,7 @@
         "configuration": {
           "scriptLang": "TBEL",
           "jsScript": "return {msg: msg, metadata: metadata, msgType: msgType};",
-          "tbelScript": "var scenarios = JSON.parse(metadata.shared_scenarios);\nif (scenarios == null)\n    scenarios = {};\nif (scenarios != null) {\n    if (msg.additionalInfo['deviceCheck'] == null) {\n        scenarios[msg.id.id] = null;\n    } else {\n        msg.additionalInfo['name'] = null;\n        msg.additionalInfo['description'] = null;\n        msg.additionalInfo['deviceCheck'] = null;\n        msg.additionalInfo['ts'] = Date.now();\n        scenarios[msg.id.id] = msg.additionalInfo;\n    }\n}\n\nreturn {\n    msg: {\n        scenarios: scenarios\n    },\n    metadata: metadata,\n    msgType: 'POST_ATTRIBUTES_REQUEST'\n};"
+          "tbelScript": "var rules = JSON.parse(metadata.shared_rules);\nif (rules == null)\n    rules = {};\nif (rules != null) {\n    if (msg.additionalInfo['deviceCheck'] == null) {\n        rules[msg.id.id] = null;\n    } else {\n        msg.additionalInfo['name'] = null;\n        msg.additionalInfo['description'] = null;\n        msg.additionalInfo['deviceCheck'] = null;\n        msg.additionalInfo['ts'] = Date.now();\n        rules[msg.id.id] = msg.additionalInfo;\n    }\n}\n\nreturn {\n    msg: {\n        rules: rules\n    },\n    metadata: metadata,\n    msgType: 'POST_ATTRIBUTES_REQUEST'\n};"
         },
         "additionalInfo": {
           "description": "",
@@ -344,7 +344,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
-        "name": "save scenarios to share attribute",
+        "name": "save rules to share attribute",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -418,7 +418,7 @@
       {
         "fromIndex": 7,
         "toIndex": 9,
-        "type": "Scenario"
+        "type": "Rule"
       },
       {
         "fromIndex": 8,

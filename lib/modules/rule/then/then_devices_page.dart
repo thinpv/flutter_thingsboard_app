@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/model/my_device_models.dart';
-import 'package:thingsboard_app/model/scenario_models.dart';
+import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
-import 'component/if_page.dart';
+import 'component/then_page.dart';
 
-class IfDevicesPage extends StatelessWidget {
+class ThenDevicesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     List<MyDeviceInfo> devices = DeviceManager.instance.myDeviceInfosList;
@@ -18,10 +18,10 @@ class IfDevicesPage extends StatelessWidget {
           return ListTile(
             title: Text(device.getDisplayName()),
             onTap: () async {
-              SceneCondition condition = SceneCondition(device.id!.id!, '', {});
-              final result = await Navigator.push<SceneCondition>(
+              SceneAction action = SceneAction(device.id!.id!, '', {});
+              final result = await Navigator.push<SceneAction>(
                 context,
-                MaterialPageRoute(builder: (context) => IfPage(condition)),
+                MaterialPageRoute(builder: (context) => ThenPage(action)),
               );
               Navigator.pop(context, result);
             },

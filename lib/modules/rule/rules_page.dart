@@ -4,27 +4,27 @@ import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 
-import 'scenarios_list.dart';
+import 'rules_list.dart';
 
-class ScenariosPage extends TbContextWidget {
+class RulesPage extends TbContextWidget {
   final bool searchMode;
 
-  ScenariosPage(
+  RulesPage(
     TbContext tbContext, {
     this.searchMode = false,
     super.key,
   }) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _ScenariosPageState();
+  State<StatefulWidget> createState() => _RulesPageState();
 }
 
-class _ScenariosPageState extends TbContextState<ScenariosPage> {
+class _RulesPageState extends TbContextState<RulesPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
   @override
   Widget build(BuildContext context) {
-    final scenariosList = ScenariosList(
+    final rulesList = RulesList(
       tbContext,
       _pageLinkController,
       searchMode: widget.searchMode,
@@ -38,24 +38,24 @@ class _ScenariosPageState extends TbContextState<ScenariosPage> {
     } else {
       appBar = TbAppBar(
         tbContext,
-        title: Text(scenariosList.title),
+        title: Text(rulesList.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              navigateTo('/scenarios?search=true');
+              navigateTo('/rules?search=true');
             },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              navigateTo('/scenario');
+              navigateTo('/rule');
             },
           ),
         ],
       );
     }
-    return Scaffold(appBar: appBar, body: scenariosList);
+    return Scaffold(appBar: appBar, body: rulesList);
   }
 
   @override

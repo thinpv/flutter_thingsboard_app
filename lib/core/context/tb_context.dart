@@ -22,12 +22,12 @@ import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/entity_device_manager.dart';
 import 'package:thingsboard_app/provider/home_manager.dart';
 import 'package:thingsboard_app/provider/room_manager.dart';
-import 'package:thingsboard_app/provider/scenario_manager.dart';
+import 'package:thingsboard_app/provider/rule_manager.dart';
 import 'package:thingsboard_app/service/device_type_service.dart';
 import 'package:thingsboard_app/service/home_service.dart';
 import 'package:thingsboard_app/service/my_device_service.dart';
 import 'package:thingsboard_app/service/room_service.dart';
-import 'package:thingsboard_app/service/scenario_service.dart';
+import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
 import 'package:thingsboard_app/utils/services/firebase/i_firebase_service.dart';
@@ -171,11 +171,11 @@ class TbContext implements PopEntry {
             await RoomManager.instance.getRoomsPageData(forceRefresh: true);
           }
 
-          ScenarioService.init(tbClient);
-          await ScenarioManager.init(tbClient);
+          RuleService.init(tbClient);
+          await RuleManager.init(tbClient);
           if (tbClient.getAuthUser()?.customerId != null) {
-            await ScenarioManager.instance
-                .getScenariosPageData(forceRefresh: true);
+            await RuleManager.instance
+                .getRulesPageData(forceRefresh: true);
           }
 
           // await EntityDeviceManager.init(tbClient);
