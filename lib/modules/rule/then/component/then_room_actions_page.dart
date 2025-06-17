@@ -4,8 +4,9 @@ import 'package:thingsboard_app/model/rule_models.dart';
 
 class ThenRoomActionsPage extends StatelessWidget {
   final List<Option> options = [
-    Option(name: 'Bật phòng', value: {'onoff': 1}),
     Option(name: 'Tắt phòng', value: {'onoff': 0}),
+    Option(name: 'Bật phòng', value: {'onoff': 1}),
+    Option(name: 'Bật/Tắt phòng', value: {'onoff': 2}),
     Option(name: 'Điều chỉnh độ sáng', value: {'dim': '?number'}),
     Option(name: 'Điều chỉnh CCT', value: {'cct': '?number'}),
   ];
