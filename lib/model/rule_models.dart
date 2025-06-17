@@ -115,7 +115,8 @@ class Rule extends Asset {
       'then': thenActions.map((e) => e.buildRule()).toList(),
       'precondition': precondition?.toJson(),
       'areaIds': areaIds,
-      'gatewayId': gatewayId,
+      // if (gatewayId != null) 'gatewayId': gatewayId,
+      'ts': DateTime.now().millisecondsSinceEpoch,
     };
   }
 }
