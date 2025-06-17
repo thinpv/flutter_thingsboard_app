@@ -22,6 +22,7 @@ RuleAction parseRuleAction(Map<String, dynamic> json) {
 
 class Rule extends Asset {
   bool active = true;
+  String conditionType = 'or';
   List<RuleCondition> ifConditions = [];
   List<RuleAction> thenActions = [];
   ScenePrecondition? precondition;
@@ -33,6 +34,7 @@ class Rule extends Asset {
   Rule.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
     active = info['active'] as bool? ?? true;
+    conditionType = info['type'] as String? ?? 'or';
     ifConditions = (info['if'] as List<dynamic>? ?? [])
         .map((e) => parseRuleCondition(e))
         .toList();
@@ -52,6 +54,7 @@ class Rule extends Asset {
     gatewayId = calculateDeviceSave();
     additionalInfo ??= {};
     additionalInfo!['active'] = active;
+    additionalInfo!['type'] = conditionType;
     additionalInfo!['if'] = ifConditions.map((e) => e.toJson()).toList();
     additionalInfo!['then'] = thenActions.map((e) => e.toJson()).toList();
     if (precondition != null) {
@@ -75,7 +78,7 @@ class Rule extends Asset {
   String? calculateDeviceSave() {
     String? gatewayId = null;
     for (var ifCondition in ifConditions) {
-      if (ifCondition is! RuleConditionDevice) return null;
+      if (ifCondition is! RuleConditionDevice) continue;
       if (ifCondition.deviceId.isEmpty) return null;
       final myDevice =
           DeviceManager.instance.getMyDeviceInfoById(ifCondition.deviceId);
@@ -88,7 +91,7 @@ class Rule extends Asset {
       }
     }
     for (var thenAction in thenActions) {
-      if (thenAction is! RuleActionDevice) return null;
+      if (thenAction is! RuleActionDevice) continue;
       if (thenAction.deviceId.isEmpty) return null;
       final myDevice =
           DeviceManager.instance.getMyDeviceInfoById(thenAction.deviceId);
@@ -101,6 +104,19 @@ class Rule extends Asset {
       }
     }
     return gatewayId;
+  }
+
+  Map<String, dynamic> buildRule() {
+    return {
+      'name': name,
+      'active': active,
+      'type': conditionType,
+      'if': ifConditions.map((e) => e.buildRule()).toList(),
+      'then': thenActions.map((e) => e.buildRule()).toList(),
+      'precondition': precondition?.toJson(),
+      'areaIds': areaIds,
+      'gatewayId': gatewayId,
+    };
   }
 }
 
@@ -119,6 +135,13 @@ class RuleCondition {
         description = json['description'];
 
   Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+    };
+  }
+
+  Map<String, dynamic> buildRule() {
     return {
       'type': type,
       'description': description,
@@ -151,6 +174,15 @@ class RuleConditionDevice extends RuleCondition {
       'condition': condition,
     };
   }
+
+  @override
+  Map<String, dynamic> buildRule() {
+    return {
+      'type': type,
+      'id': DeviceManager.instance.getMyDeviceInfoById(deviceId)!.name,
+      'condition': condition,
+    };
+  }
 }
 
 class RuleAction {
@@ -164,6 +196,13 @@ class RuleAction {
         description = json['description'];
 
   Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+    };
+  }
+
+  Map<String, dynamic> buildRule() {
     return {
       'type': type,
       'description': description,
@@ -196,6 +235,15 @@ class RuleActionDevice extends RuleAction {
       'action': action,
     };
   }
+
+  @override
+  Map<String, dynamic> buildRule() {
+    return {
+      'type': type,
+      'id': DeviceManager.instance.getMyDeviceInfoById(deviceId)!.name,
+      'action': action,
+    };
+  }
 }
 
 class RuleActionRoom extends RuleAction {
@@ -223,6 +271,15 @@ class RuleActionRoom extends RuleAction {
       'action': action,
     };
   }
+
+  @override
+  Map<String, dynamic> buildRule() {
+    return {
+      'type': 'group',
+      'id': roomId,
+      'action': action,
+    };
+  }
 }
 
 class RuleActionDelay extends RuleAction {
@@ -241,6 +298,14 @@ class RuleActionDelay extends RuleAction {
     return {
       'type': type,
       'description': description,
+      'delay': delay,
+    };
+  }
+
+  @override
+  Map<String, dynamic> buildRule() {
+    return {
+      'type': type,
       'delay': delay,
     };
   }

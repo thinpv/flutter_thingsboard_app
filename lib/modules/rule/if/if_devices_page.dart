@@ -3,7 +3,7 @@ import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
-import 'component/if_device_params_page.dart';
+import 'component/if_device_conditions_page.dart';
 
 class IfDevicesPage extends StatelessWidget {
   const IfDevicesPage({super.key});
@@ -23,7 +23,7 @@ class IfDevicesPage extends StatelessWidget {
               final result = await Navigator.push<RuleConditionDevice>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => IfDeviceParamsPage(device.id!.id!),
+                  builder: (context) => IfDeviceConditionsPage(device.id!.id!),
                 ),
               );
               Navigator.pop(context, result);

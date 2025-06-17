@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
@@ -9,6 +11,7 @@ import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/provider/rule_manager.dart';
 import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
+import 'package:thingsboard_client/thingsboard_client.dart';
 
 import 'if/if_page.dart';
 import 'then/then_page.dart';
@@ -303,8 +306,68 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          // entity.calculateDeviceSave();
-          print('----------- entity: ${entity.toJson()}');
+          String? oldGatewayId = entity.gatewayId;
+          String? gatewayId = entity.calculateDeviceSave();
+          if (gatewayId != null) {
+            try {
+              Map<String, dynamic> rules = {};
+              final rulesReq = await widget.tbContext.tbClient
+                  .getAttributeService()
+                  .getAttributesByScope(
+                DeviceId(gatewayId),
+                'SHARED_SCOPE',
+                ['rules'],
+              );
+              if (rulesReq.isNotEmpty) {
+                final value = rulesReq.first.getValue();
+                if (value is String) {
+                  rules = jsonDecode(value) as Map<String, dynamic>;
+                } else if (value is Map<String, dynamic>) {
+                  rules = value;
+                }
+              }
+              rules[widget.ruleId] = entity.buildRule();
+              await widget.tbContext.tbClient
+                  .getAttributeService()
+                  .saveEntityAttributesV1(
+                DeviceId(gatewayId),
+                'SHARED_SCOPE',
+                {'rules': rules},
+              );
+            } catch (e) {
+              print('Error saving attributes for gateway $gatewayId: $e');
+            }
+          } else if (oldGatewayId != null) {
+            // Remove the rule from the old gateway if it exists
+            try {
+              Map<String, dynamic> rules = {};
+              final rulesReq = await widget.tbContext.tbClient
+                  .getAttributeService()
+                  .getAttributesByScope(
+                DeviceId(oldGatewayId),
+                'SHARED_SCOPE',
+                ['rules'],
+              );
+              if (rulesReq.isNotEmpty) {
+                final value = rulesReq.first.getValue();
+                if (value is String) {
+                  rules = jsonDecode(value) as Map<String, dynamic>;
+                } else if (value is Map<String, dynamic>) {
+                  rules = value;
+                }
+              }
+              rules.remove(widget.ruleId);
+              await widget.tbContext.tbClient
+                  .getAttributeService()
+                  .saveEntityAttributesV1(
+                DeviceId(oldGatewayId),
+                'SHARED_SCOPE',
+                {'rules': rules},
+              );
+            } catch (e) {
+              print('Error saving attributes for gateway $oldGatewayId: $e');
+            }
+          }
           await RuleService.instance.saveRule(entity);
           _refresh();
         },

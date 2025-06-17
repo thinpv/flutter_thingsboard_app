@@ -10,13 +10,11 @@ import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 import 'package:thingsboard_app/provider/room_manager.dart';
-import 'package:thingsboard_app/service/my_device_service.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-import 'devices_in_room_list.dart';
 import 'list_devices_page.dart';
 
 class RoomDetailsPage extends TbContextWidget {
@@ -406,8 +404,8 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        const BoxShadow(
+      boxShadow: const [
+        BoxShadow(
           color: Colors.black12,
           blurRadius: 6,
           offset: Offset(0, 2),

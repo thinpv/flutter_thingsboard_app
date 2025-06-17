@@ -6,9 +6,9 @@ import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 
-class IfDeviceParamsPage extends StatelessWidget {
+class IfDeviceConditionsPage extends StatelessWidget {
   final String deviceId;
-  const IfDeviceParamsPage(this.deviceId, {super.key});
+  const IfDeviceConditionsPage(this.deviceId, {super.key});
 
   @override
   Widget build(BuildContext context) {
