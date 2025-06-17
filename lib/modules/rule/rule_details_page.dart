@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/provider/rule_manager.dart';
 import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 
-import 'if/if_devices_page.dart';
-import 'then/then_devices_page.dart';
+import 'if/if_page.dart';
+import 'then/then_page.dart';
 
 class RuleDetailsPage extends StatefulWidget {
   final TbContext tbContext;
@@ -134,45 +136,55 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
         children: [
           _sectionTitle(
               S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
-          ...entity.ifConditions.map((condition) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(condition.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
-            } else {
-              image = Icon(Icons.device_hub);
-            }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(condition.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.ifConditions.remove(condition);
-                  // entity.update(ifConditions: entity.ifConditions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
+          ...entity.ifConditions
+              .map((condition) {
+                if (condition is RuleConditionDevice) {
+                  var myDeviceInfo = DeviceManager.instance
+                      .getMyDeviceInfoById(condition.deviceId);
+                  var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+                  var deviceType = deviceTypeId != null
+                      ? DeviceTypeManager.instance
+                          .getDeviceTypeById(deviceTypeId)
+                      : null;
+                  var hasImage = deviceType?.image != null;
+                  Widget image;
+                  if (hasImage) {
+                    image = Utils.imageFromTbImage(
+                      context,
+                      widget.tbContext.tbClient,
+                      deviceType?.image,
+                    );
+                  } else {
+                    image = const Icon(Icons.device_hub);
+                  }
+                  return ListTile(
+                    leading: image,
+                    title: Text(
+                        myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+                    subtitle: Text(condition.description ?? ''),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete),
+                      tooltip: 'Xóa',
+                      onPressed: () {
+                        entity.ifConditions.remove(condition);
+                        _refresh();
+                      },
+                    ),
+                  );
+                } else {
+                  return null;
+                }
+              })
+              .whereType<Widget>()
+              .toList(),
           _addButton(
               onPressed: () async {
-                final result = await Navigator.push<SceneCondition>(
+                final result = await Navigator.push<RuleCondition>(
                   context,
-                  MaterialPageRoute(builder: (context) => IfDevicesPage()),
+                  MaterialPageRoute(builder: (context) => const IfPage()),
                 );
                 if (result != null) {
                   entity.ifConditions.add(result);
-                  // entity.update(ifConditions: entity.ifConditions);
                   _refresh();
                 }
               },
@@ -190,44 +202,78 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.thenActions.map((action) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(action.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
+            if (action is RuleActionDevice) {
+              var myDeviceInfo =
+                  DeviceManager.instance.getMyDeviceInfoById(action.deviceId);
+              var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+              var deviceType = deviceTypeId != null
+                  ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
+                  : null;
+              var hasImage = deviceType?.image != null;
+              Widget image;
+              if (hasImage) {
+                image = Utils.imageFromTbImage(
+                  context,
+                  widget.tbContext.tbClient,
+                  deviceType?.image,
+                );
+              } else {
+                image = const Icon(Icons.device_hub);
+              }
+              return ListTile(
+                leading: image,
+                title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+                subtitle: Text(action.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
+            } else if (action is RuleActionRoom) {
+              RoomInfo? roomInfo =
+                  RoomManager.instance.getRoomById(action.roomId);
+              return ListTile(
+                leading: const Icon(Icons.meeting_room),
+                title: Text(roomInfo?.getDisplayName() ?? 'Unknown Room'),
+                subtitle: Text(action.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
+            } else if (action is RuleActionDelay) {
+              return ListTile(
+                leading: const Icon(Icons.timer),
+                title: Text('Trễ ${action.delay} giây'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
             } else {
-              image = Icon(Icons.device_hub);
+              return null;
             }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(action.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.thenActions.remove(action);
-                  // entity.update(thenActions: entity.thenActions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
+          }).whereType<Widget>(),
           _addButton(
               onPressed: () async {
-                final result = await Navigator.push<SceneAction>(
+                final result = await Navigator.push<RuleAction>(
                   context,
-                  MaterialPageRoute(builder: (context) => ThenDevicesPage()),
+                  MaterialPageRoute(builder: (context) => const ThenPage()),
                 );
                 if (result != null) {
                   entity.thenActions.add(result);
-                  // entity.update(thenActions: entity.thenActions);
                   _refresh();
                 }
               },
@@ -238,15 +284,15 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
   }
 
   Widget _buildPreconditionDisplayArea(Rule entity) {
-    return Column(
+    return const Column(
       children: [
         ListTile(
-          title: const Text('Precondition'),
-          trailing: const Text('Cả ngày'),
+          title: Text('Precondition'),
+          trailing: Text('Cả ngày'),
         ),
         ListTile(
-          title: const Text('Display Area'),
-          trailing: const Icon(Icons.arrow_forward_ios),
+          title: Text('Display Area'),
+          trailing: Icon(Icons.arrow_forward_ios),
         ),
       ],
     );
@@ -257,7 +303,8 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          entity.calculateDeviceSave();
+          // entity.calculateDeviceSave();
+          print('----------- entity: ${entity.toJson()}');
           await RuleService.instance.saveRule(entity);
           _refresh();
         },
@@ -266,7 +313,7 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(S.of(context).save, style: TextStyle(fontSize: 16)),
+        child: Text(S.of(context).save, style: const TextStyle(fontSize: 16)),
       ),
     );
   }

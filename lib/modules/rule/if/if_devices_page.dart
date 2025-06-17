@@ -3,14 +3,16 @@ import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
-import 'component/if_page.dart';
+import 'component/if_device_params_page.dart';
 
 class IfDevicesPage extends StatelessWidget {
+  const IfDevicesPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     List<MyDeviceInfo> devices = DeviceManager.instance.myDeviceInfosList;
     return Scaffold(
-      appBar: AppBar(title: Text('Chọn thiết bị')),
+      appBar: AppBar(title: const Text('Chọn thiết bị')),
       body: ListView.builder(
         itemCount: devices.length,
         itemBuilder: (context, index) {
@@ -18,10 +20,11 @@ class IfDevicesPage extends StatelessWidget {
           return ListTile(
             title: Text(device.getDisplayName()),
             onTap: () async {
-              SceneCondition condition = SceneCondition(device.id!.id!, '', {});
-              final result = await Navigator.push<SceneCondition>(
+              final result = await Navigator.push<RuleConditionDevice>(
                 context,
-                MaterialPageRoute(builder: (context) => IfPage(condition)),
+                MaterialPageRoute(
+                  builder: (context) => IfDeviceParamsPage(device.id!.id!),
+                ),
               );
               Navigator.pop(context, result);
             },

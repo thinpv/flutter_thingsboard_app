@@ -6,29 +6,28 @@ import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
 
-class ThenPage extends StatelessWidget {
-  final SceneAction action;
-  ThenPage(this.action, {super.key});
+class IfDeviceParamsPage extends StatelessWidget {
+  final String deviceId;
+  const IfDeviceParamsPage(this.deviceId, {super.key});
 
   @override
   Widget build(BuildContext context) {
     MyDeviceInfo? myDeviceInfo =
-        DeviceManager.instance.getMyDeviceInfoById(action.device);
+        DeviceManager.instance.getMyDeviceInfoById(deviceId);
     DeviceTypeInfo? deviceType = myDeviceInfo?.deviceProfileId?.id != null
         ? DeviceTypeManager.instance
             .getDeviceTypeById(myDeviceInfo!.deviceProfileId!.id!)
         : null;
     return Scaffold(
-      appBar: AppBar(title: Text('Chọn hành động')),
-      body: deviceType?.actions != null
+      appBar: AppBar(title: const Text('Chọn thuộc tính')),
+      body: deviceType?.conditions != null
           ? ListView.builder(
-              itemCount: deviceType!.actions.length,
+              itemCount: deviceType!.conditions.length,
               itemBuilder: (context, index) {
-                final option = deviceType.actions[index];
+                final option = deviceType.conditions[index];
                 return ListTile(
                   title: Text(option['name'].toString()),
                   onTap: () async {
-                    action.name = option['name'].toString();
                     final values = option['value'];
                     if (values.toString().contains('?')) {
                       final List<String> fieldNames = [];
@@ -45,7 +44,7 @@ class ThenPage extends StatelessWidget {
                         context: context,
                         builder: (context) {
                           return AlertDialog(
-                            title: Text('Nhập thông tin'),
+                            title: const Text('Nhập thông tin'),
                             content: SingleChildScrollView(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -81,7 +80,7 @@ class ThenPage extends StatelessWidget {
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: Text('Hủy'),
+                                child: const Text('Hủy'),
                               ),
                               ElevatedButton(
                                 onPressed: () {
@@ -98,22 +97,31 @@ class ThenPage extends StatelessWidget {
                                   }
                                   Navigator.pop(context, inputData);
                                 },
-                                child: Text('Lưu'),
+                                child: const Text('Lưu'),
                               )
                             ],
                           );
                         },
                       );
-                      action.action = newValue ?? {};
+                      RuleConditionDevice conditionDevice = RuleConditionDevice(
+                        option['name'].toString(),
+                        deviceId,
+                        newValue ?? {},
+                      );
+                      Navigator.pop(context, conditionDevice);
                     } else {
-                      action.action = option['value'];
+                      RuleConditionDevice conditionDevice = RuleConditionDevice(
+                        option['name'].toString(),
+                        deviceId,
+                        option['value'],
+                      );
+                      Navigator.pop(context, conditionDevice);
                     }
-                    Navigator.pop(context, action);
                   },
                 );
               },
             )
-          : Center(child: Text('No actions available')),
+          : const Center(child: Text('No conditions available')),
     );
   }
 }

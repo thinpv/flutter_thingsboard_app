@@ -8,13 +8,13 @@ import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-import 'if/if_devices_page.dart';
-import 'then/then_devices_page.dart';
+import 'if/if_page.dart';
+import 'then/then_page.dart';
 
 class RuleAddPage extends StatefulWidget {
   final TbContext tbContext;
 
-  RuleAddPage(this.tbContext, {super.key});
+  const RuleAddPage(this.tbContext, {super.key});
 
   @override
   State<RuleAddPage> createState() => _RuleAddPageState();
@@ -48,11 +48,13 @@ class _RuleAddPageState extends State<RuleAddPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
-              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+            body: Center(child: Text('Không tìm thấy ngữ cảnh')),
+          );
         }
         return _buildEntityDetails(context, snapshot.data!);
       },
@@ -134,50 +136,58 @@ class _RuleAddPageState extends State<RuleAddPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionTitle(
-              S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
+            S.of(context).if_,
+            'Khi bất kỳ điều kiện nào được đáp ứng',
+          ),
           ...entity.ifConditions.map((condition) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(condition.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
-            } else {
-              image = Icon(Icons.device_hub);
-            }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(condition.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.ifConditions.remove(condition);
-                  // entity.update(ifConditions: entity.ifConditions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
-          _addButton(
-              onPressed: () async {
-                final result = await Navigator.push<SceneCondition>(
+            if (condition is RuleConditionDevice) {
+              var myDeviceInfo = DeviceManager.instance
+                  .getMyDeviceInfoById(condition.deviceId);
+              var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+              var deviceType = deviceTypeId != null
+                  ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
+                  : null;
+              var hasImage = deviceType?.image != null;
+              Widget image;
+              if (hasImage) {
+                image = Utils.imageFromTbImage(
                   context,
-                  MaterialPageRoute(builder: (context) => IfDevicesPage()),
+                  widget.tbContext.tbClient,
+                  deviceType?.image,
                 );
-                if (result != null) {
-                  entity.ifConditions.add(result);
-                  // entity.update(ifConditions: entity.ifConditions);
-                  _refresh();
-                }
-              },
-              tooltip: 'Thêm điều kiện'),
+              } else {
+                image = const Icon(Icons.device_hub);
+              }
+              return ListTile(
+                leading: image,
+                title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+                subtitle: Text(condition.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.ifConditions.remove(condition);
+                    _refresh();
+                  },
+                ),
+              );
+            } else {
+              return null;
+            }
+          }).whereType<Widget>(),
+          _addButton(
+            onPressed: () async {
+              final result = await Navigator.push<RuleCondition>(
+                context,
+                MaterialPageRoute(builder: (context) => const IfPage()),
+              );
+              if (result != null) {
+                entity.ifConditions.add(result);
+                _refresh();
+              }
+            },
+            tooltip: 'Thêm điều kiện',
+          ),
         ],
       ),
     );
@@ -191,63 +201,69 @@ class _RuleAddPageState extends State<RuleAddPage> {
         children: [
           _sectionTitle(S.of(context).then, 'Thêm tác vụ khi điều kiện đúng'),
           ...entity.thenActions.map((action) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(action.device);
-            var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
-            var deviceType = deviceTypeId != null
-                ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
-                : null;
-            var hasImage = deviceType?.image != null;
-            Widget image;
-            if (hasImage) {
-              image = Utils.imageFromTbImage(
-                  context, widget.tbContext.tbClient, deviceType?.image);
-            } else {
-              image = Icon(Icons.device_hub);
-            }
-            return ListTile(
-              leading: image,
-              title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
-              subtitle: Text(action.name),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                tooltip: 'Xóa',
-                onPressed: () {
-                  entity.thenActions.remove(action);
-                  // entity.update(thenActions: entity.thenActions);
-                  _refresh();
-                },
-              ),
-            );
-          }).toList(),
-          _addButton(
-              onPressed: () async {
-                final result = await Navigator.push<SceneAction>(
+            if (action is RuleActionDevice) {
+              var myDeviceInfo =
+                  DeviceManager.instance.getMyDeviceInfoById(action.deviceId);
+              var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
+              var deviceType = deviceTypeId != null
+                  ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
+                  : null;
+              var hasImage = deviceType?.image != null;
+              Widget image;
+              if (hasImage) {
+                image = Utils.imageFromTbImage(
                   context,
-                  MaterialPageRoute(builder: (context) => ThenDevicesPage()),
+                  widget.tbContext.tbClient,
+                  deviceType?.image,
                 );
-                if (result != null) {
-                  entity.thenActions.add(result);
-                  // entity.update(thenActions: entity.thenActions);
-                  _refresh();
-                }
-              },
-              tooltip: 'Thêm tác vụ'),
+              } else {
+                image = const Icon(Icons.device_hub);
+              }
+              return ListTile(
+                leading: image,
+                title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+                subtitle: Text(action.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
+            } else {
+              return null;
+            }
+          }).whereType<Widget>(),
+          _addButton(
+            onPressed: () async {
+              final result = await Navigator.push<RuleAction>(
+                context,
+                MaterialPageRoute(builder: (context) => const ThenPage()),
+              );
+              if (result != null) {
+                entity.thenActions.add(result);
+                _refresh();
+              }
+            },
+            tooltip: 'Thêm tác vụ',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildPreconditionDisplayArea(RuleAdd entity) {
-    return Column(
+    return const Column(
       children: [
         ListTile(
-          title: const Text('Precondition'),
-          trailing: const Text('Cả ngày'),
+          title: Text('Precondition'),
+          trailing: Text('Cả ngày'),
         ),
         ListTile(
-          title: const Text('Display Area'),
-          trailing: const Icon(Icons.arrow_forward_ios),
+          title: Text('Display Area'),
+          trailing: Icon(Icons.arrow_forward_ios),
         ),
       ],
     );
@@ -262,13 +278,15 @@ class _RuleAddPageState extends State<RuleAddPage> {
               widget.tbContext.tbClient.getAuthUser()?.customerId;
           if (customerId != null) {
             entity.customerId = CustomerId(customerId);
-            entity.calculateDeviceSave();
+            // entity.calculateDeviceSave();
+            print('----------- entity: ${entity.toJson()}');
             await RuleService.instance.saveRule(entity);
             _refresh();
           } else {
             // Handle the case when customerId is null, e.g., show an error
             ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Customer ID is not available.')));
+              const SnackBar(content: Text('Customer ID is not available.')),
+            );
           }
         },
         style: ElevatedButton.styleFrom(
@@ -276,13 +294,15 @@ class _RuleAddPageState extends State<RuleAddPage> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(S.of(context).save, style: TextStyle(fontSize: 16)),
+        child: Text(S.of(context).save, style: const TextStyle(fontSize: 16)),
       ),
     );
   }
 
-  Widget _addButton(
-      {required VoidCallback onPressed, required String tooltip}) {
+  Widget _addButton({
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
@@ -299,12 +319,15 @@ class _RuleAddPageState extends State<RuleAddPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
         ],
       ),
     );
@@ -314,9 +337,12 @@ class _RuleAddPageState extends State<RuleAddPage> {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        const BoxShadow(
-            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
       ],
     );
   }

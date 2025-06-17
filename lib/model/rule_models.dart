@@ -2,13 +2,31 @@ import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
+RuleCondition parseRuleCondition(Map<String, dynamic> json) {
+  if (json['type'] == 'device') {
+    return RuleConditionDevice.fromJson(json);
+  }
+  throw Exception('Unknown RuleCondition type: ${json['type']}');
+}
+
+RuleAction parseRuleAction(Map<String, dynamic> json) {
+  if (json['type'] == 'device') {
+    return RuleActionDevice.fromJson(json);
+  } else if (json['type'] == 'room') {
+    return RuleActionRoom.fromJson(json);
+  } else if (json['type'] == 'delay') {
+    return RuleActionDelay.fromJson(json);
+  }
+  throw Exception('Unknown RuleAction type: ${json['type']}');
+}
+
 class Rule extends Asset {
   bool active = true;
-  List<SceneCondition> ifConditions = [];
-  List<SceneAction> thenActions = [];
+  List<RuleCondition> ifConditions = [];
+  List<RuleAction> thenActions = [];
   ScenePrecondition? precondition;
   List<String>? areaIds;
-  String? deviceCheck;
+  String? gatewayId;
 
   Rule() : super(const Uuid().v4(), 'Rule');
 
@@ -16,23 +34,23 @@ class Rule extends Asset {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
     active = info['active'] as bool? ?? true;
     ifConditions = (info['if'] as List<dynamic>? ?? [])
-        .map((e) => SceneCondition.fromJson(e))
+        .map((e) => parseRuleCondition(e))
         .toList();
     thenActions = (info['then'] as List<dynamic>? ?? [])
-        .map((e) => SceneAction.fromJson(e))
+        .map((e) => parseRuleAction(e))
         .toList();
     precondition = info['precondition'] != null
         ? ScenePrecondition.fromJson(info['precondition'])
         : null;
     areaIds =
         (info['areaIds'] as List<dynamic>?)?.map((e) => e as String).toList();
-    deviceCheck = info['deviceCheck'] as String?;
+    gatewayId = info['gatewayId'] as String?;
   }
 
   @override
   Map<String, dynamic> toJson() {
+    gatewayId = calculateDeviceSave();
     additionalInfo ??= {};
-    additionalInfo!['name'] = name;
     additionalInfo!['active'] = active;
     additionalInfo!['if'] = ifConditions.map((e) => e.toJson()).toList();
     additionalInfo!['then'] = thenActions.map((e) => e.toJson()).toList();
@@ -40,11 +58,8 @@ class Rule extends Asset {
       additionalInfo!['precondition'] = precondition!.toJson();
     }
     if (areaIds != null) additionalInfo!['areaIds'] = areaIds;
-    if (deviceCheck != null) {
-      additionalInfo!['deviceCheck'] = deviceCheck;
-      final deviceInfo =
-          DeviceManager.instance.getMyDeviceInfoById(deviceCheck!);
-      additionalInfo!['deviceCheckName'] = deviceInfo?.name;
+    if (gatewayId != null) {
+      additionalInfo!['gatewayId'] = gatewayId;
     }
     return super.toJson();
   }
@@ -57,38 +72,35 @@ class Rule extends Asset {
     }
   }
 
-  void calculateDeviceSave() {
-    deviceCheck = null;
+  String? calculateDeviceSave() {
+    String? gatewayId = null;
     for (var ifCondition in ifConditions) {
+      if (ifCondition is! RuleConditionDevice) return null;
+      if (ifCondition.deviceId.isEmpty) return null;
       final myDevice =
-          DeviceManager.instance.getMyDeviceInfoById(ifCondition.device);
+          DeviceManager.instance.getMyDeviceInfoById(ifCondition.deviceId);
       String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
-      if (deviceId == null) {
-        deviceCheck = null;
-        return;
-      }
-      if (deviceCheck == null) {
-        deviceCheck = deviceId;
-      } else if (deviceCheck != deviceId) {
-        deviceCheck = null;
-        return;
+      if (deviceId == null) return null;
+      if (gatewayId == null) {
+        gatewayId = deviceId; // gán id đầu tiên tìm thấy
+      } else if (gatewayId != deviceId) {
+        return null; // nếu có nhiều id khác nhau thì trả về null
       }
     }
     for (var thenAction in thenActions) {
+      if (thenAction is! RuleActionDevice) return null;
+      if (thenAction.deviceId.isEmpty) return null;
       final myDevice =
-          DeviceManager.instance.getMyDeviceInfoById(thenAction.device);
+          DeviceManager.instance.getMyDeviceInfoById(thenAction.deviceId);
       String? deviceId = myDevice?.gatewayId ?? myDevice?.id?.id;
-      if (deviceId == null) {
-        deviceCheck = null;
-        return;
-      }
-      if (deviceCheck == null) {
-        deviceCheck = deviceId;
-      } else if (deviceCheck != deviceId) {
-        deviceCheck = null;
-        return;
+      if (deviceId == null) return null;
+      if (gatewayId == null) {
+        gatewayId = deviceId; // gán id đầu tiên tìm thấy
+      } else if (gatewayId != deviceId) {
+        return null; // nếu có nhiều id khác nhau thì trả về null
       }
     }
+    return gatewayId;
   }
 }
 
@@ -96,54 +108,140 @@ class RuleAdd extends Rule {
   RuleAdd() : super();
 }
 
-class SceneCondition {
-  String device;
-  String name;
-  Map<String, dynamic> condition;
+class RuleCondition {
+  String type;
+  String? description;
 
-  SceneCondition(
-    this.device,
-    this.name,
-    this.condition,
-  );
+  RuleCondition(this.type, {this.description});
 
-  SceneCondition.fromJson(Map<String, dynamic> json)
-      : device = json['device'],
-        name = json['name'],
-        condition = json['condition'];
+  RuleCondition.fromJson(Map<String, dynamic> json)
+      : type = json['type'],
+        description = json['description'];
 
   Map<String, dynamic> toJson() {
     return {
-      'device': device,
-      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
-      'name': name,
+      'type': type,
+      'description': description,
+    };
+  }
+}
+
+class RuleConditionDevice extends RuleCondition {
+  String deviceId;
+  Map<String, dynamic> condition;
+
+  RuleConditionDevice(
+    String description,
+    this.deviceId,
+    this.condition,
+  ) : super('device', description: description);
+
+  @override
+  RuleConditionDevice.fromJson(Map<String, dynamic> json)
+      : deviceId = json['deviceId'],
+        condition = json['condition'],
+        super.fromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+      'deviceId': deviceId,
       'condition': condition,
     };
   }
 }
 
-class SceneAction {
-  String device;
-  String name;
-  Map<String, dynamic> action;
+class RuleAction {
+  String type;
+  String? description;
 
-  SceneAction(
-    this.device,
-    this.name,
-    this.action,
-  );
+  RuleAction(this.type, {this.description});
 
-  SceneAction.fromJson(Map<String, dynamic> json)
-      : device = json['device'],
-        name = json['name'],
-        action = json['action'];
+  RuleAction.fromJson(Map<String, dynamic> json)
+      : type = json['type'],
+        description = json['description'];
 
   Map<String, dynamic> toJson() {
     return {
-      'device': device,
-      'deviceName': DeviceManager.instance.getMyDeviceInfoById(device)?.name,
-      'name': name,
+      'type': type,
+      'description': description,
+    };
+  }
+}
+
+class RuleActionDevice extends RuleAction {
+  String deviceId;
+  Map<String, dynamic> action;
+
+  RuleActionDevice(
+    String description,
+    this.deviceId,
+    this.action,
+  ) : super('device', description: description);
+
+  @override
+  RuleActionDevice.fromJson(Map<String, dynamic> json)
+      : deviceId = json['deviceId'],
+        action = json['action'],
+        super.fromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+      'deviceId': deviceId,
       'action': action,
+    };
+  }
+}
+
+class RuleActionRoom extends RuleAction {
+  String roomId;
+  Map<String, dynamic> action;
+
+  RuleActionRoom(
+    String description,
+    this.roomId,
+    this.action,
+  ) : super('room', description: description);
+
+  @override
+  RuleActionRoom.fromJson(Map<String, dynamic> json)
+      : roomId = json['roomId'],
+        action = json['action'],
+        super.fromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+      'roomId': roomId,
+      'action': action,
+    };
+  }
+}
+
+class RuleActionDelay extends RuleAction {
+  int delay;
+
+  RuleActionDelay(String description, this.delay)
+      : super('delay', description: description);
+
+  @override
+  RuleActionDelay.fromJson(Map<String, dynamic> json)
+      : delay = json['delay'] ?? 0,
+        super.fromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'description': description,
+      'delay': delay,
     };
   }
 }
