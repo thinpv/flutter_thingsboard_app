@@ -81,17 +81,18 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
 
   Future<void> saveRoom(Room entity) async {
     entity.updateGatewayList();
-    Map<String, dynamic> deviceInRoomList = {};
-    for (final deviceId in entity.deviceIds) {
-      final device = DeviceManager.instance.getMyDeviceInfoById(deviceId);
+    Map<String, List<DeviceInRoom>> deviceInRoomList = {};
+    for (final deviceInRoom in entity.deviceInRooms) {
+      final device =
+          DeviceManager.instance.getMyDeviceInfoById(deviceInRoom.deviceId);
       if (device != null) {
         if (device.gatewayId != null) {
           deviceInRoomList[device.gatewayId!] ??= [];
-          deviceInRoomList[device.gatewayId!]!.add(DeviceInRoom(device.name));
+          deviceInRoomList[device.gatewayId!]!.add(deviceInRoom);
         }
         if (device.isGateway) {
-          deviceInRoomList[deviceId] ??= [];
-          deviceInRoomList[deviceId]!.add(DeviceInRoom(device.name));
+          deviceInRoomList[deviceInRoom.deviceId] ??= [];
+          deviceInRoomList[deviceInRoom.deviceId]!.add(deviceInRoom);
         }
       }
     }
@@ -99,7 +100,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     deviceInRoomList.forEach((gatewayId, deviceInRooms) async {
       List<dynamic> devicesInfo = [];
       for (final deviceInRoom in deviceInRooms) {
-        devicesInfo.add(deviceInRoom);
+        devicesInfo.add(deviceInRoom.buildRoom());
       }
       final groupData = {
         'name': entity.getDisplayName(),
@@ -208,14 +209,14 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              final result = await Navigator.push<Device>(
-                context,
-                MaterialPageRoute(builder: (context) => ListDevicesPage()),
-              );
-              if (result != null) {
-                entity.addDevice(result.id!.id!);
-                _refresh();
-              }
+              // final result = await Navigator.push<Device>(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => ListDevicesPage()),
+              // );
+              // if (result != null) {
+              //   entity.addDevice(result.id!.id!);
+              //   _refresh();
+              // }
             },
           ),
         ],
@@ -244,9 +245,9 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ...entity.deviceIds.map((deviceId) {
-            var myDeviceInfo =
-                DeviceManager.instance.getMyDeviceInfoById(deviceId);
+          ...entity.deviceInRooms.map((deviceInRoom) {
+            var myDeviceInfo = DeviceManager.instance
+                .getMyDeviceInfoById(deviceInRoom.deviceId);
             var deviceTypeId = myDeviceInfo?.deviceProfileId?.id;
             var deviceType = deviceTypeId != null
                 ? DeviceTypeManager.instance.getDeviceTypeById(deviceTypeId)
@@ -270,7 +271,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
                 icon: const Icon(Icons.delete),
                 tooltip: 'Xóa',
                 onPressed: () {
-                  entity.removeDevice(deviceId);
+                  entity.removeDeviceInRoom(deviceInRoom);
                   _refresh();
                 },
               ),
@@ -278,12 +279,12 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           }).toList(),
           _addButton(
             onPressed: () async {
-              final result = await Navigator.push<Device>(
+              final result = await Navigator.push<DeviceInRoom>(
                 context,
                 MaterialPageRoute(builder: (context) => ListDevicesPage()),
               );
               if (result != null) {
-                entity.addDevice(result.id!.id!);
+                entity.addDeviceInRoom(result);
                 _refresh();
               }
             },

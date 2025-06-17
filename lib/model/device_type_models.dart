@@ -9,6 +9,7 @@ class DeviceType extends DeviceProfile {
 class DeviceTypeInfo extends DeviceProfileInfo {
   List<Map<String, dynamic>> conditions = [];
   List<Map<String, dynamic>> actions = [];
+  List<Map<String, dynamic>> endpoints = [];
   Map<String, dynamic>? description;
 
   DeviceTypeInfo.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
@@ -24,6 +25,8 @@ class DeviceTypeInfo extends DeviceProfileInfo {
               List<Map<String, dynamic>>.from(description?['conditions'] ?? []);
           actions =
               List<Map<String, dynamic>>.from(description?['actions'] ?? []);
+          endpoints =
+              List<Map<String, dynamic>>.from(description?['endpoints'] ?? []);
         }
       }
     } catch (e) {
@@ -35,6 +38,7 @@ class DeviceTypeInfo extends DeviceProfileInfo {
     description ??= {};
     description!['conditions'] = conditions;
     description!['actions'] = actions;
+    description!['endpoints'] = endpoints;
     Map<String, dynamic> json = {
       'id': id.toJson(),
       'name': name,

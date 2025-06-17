@@ -3,15 +3,19 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Room extends Asset {
-  List<String> _deviceIds = [];
+  List<DeviceInRoom> _deviceInRooms = [];
   List<String> _gatewayIds = [];
 
   Room() : super(const Uuid().v4(), 'Room');
 
   Room.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
-    _deviceIds = (info['deviceIds'] as List<dynamic>?)
-            ?.map((e) => e as String)
+    _deviceInRooms = (info['devices'] as List<dynamic>?)
+            ?.map(
+              (e) =>
+                  e is Map<String, dynamic> ? DeviceInRoom.fromJson(e) : null,
+            )
+            .whereType<DeviceInRoom>()
             .toList() ??
         [];
     _gatewayIds = (info['gatewayIds'] as List<dynamic>?)
@@ -23,32 +27,57 @@ class Room extends Asset {
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
-    additionalInfo!['deviceIds'] = _deviceIds;
+    additionalInfo!['devices'] = _deviceInRooms;
     additionalInfo!['gatewayIds'] = _gatewayIds;
     return super.toJson();
   }
 
-  List<String> get deviceIds => _deviceIds;
+  List<DeviceInRoom> get deviceInRooms => _deviceInRooms;
   List<String> get gatewayIds => _gatewayIds;
 
-  void addDevice(String deviceId) {
-    if (!_deviceIds.contains(deviceId)) {
-      _deviceIds.add(deviceId);
+  DeviceInRoom? findDevice(String deviceId, int epId) {
+    for (final deviceInRoom in _deviceInRooms) {
+      if (deviceInRoom.deviceId == deviceId && deviceInRoom.epId == epId) {
+        return deviceInRoom;
+      }
+    }
+    return null;
+  }
+
+  void addDevice(String deviceId, int epId) {
+    if (findDevice(deviceId, epId) == null) {
+      _deviceInRooms.add(DeviceInRoom(deviceId, epId: epId));
       updateGatewayList();
     }
   }
 
-  void removeDevice(String deviceId) {
-    if (_deviceIds.contains(deviceId)) {
-      _deviceIds.remove(deviceId);
+  void addDeviceInRoom(DeviceInRoom deviceInRoom) {
+    if (findDevice(deviceInRoom.deviceId, deviceInRoom.epId ?? 0) == null) {
+      _deviceInRooms.add(deviceInRoom);
+      updateGatewayList();
+    }
+  }
+
+  void removeDevice(String deviceId, int epId) {
+    DeviceInRoom? deviceInRoom = findDevice(deviceId, epId);
+    if (deviceInRoom != null) {
+      _deviceInRooms.remove(deviceInRoom);
+      updateGatewayList();
+    }
+  }
+
+  void removeDeviceInRoom(DeviceInRoom deviceInRoom) {
+    if (findDevice(deviceInRoom.deviceId, deviceInRoom.epId ?? 0) != null) {
+      _deviceInRooms.remove(deviceInRoom);
       updateGatewayList();
     }
   }
 
   void updateGatewayList() {
     _gatewayIds.clear();
-    for (final deviceId in _deviceIds) {
-      final device = DeviceManager.instance.getMyDeviceInfoById(deviceId);
+    for (final deviceInRoom in _deviceInRooms) {
+      final device =
+          DeviceManager.instance.getMyDeviceInfoById(deviceInRoom.deviceId);
       if (device != null) {
         String id = device.id!.id ?? '';
         if (device.gatewayId != null) id = device.gatewayId!;
@@ -100,13 +129,31 @@ class RoomInfo extends Room {
 class DeviceInRoom {
   String deviceId;
   int? epId;
+  String? epName;
 
-  DeviceInRoom(this.deviceId, {this.epId});
+  DeviceInRoom(this.deviceId, {this.epId, this.epName});
 
-  toJson() {
+  factory DeviceInRoom.fromJson(Map<String, dynamic> json) {
+    return DeviceInRoom(
+      json['id'] as String,
+      epId: json['epId'] as int?,
+      epName: json['epName'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
     return {
       'id': deviceId,
       if (epId != null) 'epId': epId,
+      if (epName != null) 'epName': epName,
+    };
+  }
+
+  Map<String, dynamic> buildRoom() {
+    return {
+      'id': DeviceManager.instance.getMyDeviceInfoById(deviceId)!.name,
+      if (epId != null) 'epId': epId,
+      if (epName != null) 'epName': epName,
     };
   }
 }
@@ -114,11 +161,11 @@ class DeviceInRoom {
 class RoomSearchQuery extends EntitySearchQuery {
   List<String> roomTypes;
 
-  RoomSearchQuery(
-      {required RelationsSearchParameters parameters,
-      required this.roomTypes,
-      String? relationType})
-      : super(parameters: parameters, relationType: relationType);
+  RoomSearchQuery({
+    required RelationsSearchParameters parameters,
+    required this.roomTypes,
+    String? relationType,
+  }) : super(parameters: parameters, relationType: relationType);
 
   @override
   Map<String, dynamic> toJson() {
