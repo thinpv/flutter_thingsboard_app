@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/model/rule_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
+import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/service/rule_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
@@ -223,6 +225,35 @@ class _RuleAddPageState extends State<RuleAddPage> {
                 leading: image,
                 title: Text(myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
                 subtitle: Text(action.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
+            } else if (action is RuleActionRoom) {
+              RoomInfo? roomInfo =
+                  RoomManager.instance.getRoomById(action.roomId);
+              return ListTile(
+                leading: const Icon(Icons.meeting_room),
+                title: Text(roomInfo?.getDisplayName() ?? 'Unknown Room'),
+                subtitle: Text(action.description ?? ''),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  tooltip: 'Xóa',
+                  onPressed: () {
+                    entity.thenActions.remove(action);
+                    _refresh();
+                  },
+                ),
+              );
+            } else if (action is RuleActionDelay) {
+              return ListTile(
+                leading: const Icon(Icons.timer),
+                title: Text('Trễ ${action.delay} giây'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   tooltip: 'Xóa',
