@@ -93,8 +93,8 @@ class _RuleAddPageState extends State<RuleAddPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.name) {
-              entity.name = newName.trim();
+                newName != entity.label) {
+              entity.label = newName.trim();
               _refresh();
             }
           },

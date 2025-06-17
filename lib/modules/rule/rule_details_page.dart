@@ -52,11 +52,13 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snapshot.hasData || snapshot.data == null) {
           return const Scaffold(
-              body: Center(child: Text('Không tìm thấy ngữ cảnh')));
+            body: Center(child: Text('Không tìm thấy ngữ cảnh')),
+          );
         }
         return _buildEntityDetails(context, snapshot.data!);
       },
@@ -95,8 +97,8 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
             );
             if (newName != null &&
                 newName.trim().isNotEmpty &&
-                newName != entity.name) {
-              entity.name = newName.trim();
+                newName != entity.label) {
+              entity.label = newName.trim();
               _refresh();
             }
           },
@@ -138,7 +140,9 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionTitle(
-              S.of(context).if_, 'Khi bất kỳ điều kiện nào được đáp ứng'),
+            S.of(context).if_,
+            'Khi bất kỳ điều kiện nào được đáp ứng',
+          ),
           ...entity.ifConditions
               .map((condition) {
                 if (condition is RuleConditionDevice) {
@@ -163,7 +167,8 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
                   return ListTile(
                     leading: image,
                     title: Text(
-                        myDeviceInfo?.getDisplayName() ?? 'Unknown Device'),
+                      myDeviceInfo?.getDisplayName() ?? 'Unknown Device',
+                    ),
                     subtitle: Text(condition.description ?? ''),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete),
@@ -181,17 +186,18 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
               .whereType<Widget>()
               .toList(),
           _addButton(
-              onPressed: () async {
-                final result = await Navigator.push<RuleCondition>(
-                  context,
-                  MaterialPageRoute(builder: (context) => const IfPage()),
-                );
-                if (result != null) {
-                  entity.ifConditions.add(result);
-                  _refresh();
-                }
-              },
-              tooltip: 'Thêm điều kiện'),
+            onPressed: () async {
+              final result = await Navigator.push<RuleCondition>(
+                context,
+                MaterialPageRoute(builder: (context) => const IfPage()),
+              );
+              if (result != null) {
+                entity.ifConditions.add(result);
+                _refresh();
+              }
+            },
+            tooltip: 'Thêm điều kiện',
+          ),
         ],
       ),
     );
@@ -270,17 +276,18 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
             }
           }).whereType<Widget>(),
           _addButton(
-              onPressed: () async {
-                final result = await Navigator.push<RuleAction>(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ThenPage()),
-                );
-                if (result != null) {
-                  entity.thenActions.add(result);
-                  _refresh();
-                }
-              },
-              tooltip: 'Thêm tác vụ'),
+            onPressed: () async {
+              final result = await Navigator.push<RuleAction>(
+                context,
+                MaterialPageRoute(builder: (context) => const ThenPage()),
+              );
+              if (result != null) {
+                entity.thenActions.add(result);
+                _refresh();
+              }
+            },
+            tooltip: 'Thêm tác vụ',
+          ),
         ],
       ),
     );
@@ -302,87 +309,54 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
   }
 
   Widget _buildSaveButton(BuildContext context, Rule entity) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () async {
-          String? oldGatewayId = entity.gatewayId;
-          String? gatewayId = entity.calculateDeviceSave();
-          if (gatewayId != null) {
-            try {
-              Map<String, dynamic> rules = {};
-              final rulesReq = await widget.tbContext.tbClient
-                  .getAttributeService()
-                  .getAttributesByScope(
-                DeviceId(gatewayId),
-                'SHARED_SCOPE',
-                ['rules'],
-              );
-              if (rulesReq.isNotEmpty) {
-                final value = rulesReq.first.getValue();
-                if (value is String) {
-                  rules = jsonDecode(value) as Map<String, dynamic>;
-                } else if (value is Map<String, dynamic>) {
-                  rules = value;
-                }
-              }
-              rules[widget.ruleId] = entity.buildRule();
-              await widget.tbContext.tbClient
-                  .getAttributeService()
-                  .saveEntityAttributesV1(
-                DeviceId(gatewayId),
-                'SHARED_SCOPE',
-                {'rules': rules},
-              );
-            } catch (e) {
-              print('Error saving attributes for gateway $gatewayId: $e');
-            }
-          } else if (oldGatewayId != null) {
-            // Remove the rule from the old gateway if it exists
-            try {
-              Map<String, dynamic> rules = {};
-              final rulesReq = await widget.tbContext.tbClient
-                  .getAttributeService()
-                  .getAttributesByScope(
-                DeviceId(oldGatewayId),
-                'SHARED_SCOPE',
-                ['rules'],
-              );
-              if (rulesReq.isNotEmpty) {
-                final value = rulesReq.first.getValue();
-                if (value is String) {
-                  rules = jsonDecode(value) as Map<String, dynamic>;
-                } else if (value is Map<String, dynamic>) {
-                  rules = value;
-                }
-              }
-              rules.remove(widget.ruleId);
-              await widget.tbContext.tbClient
-                  .getAttributeService()
-                  .saveEntityAttributesV1(
-                DeviceId(oldGatewayId),
-                'SHARED_SCOPE',
-                {'rules': rules},
-              );
-            } catch (e) {
-              print('Error saving attributes for gateway $oldGatewayId: $e');
-            }
-          }
-          await RuleService.instance.saveRule(entity);
-          _refresh();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Column(
+      children: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.send),
+          label: const Text('Lưu cấu hình'),
+          onPressed: () => saveRule(entity),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
-        child: Text(S.of(context).save, style: const TextStyle(fontSize: 16)),
-      ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.delete),
+          label: const Text('Xóa kịch bản'),
+          onPressed: () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Xác nhận'),
+                content: const Text('Bạn có chắc chắn muốn tiếp tục?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false), // Cancel
+                    child: const Text('Hủy'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true), // OK
+                    child: const Text('Đồng ý'),
+                  ),
+                ],
+              ),
+            );
+            if (ok == true) {
+              deleteRule(entity);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _addButton(
-      {required VoidCallback onPressed, required String tooltip}) {
+  Widget _addButton({
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
@@ -399,12 +373,15 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: Colors.grey),
+          ),
         ],
       ),
     );
@@ -414,10 +391,115 @@ class _RuleDetailsPageState extends State<RuleDetailsPage> {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        const BoxShadow(
-            color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
       ],
     );
+  }
+
+  Future<void> saveRule(Rule rule) async {
+    String? oldGatewayId = rule.gatewayId;
+    String? gatewayId = rule.calculateDeviceSave();
+    if (gatewayId != null) {
+      try {
+        Map<String, dynamic> rules = {};
+        final rulesReq = await widget.tbContext.tbClient
+            .getAttributeService()
+            .getAttributesByScope(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          ['rules'],
+        );
+        if (rulesReq.isNotEmpty) {
+          final value = rulesReq.first.getValue();
+          if (value is String) {
+            rules = jsonDecode(value) as Map<String, dynamic>;
+          } else if (value is Map<String, dynamic>) {
+            rules = value;
+          }
+        }
+        rules[widget.ruleId] = rule.buildRule();
+        await widget.tbContext.tbClient
+            .getAttributeService()
+            .saveEntityAttributesV1(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          {'rules': rules},
+        );
+      } catch (e) {
+        print('Error saving attributes for gateway $gatewayId: $e');
+      }
+    } else if (oldGatewayId != null) {
+      // Remove the rule from the old gateway if it exists
+      try {
+        Map<String, dynamic> rules = {};
+        final rulesReq = await widget.tbContext.tbClient
+            .getAttributeService()
+            .getAttributesByScope(
+          DeviceId(oldGatewayId),
+          'SHARED_SCOPE',
+          ['rules'],
+        );
+        if (rulesReq.isNotEmpty) {
+          final value = rulesReq.first.getValue();
+          if (value is String) {
+            rules = jsonDecode(value) as Map<String, dynamic>;
+          } else if (value is Map<String, dynamic>) {
+            rules = value;
+          }
+        }
+        rules.remove(widget.ruleId);
+        await widget.tbContext.tbClient
+            .getAttributeService()
+            .saveEntityAttributesV1(
+          DeviceId(oldGatewayId),
+          'SHARED_SCOPE',
+          {'rules': rules},
+        );
+      } catch (e) {
+        print('Error saving attributes for gateway $oldGatewayId: $e');
+      }
+    }
+    await RuleService.instance.saveRule(rule);
+    _refresh();
+  }
+
+  Future<void> deleteRule(Rule rule) async {
+    if (rule.gatewayId != null) {
+      try {
+        Map<String, dynamic> rules = {};
+        final rulesReq = await widget.tbContext.tbClient
+            .getAttributeService()
+            .getAttributesByScope(
+          DeviceId(rule.gatewayId!),
+          'SHARED_SCOPE',
+          ['rules'],
+        );
+        if (rulesReq.isNotEmpty) {
+          final value = rulesReq.first.getValue();
+          if (value is String) {
+            rules = jsonDecode(value) as Map<String, dynamic>;
+          } else if (value is Map<String, dynamic>) {
+            rules = value;
+          }
+        }
+        rules.remove(widget.ruleId);
+        await widget.tbContext.tbClient
+            .getAttributeService()
+            .saveEntityAttributesV1(
+          DeviceId(rule.gatewayId!),
+          'SHARED_SCOPE',
+          {'rules': rules},
+        );
+      } catch (e) {
+        print('Error saving attributes for gateway $rule.gatewayId!: $e');
+      }
+    }
+    await RuleService.instance.deleteRule(widget.ruleId);
+    Navigator.pop(context);
   }
 }

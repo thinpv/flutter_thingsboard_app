@@ -3,14 +3,14 @@ import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 
-class ListDevicesPage extends StatefulWidget {
-  const ListDevicesPage({super.key});
+class ListDevicesMultiPage extends StatefulWidget {
+  const ListDevicesMultiPage({super.key});
 
   @override
-  State<ListDevicesPage> createState() => _ListDevicesPageState();
+  State<ListDevicesMultiPage> createState() => _ListDevicesMultiPageState();
 }
 
-class _ListDevicesPageState extends State<ListDevicesPage> {
+class _ListDevicesMultiPageState extends State<ListDevicesMultiPage> {
   final Set<String> selectedDeviceIds = {};
 
   @override

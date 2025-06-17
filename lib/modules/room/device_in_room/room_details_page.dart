@@ -16,6 +16,7 @@ import 'package:thingsboard_app/utils/utils.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
+import 'list_devices_multi_page.dart';
 import 'list_devices_page.dart';
 
 class RoomDetailsPage extends TbContextWidget {
@@ -141,26 +142,6 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     });
 
     RoomService.instance.saveRoom(entity);
-  }
-
-  Future<bool?> showConfirmDialog(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc chắn muốn tiếp tục?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), // Cancel
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true), // OK
-            child: const Text('Đồng ý'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> deleteRoom(Room room) async {
@@ -350,7 +331,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
               // final deviceInRooms = await Navigator.push<List<DeviceInRoom>>(
               //   context,
               //   MaterialPageRoute(
-              //       builder: (context) => const ListDevicesPage()),
+              //       builder: (context) => const ListDevicesMultiPage()),
               // );
               // if (deviceInRooms != null) {
               //   for (DeviceInRoom deviceInRoom in deviceInRooms) {
