@@ -143,6 +143,59 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
     RoomService.instance.saveRoom(entity);
   }
 
+  Future<bool?> showConfirmDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: const Text('Bạn có chắc chắn muốn tiếp tục?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // Cancel
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true), // OK
+            child: const Text('Đồng ý'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> deleteRoom(Room room) async {
+    room.updateGatewayList();
+    for (String gatewayId in room.gatewayIds) {
+      try {
+        Map<String, dynamic> groups = {};
+        final groupsReq =
+            await tbClient.getAttributeService().getAttributesByScope(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          ['groups'],
+        );
+        if (groupsReq.isNotEmpty) {
+          final value = groupsReq.first.getValue();
+          if (value is String) {
+            groups = jsonDecode(value) as Map<String, dynamic>;
+          } else if (value is Map<String, dynamic>) {
+            groups = value;
+          }
+        }
+        groups.remove(widget.roomId);
+        await tbClient.getAttributeService().saveEntityAttributesV1(
+          DeviceId(gatewayId),
+          'SHARED_SCOPE',
+          {'groups': groups},
+        );
+      } catch (e) {
+        print('Error saving attributes for gateway $gatewayId: $e');
+      }
+    }
+    RoomManager.instance.deleteRoom(room);
+    Navigator.pop(context);
+  }
+
   Future<void> controlGroup(Room entity, Map<String, dynamic> data) async {
     final rpcBody = {
       'method': 'controlGroup',
@@ -286,7 +339,8 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
             onPressed: () async {
               final result = await Navigator.push<DeviceInRoom>(
                 context,
-                MaterialPageRoute(builder: (context) => const ListDevicesPage()),
+                MaterialPageRoute(
+                    builder: (context) => const ListDevicesPage()),
               );
               if (result != null) {
                 entity.addDeviceInRoom(result);
@@ -395,6 +449,36 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           icon: const Icon(Icons.send),
           label: const Text('Lưu cấu hình'),
           onPressed: () => saveRoom(entity),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.delete),
+          label: const Text('Xóa phòng'),
+          onPressed: () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Xác nhận'),
+                content: const Text('Bạn có chắc chắn muốn tiếp tục?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false), // Cancel
+                    child: const Text('Hủy'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true), // OK
+                    child: const Text('Đồng ý'),
+                  ),
+                ],
+              ),
+            );
+            if (ok == true) {
+              deleteRoom(entity);
+            }
+          },
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
           ),

@@ -113,6 +113,13 @@ mixin RoomsBase on EntitiesBase<Room, PageLink> {
                 ),
                 const SizedBox(width: 16),
                 const Icon(Icons.chevron_right, color: Color(0xFFACACAC)),
+                // IconButton(
+                //   icon: const Icon(Icons.delete),
+                //   tooltip: 'Xóa',
+                //   onPressed: () {
+                //     RoomManager.instance.deleteRoom(room);
+                //   },
+                // ),
                 const SizedBox(width: 16),
               ],
             ),

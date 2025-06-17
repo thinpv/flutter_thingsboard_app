@@ -107,6 +107,12 @@ class RoomManager {
     }
   }
 
+  Future<void> deleteRoom(Room room) async {
+    if (room.id != null && room.id!.id != null) {
+      await RoomService.instance.deleteRoom(room.id!.id!);
+    }
+  }
+
   Future<void> refresh() async {
     await getRoomsPageData(forceRefresh: true);
   }
