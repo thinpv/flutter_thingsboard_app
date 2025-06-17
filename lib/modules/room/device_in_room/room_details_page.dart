@@ -81,29 +81,28 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
 
   Future<void> saveRoom(Room entity) async {
     entity.updateGatewayList();
-    Map<String, dynamic> gatewayData = {}; // Prepare gateway data if needed;
+    Map<String, dynamic> deviceInRoomList = {};
     for (final deviceId in entity.deviceIds) {
       final device = DeviceManager.instance.getMyDeviceInfoById(deviceId);
       if (device != null) {
         if (device.gatewayId != null) {
-          gatewayData[device.gatewayId!] ??= [];
-          gatewayData[device.gatewayId!]!.add(device.name);
+          deviceInRoomList[device.gatewayId!] ??= [];
+          deviceInRoomList[device.gatewayId!]!.add(DeviceInRoom(device.name));
         }
         if (device.isGateway) {
-          gatewayData[deviceId] ??= [];
-          gatewayData[deviceId]!.add(device.name);
+          deviceInRoomList[deviceId] ??= [];
+          deviceInRoomList[deviceId]!.add(DeviceInRoom(device.name));
         }
       }
     }
 
-    gatewayData.forEach((gatewayId, deviceNames) async {
+    deviceInRoomList.forEach((gatewayId, deviceInRooms) async {
       List<dynamic> devicesInfo = [];
-      for (final deviceName in deviceNames) {
-        devicesInfo.add(
-          {'name': deviceName},
-        );
+      for (final deviceInRoom in deviceInRooms) {
+        devicesInfo.add(deviceInRoom);
       }
       final groupData = {
+        'name': entity.getDisplayName(),
         'devices': devicesInfo,
         'addr': 10,
         'ts': DateTime.now().millisecondsSinceEpoch,

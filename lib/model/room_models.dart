@@ -97,6 +97,20 @@ class RoomInfo extends Room {
   }
 }
 
+class DeviceInRoom {
+  String deviceId;
+  int? epId;
+
+  DeviceInRoom(this.deviceId, {this.epId});
+
+  toJson() {
+    return {
+      'id': deviceId,
+      if (epId != null) 'epId': epId,
+    };
+  }
+}
+
 class RoomSearchQuery extends EntitySearchQuery {
   List<String> roomTypes;
 
