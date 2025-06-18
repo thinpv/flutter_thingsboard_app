@@ -4,7 +4,7 @@ import 'package:thingsboard_app/model/home_models.dart';
 import 'package:thingsboard_app/provider/home_manager.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-mixin HomesBase on EntitiesBase<Home, PageLink> {
+mixin HomesBase on EntitiesBase<HomeInfo, PageLink> {
   bool refresh = false;
 
   @override
@@ -14,7 +14,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
   String get noItemsFoundText => 'No homes found';
 
   @override
-  Future<PageData<Home>> fetchEntities(PageLink pageLink) async {
+  Future<PageData<HomeInfo>> fetchEntities(PageLink pageLink) async {
     var data = await HomeManager.instance
         .getHomesPageData(pageLink: pageLink, forceRefresh: refresh);
     refresh = false;
@@ -28,26 +28,26 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
   }
 
   @override
-  void onEntityTap(Home home) {
-    navigateTo('/home/${home.id!.id}');
+  void onEntityTap(HomeInfo homeInfo) {
+    navigateTo('/home/${homeInfo.id!.id}');
   }
 
   @override
-  Widget buildEntityListCard(BuildContext context, Home home) {
-    return _buildCard(context, home);
+  Widget buildEntityListCard(BuildContext context, HomeInfo homeInfo) {
+    return _buildCard(context, homeInfo);
   }
 
   @override
-  Widget buildEntityListWidgetCard(BuildContext context, Home home) {
-    return _buildListWidgetCard(context, home);
+  Widget buildEntityListWidgetCard(BuildContext context, HomeInfo homeInfo) {
+    return _buildListWidgetCard(context, homeInfo);
   }
 
   @override
-  Widget buildEntityGridCard(BuildContext context, Home home) {
-    return Text(home.getDisplayName());
+  Widget buildEntityGridCard(BuildContext context, HomeInfo homeInfo) {
+    return Text(homeInfo.getDisplayName());
   }
 
-  Widget _buildCard(context, Home home) {
+  Widget _buildCard(context, HomeInfo homeInfo) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -73,7 +73,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                               fit: BoxFit.fitWidth,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                home.getDisplayName(),
+                                homeInfo.getDisplayName(),
                                 style: const TextStyle(
                                   color: Color(0xFF282828),
                                   fontSize: 14,
@@ -86,7 +86,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                           Text(
                             entityDateFormat.format(
                               DateTime.fromMillisecondsSinceEpoch(
-                                home.createdTime!,
+                                homeInfo.createdTime!,
                               ),
                             ),
                             style: const TextStyle(
@@ -100,7 +100,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        home.type,
+                        homeInfo.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,
@@ -122,7 +122,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
     );
   }
 
-  Widget _buildListWidgetCard(BuildContext context, Home home) {
+  Widget _buildListWidgetCard(BuildContext context, HomeInfo homeInfo) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -142,7 +142,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          home.getDisplayName(),
+                          homeInfo.getDisplayName(),
                           style: const TextStyle(
                             color: Color(0xFF282828),
                             fontSize: 14,
@@ -152,7 +152,7 @@ mixin HomesBase on EntitiesBase<Home, PageLink> {
                         ),
                       ),
                       Text(
-                        home.type,
+                        homeInfo.type,
                         style: const TextStyle(
                           color: Color(0xFFAFAFAF),
                           fontSize: 12,

@@ -4,7 +4,7 @@ import 'package:thingsboard_app/model/home_models.dart';
 
 import 'homes_base.dart';
 
-class HomesListWidget extends EntitiesListPageLinkWidget<Home> with HomesBase {
+class HomesListWidget extends EntitiesListPageLinkWidget<HomeInfo> with HomesBase {
   HomesListWidget(
     TbContext tbContext, {
     super.key,

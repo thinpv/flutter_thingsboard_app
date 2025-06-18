@@ -6,7 +6,7 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 
 import 'homes_base.dart';
 
-class HomesList extends BaseEntitiesWidget<Home, PageLink>
+class HomesList extends BaseEntitiesWidget<HomeInfo, PageLink>
     with HomesBase, EntitiesListStateBase {
   HomesList(
     TbContext tbContext,

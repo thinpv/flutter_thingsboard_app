@@ -19,7 +19,7 @@ class HomeDetailsPage extends StatefulWidget {
 }
 
 class _HomeDetailsPageState extends State<HomeDetailsPage> {
-  late Future<Home?> _homeFuture;
+  late Future<HomeInfo?> _homeFuture;
 
   @override
   void initState() {
@@ -27,7 +27,7 @@ class _HomeDetailsPageState extends State<HomeDetailsPage> {
     _homeFuture = fetchEntity(widget.homeId);
   }
 
-  Future<Home?> fetchEntity(String id) async {
+  Future<HomeInfo?> fetchEntity(String id) async {
     return HomeManager.instance.getHomeById(id);
   }
 
@@ -39,7 +39,7 @@ class _HomeDetailsPageState extends State<HomeDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Home?>(
+    return FutureBuilder<HomeInfo?>(
       future: _homeFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -57,7 +57,7 @@ class _HomeDetailsPageState extends State<HomeDetailsPage> {
     );
   }
 
-  Widget _buildEntityDetails(BuildContext context, Home entity) {
+  Widget _buildEntityDetails(BuildContext context, HomeInfo entity) {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(

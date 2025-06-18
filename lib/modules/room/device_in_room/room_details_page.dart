@@ -104,14 +104,9 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
       for (final deviceInRoom in deviceInRooms) {
         devicesInfo.add(deviceInRoom.buildRoom());
       }
-      if (entity.addr == null) {
-        entity.addr = HomeManager.instance.getCurrentHome()!.nextGroupAddr;
-        HomeManager.instance.getCurrentHome()!.increaseGroupAddr();
-      }
       final groupData = {
         'name': entity.getDisplayName(),
         'devices': devicesInfo,
-        'addr': entity.addr,
         'ts': DateTime.now().millisecondsSinceEpoch,
       };
       try {

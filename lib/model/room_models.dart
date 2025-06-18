@@ -3,7 +3,6 @@ import 'package:thingsboard_client/thingsboard_client.dart';
 import 'package:uuid/uuid.dart';
 
 class Room extends Asset {
-  int? addr;
   List<DeviceInRoom> _deviceInRooms = [];
   List<String> _gatewayIds = [];
 
@@ -11,7 +10,6 @@ class Room extends Asset {
 
   Room.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};
-    addr = info['addr'] as int?;
     _deviceInRooms = (info['devices'] as List<dynamic>?)
             ?.map(
               (e) =>
@@ -29,7 +27,6 @@ class Room extends Asset {
   @override
   Map<String, dynamic> toJson() {
     additionalInfo ??= {};
-    additionalInfo!['addr'] = addr;
     additionalInfo!['devices'] = _deviceInRooms;
     additionalInfo!['gatewayIds'] = _gatewayIds;
     return super.toJson();
