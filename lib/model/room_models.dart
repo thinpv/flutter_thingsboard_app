@@ -6,7 +6,9 @@ class Room extends Asset {
   List<DeviceInRoom> _deviceInRooms = [];
   List<String> _gatewayIds = [];
 
-  Room() : super(const Uuid().v4(), 'Room');
+  Room({String? name}) : super(const Uuid().v4(), 'Room') {
+    label = name;
+  }
 
   Room.fromJson(Map<String, dynamic> json) : super.fromJson(json) {
     final info = json['additionalInfo'] as Map<String, dynamic>? ?? {};

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
@@ -9,7 +10,6 @@ import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_app/model/room_models.dart';
 import 'package:thingsboard_app/provider/device_manager.dart';
 import 'package:thingsboard_app/provider/device_type_manager.dart';
-import 'package:thingsboard_app/provider/home_manager.dart';
 import 'package:thingsboard_app/provider/room_manager.dart';
 import 'package:thingsboard_app/service/room_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
@@ -230,28 +230,51 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
         onSearch: (searchText) => _pageLinkController.onSearchText(searchText),
       );
     } else {
-      appBar = TbAppBar(
-        tbContext,
-        title: Text(entity.getDisplayName()),
+      appBar = AppBar(
+        title: GestureDetector(
+          onTap: () async {
+            final controller =
+                TextEditingController(text: entity.getDisplayName());
+            final newName = await showDialog<String>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Cập nhật tên ngữ cảnh'),
+                content: TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên ngữ cảnh',
+                  ),
+                  autofocus: true,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, controller.text),
+                    child: Text(S.of(context).save),
+                  ),
+                ],
+              ),
+            );
+            if (newName != null &&
+                newName.trim().isNotEmpty &&
+                newName != entity.label) {
+              entity.label = newName.trim();
+              _refresh();
+            }
+          },
+          child: Text(entity.getDisplayName()),
+        ),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              navigateTo('/room/?id=${widget.roomId}&search=true');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              // final result = await Navigator.push<Device>(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => ListDevicesPage()),
-              // );
-              // if (result != null) {
-              //   entity.addDevice(result.id!.id!);
-              //   _refresh();
-              // }
-            },
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
           ),
         ],
       );
