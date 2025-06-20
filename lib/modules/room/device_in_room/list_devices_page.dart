@@ -29,14 +29,23 @@ class ListDevicesPage extends StatelessWidget {
                       ? DeviceTypeManager.instance
                           .getDeviceTypeById(myDeviceInfo!.deviceProfileId!.id!)
                       : null;
-              if (deviceType != null && deviceType.endpoints.length >= 2) {
-                final result = await Navigator.push<DeviceInRoom>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DeviceEndpointsPage(device.id!.id!),
-                  ),
-                );
-                Navigator.pop(context, result);
+              if (deviceType != null) {
+                if (deviceType.endpoints.length == 1) {
+                  DeviceInRoom deviceInRoom = DeviceInRoom(
+                    device.id!.id!,
+                    epId: deviceType.endpoints[0]['id'] as int?,
+                    epName: deviceType.endpoints[0]['name'],
+                  );
+                  Navigator.pop(context, deviceInRoom);
+                } else if (deviceType.endpoints.length >= 2) {
+                  final result = await Navigator.push<DeviceInRoom>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DeviceEndpointsPage(device.id!.id!),
+                    ),
+                  );
+                  Navigator.pop(context, result);
+                }
               } else {
                 Navigator.pop(context, DeviceInRoom(device.id!.id!));
               }
