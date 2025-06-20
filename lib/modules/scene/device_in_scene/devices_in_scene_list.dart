@@ -1,0 +1,42 @@
+import 'package:thingsboard_app/core/context/tb_context.dart';
+import 'package:thingsboard_app/core/entity/entities_base.dart';
+import 'package:thingsboard_app/core/entity/entities_list.dart';
+import 'package:thingsboard_app/model/my_device_models.dart';
+import 'package:thingsboard_app/modules/device/devices_base.dart';
+import 'package:thingsboard_app/provider/device_manager.dart';
+import 'package:thingsboard_app/thingsboard_client.dart';
+
+class DevicesInSceneList extends BaseEntitiesWidget<MyDeviceInfo, PageLink>
+    with DevicesBase, EntitiesListStateBase {
+  final String sceneId;
+  final bool displayDeviceImage;
+
+  DevicesInSceneList(
+    TbContext tbContext,
+    PageKeyController<PageLink> pageKeyController,
+    this.sceneId, {
+    super.key,
+    searchMode = false,
+    this.displayDeviceImage = false,
+  }) : super(tbContext, pageKeyController, searchMode: searchMode);
+
+  @override
+  bool displayCardImage(bool listWidgetCard) => displayDeviceImage;
+
+  @override
+  Future<PageData<MyDeviceInfo>> fetchEntities(PageLink pageLink) async {
+    refresh = false;
+    AssetId assetId = AssetId(sceneId);
+    final listRelation =
+        await tbClient.getEntityRelationService().findInfoByFrom(assetId);
+    List<MyDeviceInfo> list = [];
+    for (final relation in listRelation) {
+      final device =
+          DeviceManager.instance.getMyDeviceInfoByName(relation.toName);
+      if (device != null) {
+        list.add(device);
+      }
+    }
+    return PageData<MyDeviceInfo>(list, 1, list.length, false);
+  }
+}

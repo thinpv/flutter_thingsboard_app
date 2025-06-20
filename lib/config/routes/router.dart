@@ -19,6 +19,7 @@ import 'package:thingsboard_app/modules/main/main_routes.dart';
 import 'package:thingsboard_app/modules/more/more_routes.dart';
 import 'package:thingsboard_app/modules/notification/routes/notification_routes.dart';
 import 'package:thingsboard_app/modules/profile/profile_routes.dart';
+import 'package:thingsboard_app/modules/scene/scene_routes.dart';
 import 'package:thingsboard_app/modules/tenant/tenant_routes.dart';
 import 'package:thingsboard_app/modules/url/url_routes.dart';
 import 'package:thingsboard_app/modules/version/route/version_route.dart';
@@ -46,6 +47,7 @@ class ThingsboardAppRouter {
     MainRoutes(_tbContext).registerRoutes();
     HomeRoutes(_tbContext).registerRoutes();
     RoomRoutes(_tbContext).registerRoutes();
+    SceneRoutes(_tbContext).registerRoutes();
     ProfileRoutes(_tbContext).registerRoutes();
     AssetRoutes(_tbContext).registerRoutes();
     RuleRoutes(_tbContext).registerRoutes();

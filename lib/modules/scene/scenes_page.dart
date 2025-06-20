@@ -3,33 +3,33 @@ import 'package:flutter_gen/gen_l10n/messages.dart';
 import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/entity/entities_base.dart';
-import 'package:thingsboard_app/model/room_models.dart';
-import 'package:thingsboard_app/provider/room_manager.dart';
-import 'package:thingsboard_app/service/room_service.dart';
+import 'package:thingsboard_app/model/scene_models.dart';
+import 'package:thingsboard_app/provider/scene_manager.dart';
+import 'package:thingsboard_app/service/scene_service.dart';
 import 'package:thingsboard_app/widgets/tb_app_bar.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-import 'rooms_list.dart';
+import 'scenes_list.dart';
 
-class RoomsPage extends TbContextWidget {
+class ScenesPage extends TbContextWidget {
   final bool searchMode;
 
-  RoomsPage(
+  ScenesPage(
     TbContext tbContext, {
     this.searchMode = false,
     super.key,
   }) : super(tbContext);
 
   @override
-  State<StatefulWidget> createState() => _RoomsPageState();
+  State<StatefulWidget> createState() => _ScenesPageState();
 }
 
-class _RoomsPageState extends TbContextState<RoomsPage> {
+class _ScenesPageState extends TbContextState<ScenesPage> {
   final PageLinkController _pageLinkController = PageLinkController();
 
   @override
   Widget build(BuildContext context) {
-    final roomsList = RoomsList(
+    final scenesList = ScenesList(
       tbContext,
       _pageLinkController,
       searchMode: widget.searchMode,
@@ -43,27 +43,27 @@ class _RoomsPageState extends TbContextState<RoomsPage> {
     } else {
       appBar = TbAppBar(
         tbContext,
-        title: Text(roomsList.title),
+        title: Text(scenesList.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              navigateTo('/rooms?search=true');
+              navigateTo('/scenes?search=true');
             },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              // navigateTo('/room');
+              // navigateTo('/scene');
               final controller = TextEditingController();
-              final roomName = await showDialog<String>(
+              final sceneName = await showDialog<String>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Tạo phòng mới'),
+                  title: const Text('Tạo kịch bản mới'),
                   content: TextField(
                     controller: controller,
                     decoration: const InputDecoration(
-                      labelText: 'Tên phòng',
+                      labelText: 'Tên kịch bản',
                     ),
                     autofocus: true,
                   ),
@@ -79,16 +79,16 @@ class _RoomsPageState extends TbContextState<RoomsPage> {
                   ],
                 ),
               );
-              if (roomName != null) {
+              if (sceneName != null) {
                 final customerId =
                     widget.tbContext.tbClient.getAuthUser()?.customerId;
                 if (customerId != null) {
-                  Room room = Room(name: roomName);
-                  room.customerId = CustomerId(customerId);
-                  room = await RoomService.instance.saveRoom(room);
-                  await RoomManager.instance.getRoomsList(forceRefresh: true);
-                  if (room.id != null) {
-                    navigateTo('/room/${room.id!.id}');
+                  Scene scene = Scene(name: sceneName);
+                  scene.customerId = CustomerId(customerId);
+                  scene = await SceneService.instance.saveScene(scene);
+                  await SceneManager.instance.getScenesList(forceRefresh: true);
+                  if (scene.id != null) {
+                    navigateTo('/scene/${scene.id!.id}');
                   }
                 }
               }
@@ -97,7 +97,7 @@ class _RoomsPageState extends TbContextState<RoomsPage> {
         ],
       );
     }
-    return Scaffold(appBar: appBar, body: roomsList);
+    return Scaffold(appBar: appBar, body: scenesList);
   }
 
   @override
