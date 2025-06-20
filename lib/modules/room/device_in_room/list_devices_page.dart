@@ -30,7 +30,9 @@ class ListDevicesPage extends StatelessWidget {
                           .getDeviceTypeById(myDeviceInfo!.deviceProfileId!.id!)
                       : null;
               if (deviceType != null) {
-                if (deviceType.endpoints.length == 1) {
+                if (deviceType.endpoints.isEmpty) {
+                  Navigator.pop(context, DeviceInRoom(device.id!.id!));
+                } else if (deviceType.endpoints.length == 1) {
                   DeviceInRoom deviceInRoom = DeviceInRoom(
                     device.id!.id!,
                     epId: deviceType.endpoints[0]['id'] as int?,
