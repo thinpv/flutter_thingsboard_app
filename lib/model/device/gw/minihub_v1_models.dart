@@ -1,8 +1,8 @@
 import 'package:thingsboard_app/model/my_device_models.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
-class MinihubV1Models extends MyDeviceInfo {
-  MinihubV1Models.fromJson(Map<String, dynamic> json) : super.fromJson(json);
+class MinihubV1 extends MyDeviceInfo {
+  MinihubV1.fromJson(Map<String, dynamic> json) : super.fromJson(json);
 
   @override
   void subscribe(ThingsboardClient tbClient) {

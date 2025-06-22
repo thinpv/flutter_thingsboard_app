@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/core/context/tb_context.dart';
 import 'package:thingsboard_app/model/device/lumi_plug_models.dart';
+import 'package:thingsboard_client/thingsboard_client.dart';
 
 class LumiPlugControlPage extends StatefulWidget {
+  final TbContext tbContext;
   final LumiPlug lumiPlug;
 
-  const LumiPlugControlPage({super.key, required this.lumiPlug});
+  const LumiPlugControlPage(this.tbContext,
+      {super.key, required this.lumiPlug});
 
   @override
   State<LumiPlugControlPage> createState() => _LumiPlugControlPageState();
@@ -20,8 +24,12 @@ class _LumiPlugControlPageState extends State<LumiPlugControlPage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 50),
           GestureDetector(
-            onTap: () => setState(() => isOn = !isOn),
+            onTap: () {
+              setState(() => isOn = !isOn);
+              control();
+            },
             child: Container(
               width: 200,
               height: 200,
@@ -59,5 +67,25 @@ class _LumiPlugControlPageState extends State<LumiPlugControlPage> {
         ],
       ),
     );
+  }
+
+  Future<void> control() async {
+    final rpcBody = {
+      'method': 'controlDev',
+      'params': {
+        'bt': isOn ? 1 : 0,
+      },
+    };
+    RequestConfig requestConfig = RequestConfig(
+      ignoreLoading: true,
+      ignoreErrors: true,
+    );
+    await widget.tbContext.tbClient
+        .getDeviceService()
+        .handleOneWayDeviceRPCRequest(
+          widget.lumiPlug.id!.id!,
+          rpcBody,
+          requestConfig: requestConfig,
+        );
   }
 }
