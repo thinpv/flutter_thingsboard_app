@@ -112,7 +112,31 @@ mixin RulesBase on EntitiesBase<Rule, PageLink> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.chevron_right, color: Color(0xFFACACAC)),
+                IconButton(
+                  icon: const Icon(
+                    Icons.play_arrow,
+                    color: Color(0xFFACACAC),
+                  ),
+                  onPressed: () async {
+                    final rpcBody = {
+                      'method': 'control_rule',
+                      'params': {
+                        'id': rule.id!.id,
+                      },
+                    };
+                    RequestConfig requestConfig = RequestConfig(
+                      ignoreLoading: true,
+                      ignoreErrors: true,
+                    );
+                    await tbContext.tbClient
+                        .getDeviceService()
+                        .handleOneWayDeviceRPCRequest(
+                          rule.calculateDeviceSave()!,
+                          rpcBody,
+                          requestConfig: requestConfig,
+                        );
+                  },
+                ),
                 const SizedBox(width: 16),
               ],
             ),

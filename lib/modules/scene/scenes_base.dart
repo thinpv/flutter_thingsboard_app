@@ -112,15 +112,32 @@ mixin ScenesBase on EntitiesBase<Scene, PageLink> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.chevron_right, color: Color(0xFFACACAC)),
                 // IconButton(
-                //   icon: const Icon(Icons.delete),
-                //   tooltip: 'Xóa',
-                //   onPressed: () {
-                //     SceneManager.instance.deleteScene(scene);
+                //   icon: const Icon(
+                //     Icons.chevron_right,
+                //     color: Color(0xFFACACAC),
+                //   ),
+                //   onPressed: () async {
+                //     final rpcBody = {
+                //       'method': 'control_scene',
+                //       'params': {
+                //         'id': scene.id!.id,
+                //       },
+                //     };
+                //     RequestConfig requestConfig = RequestConfig(
+                //       ignoreLoading: true,
+                //       ignoreErrors: true,
+                //     );
+                //     await tbContext.tbClient
+                //         .getDeviceService()
+                //         .handleOneWayDeviceRPCRequest(
+                //           scene.calculateDeviceSave()!,
+                //           rpcBody,
+                //           requestConfig: requestConfig,
+                //         );
                 //   },
                 // ),
-                const SizedBox(width: 16),
+                // const SizedBox(width: 16),
               ],
             ),
           ),
