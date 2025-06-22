@@ -174,7 +174,7 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
 
   Future<void> controlGroup(Room entity, Map<String, dynamic> data) async {
     final rpcBody = {
-      'method': 'controlGroup',
+      'method': 'control_group',
       'params': {
         'id': widget.roomId,
         'data': data,
@@ -339,7 +339,8 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
               final result = await Navigator.push<DeviceInRoom>(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const ListDevicesPage()),
+                  builder: (context) => const ListDevicesPage(),
+                ),
               );
               if (result != null) {
                 entity.addDeviceInRoom(result);
@@ -406,8 +407,10 @@ class _RoomDetailsPageState extends TbContextState<RoomDetailsPage> {
           },
         ),
         const SizedBox(height: 20),
-        Text('CCT: ${cct.toInt() * 38 + 2700}K',
-            style: const TextStyle(fontSize: 16)),
+        Text(
+          'CCT: ${cct.toInt() * 38 + 2700}K',
+          style: const TextStyle(fontSize: 16),
+        ),
         Slider(
           min: 0,
           max: 100,
