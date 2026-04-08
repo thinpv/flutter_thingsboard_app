@@ -4,43 +4,66 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.d
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/providers/automation_provider.dart';
+import 'package:thingsboard_app/utils/services/smarthome/automation_service.dart';
 
 class SmartTab extends ConsumerWidget {
   const SmartTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final serverRules = ref.watch(serverRulesProvider);
+    final allRules = ref.watch(allRulesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Smart'),
-        elevation: 0,
-      ),
-      body: serverRules.when(
+      appBar: AppBar(title: const Text('Smart'), elevation: 0),
+      body: allRules.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('Lỗi: $e')),
         data: (rules) {
           if (rules.isEmpty) return const _EmptyAutomationView();
-          return ListView.builder(
+          final serverRules = rules.where((r) => !r.isGatewayRule).toList();
+          final gwRules = rules.where((r) => r.isGatewayRule).toList();
+          return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: rules.length,
-            itemBuilder: (context, index) =>
-                AutomationCard(rule: rules[index]),
+            children: [
+              if (serverRules.isNotEmpty) ...[
+                _SectionLabel('☁️ Server automations (${serverRules.length})'),
+                ...serverRules.map((r) => AutomationCard(rule: r)),
+              ],
+              if (gwRules.isNotEmpty) ...[
+                _SectionLabel('⚡ Gateway local (${gwRules.length})'),
+                ...gwRules.map((r) => AutomationCard(rule: r)),
+              ],
+            ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final saved = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(
-              builder: (_) => const AutomationEditPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const AutomationEditPage()),
           );
-          if (saved == true) ref.invalidate(serverRulesProvider);
+          if (saved == true) ref.invalidate(allRulesProvider);
         },
         icon: const Icon(Icons.add),
         label: const Text('Tạo automation'),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+            ),
       ),
     );
   }
@@ -114,14 +137,34 @@ class AutomationCard extends ConsumerWidget {
     );
   }
 
-  void _toggleEnabled(WidgetRef ref, bool enabled) {
+  Future<void> _toggleEnabled(WidgetRef ref, bool enabled) async {
     final home = ref.read(selectedHomeProvider).valueOrNull;
     if (home == null) return;
+    final svc = AutomationService();
     if (rule.isGatewayRule) {
-      // TODO: gateway rule toggle via AutomationService
+      final gwId = rule.gatewayId!;
+      final index = await svc.fetchGatewayRuleIndex(gwId);
+      final newIndex = index
+          .map((e) => e.id == rule.id
+              ? RuleIndexEntry(
+                  id: e.id,
+                  name: e.name,
+                  icon: e.icon,
+                  color: e.color,
+                  enabled: enabled,
+                  ts: DateTime.now().millisecondsSinceEpoch,
+                  status: e.status,
+                )
+              : e)
+          .toList();
+      await svc.saveGatewayRuleIndex(gwId, newIndex);
     } else {
-      // TODO: server rule toggle via AutomationService
+      final rules = await svc.fetchServerRules(home.id);
+      final updated =
+          rules.map((r) => r.id == rule.id ? r.copyWith(enabled: enabled) : r).toList();
+      await svc.saveServerRules(home.id, updated);
     }
+    ref.invalidate(allRulesProvider);
   }
 
   Color _parseColor(String hex) {

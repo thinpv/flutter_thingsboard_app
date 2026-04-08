@@ -4,6 +4,10 @@ abstract final class ThingsboardAppConstants {
   static const thingsBoardApiEndpoint = String.fromEnvironment(
     'thingsboardApiEndpoint',
   );
+  static const middlewareUrl = String.fromEnvironment(
+    'middlewareUrl',
+    defaultValue: 'http://192.168.90.70:3000',
+  );
   static const thingsboardOAuth2CallbackUrlScheme = String.fromEnvironment(
     'thingsboardOAuth2CallbackUrlScheme',
   );

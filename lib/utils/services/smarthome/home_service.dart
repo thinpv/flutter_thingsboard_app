@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:thingsboard_app/constants/app_constants.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
@@ -6,13 +10,65 @@ import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 class HomeService {
-  HomeService() : _client = getIt<ITbClientService>().client;
+  HomeService()
+      : _client = getIt<ITbClientService>().client,
+        _middlewareBase = ThingsboardAppConstants.middlewareUrl;
 
   final ThingsboardClient _client;
+  final String _middlewareBase;
 
   static const _homeType = 'smarthome_home';
   static const _roomType = 'smarthome_room';
   static const _containsRelation = 'Contains';
+
+  // ─── Middleware HTTP helper ──────────────────────────────────────────────────
+
+  /// Returns the current customer JWT — used as Bearer token for middleware.
+  String get _bearerToken => _client.getJwtToken() ?? '';
+
+  /// POST / PATCH / DELETE to the middleware.
+  Future<Map<String, dynamic>> _mw(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final uri = Uri.parse('$_middlewareBase$path');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_bearerToken',
+    };
+
+    late http.Response resp;
+    switch (method) {
+      case 'POST':
+        resp = await http.post(uri, headers: headers,
+            body: body != null ? jsonEncode(body) : null);
+      case 'PATCH':
+        resp = await http.patch(uri, headers: headers,
+            body: body != null ? jsonEncode(body) : null);
+      case 'DELETE':
+        resp = await http.delete(uri, headers: headers);
+      default:
+        throw ArgumentError('Unsupported method: $method');
+    }
+
+    if (resp.statusCode >= 400) {
+      final msg = _tryDecodeError(resp.body);
+      throw Exception('Middleware $method $path → ${resp.statusCode}: $msg');
+    }
+
+    if (resp.body.isEmpty) return {};
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
+
+  String _tryDecodeError(String body) {
+    try {
+      final m = jsonDecode(body) as Map<String, dynamic>;
+      return m['error'] as String? ?? body;
+    } catch (_) {
+      return body;
+    }
+  }
 
   // ─── Home ───────────────────────────────────────────────────────────────────
 
@@ -30,21 +86,17 @@ class HomeService {
   }
 
   Future<SmarthomeHome> createHome(String name) async {
-    final user = await _client.getUserService().getUser();
-    final customerId = user.customerId?.id;
-
-    final asset = Asset(name, _homeType);
-    final saved = await _client.getAssetService().saveAsset(asset);
-    if (customerId != null) {
-      await _client
-          .getAssetService()
-          .assignAssetToCustomer(customerId, saved.id!.id!);
-    }
-    return SmarthomeHome(id: saved.id!.id!, name: saved.name);
+    final result = await _mw('POST', '/assets', body: {
+      'name': name,
+      'type': _homeType,
+    });
+    final assetId = (result['id'] as Map<String, dynamic>?)?['id'] as String?;
+    if (assetId == null) throw Exception('createHome: no id in response');
+    return SmarthomeHome(id: assetId, name: name);
   }
 
   Future<void> deleteHome(String homeId) async {
-    await _client.getAssetService().deleteAsset(homeId);
+    await _mw('DELETE', '/assets/$homeId');
   }
 
   // ─── Room ───────────────────────────────────────────────────────────────────
@@ -59,35 +111,66 @@ class HomeService {
       relationType: _containsRelation,
     );
     final assets = await _client.getAssetService().findByQuery(query);
-    return assets
+    final rooms = assets
         .map((a) => SmarthomeRoom.fromAsset(a, homeId: homeId))
         .toList();
+
+    // Load icon + order from server attributes in parallel
+    await Future.wait(rooms.asMap().entries.map((entry) async {
+      final i = entry.key;
+      final room = entry.value;
+      try {
+        final attrs = await getServerAttributes(
+          AssetId(room.id),
+          ['icon', 'order'],
+        );
+        if (attrs.isNotEmpty) {
+          rooms[i] = room.copyWith(
+            icon: attrs['icon'] as String?,
+            order: attrs['order'] is int
+                ? attrs['order'] as int
+                : int.tryParse(attrs['order']?.toString() ?? ''),
+          );
+        }
+      } catch (_) {
+        // best-effort: keep room without attributes
+      }
+    }));
+
+    rooms.sort((a, b) => a.order.compareTo(b.order));
+    return rooms;
   }
 
-  Future<SmarthomeRoom> createRoom(String homeId, String name) async {
-    final user = await _client.getUserService().getUser();
-    final customerId = user.customerId?.id;
-
-    final asset = Asset(name, _roomType);
-    final saved = await _client.getAssetService().saveAsset(asset);
-    if (customerId != null) {
-      await _client
-          .getAssetService()
-          .assignAssetToCustomer(customerId, saved.id!.id!);
-    }
-    // Create Contains relation: Home → Room
-    await _client.getEntityRelationService().saveRelation(
-          EntityRelation(
-            from: AssetId(homeId),
-            to: saved.id!,
-            type: _containsRelation,
-          ),
-        );
-    return SmarthomeRoom(id: saved.id!.id!, homeId: homeId, name: saved.name);
+  Future<SmarthomeRoom> createRoom(
+    String homeId,
+    String name, {
+    String icon = 'living_room',
+    int order = 0,
+  }) async {
+    final result = await _mw('POST', '/assets/$homeId/children', body: {
+      'name': name,
+      'type': _roomType,
+      'attributes': {'icon': icon, 'order': order},
+    });
+    final assetId = (result['id'] as Map<String, dynamic>?)?['id'] as String?;
+    if (assetId == null) throw Exception('createRoom: no id in response');
+    return SmarthomeRoom(id: assetId, homeId: homeId, name: name);
   }
 
   Future<void> deleteRoom(String roomId) async {
-    await _client.getAssetService().deleteAsset(roomId);
+    await _mw('DELETE', '/assets/$roomId');
+  }
+
+  Future<void> updateRoom(
+    String roomId, {
+    required String name,
+    required String icon,
+    required int order,
+  }) async {
+    await _mw('PATCH', '/assets/$roomId', body: {
+      'name': name,
+      'attributes': {'icon': icon, 'order': order},
+    });
   }
 
   // ─── Devices ────────────────────────────────────────────────────────────────
@@ -108,7 +191,7 @@ class HomeService {
     return devices.map(SmarthomeDevice.fromDevice).toList();
   }
 
-  // ─── Attributes ─────────────────────────────────────────────────────────────
+  // ─── Attributes (read/write direct to TB) ───────────────────────────────────
 
   Future<Map<String, dynamic>> getServerAttributes(
     EntityId entityId,
@@ -122,18 +205,6 @@ class HomeService {
     return {for (final e in entries) e.getKey(): e.getValue()};
   }
 
-  Future<Map<String, dynamic>> getSharedAttributes(
-    EntityId entityId,
-    List<String> keys,
-  ) async {
-    final entries = await _client.getAttributeService().getAttributesByScope(
-          entityId,
-          'SHARED_SCOPE',
-          keys,
-        );
-    return {for (final e in entries) e.getKey(): e.getValue()};
-  }
-
   Future<void> saveServerAttributes(
     EntityId entityId,
     Map<String, dynamic> data,
@@ -141,17 +212,6 @@ class HomeService {
     await _client.getAttributeService().saveEntityAttributesV2(
           entityId,
           'SERVER_SCOPE',
-          data,
-        );
-  }
-
-  Future<void> saveSharedAttributes(
-    EntityId entityId,
-    Map<String, dynamic> data,
-  ) async {
-    await _client.getAttributeService().saveEntityAttributesV2(
-          entityId,
-          'SHARED_SCOPE',
           data,
         );
   }

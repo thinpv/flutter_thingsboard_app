@@ -101,7 +101,7 @@ class AutomationService {
     } else {
       newIndex.add(entry);
     }
-    await _saveGatewayRuleIndex(gatewayDeviceId, newIndex);
+    await saveGatewayRuleIndex(gatewayDeviceId, newIndex);
   }
 
   Future<void> deleteGatewayRule(
@@ -111,7 +111,7 @@ class AutomationService {
   ) async {
     // Remove index entry first so gateway stops executing it
     final newIndex = currentIndex.where((e) => e.id != ruleId).toList();
-    await _saveGatewayRuleIndex(gatewayDeviceId, newIndex);
+    await saveGatewayRuleIndex(gatewayDeviceId, newIndex);
     // Delete the detail attribute
     await _client.getAttributeService().deleteEntityAttributes(
           DeviceId(gatewayDeviceId),
@@ -120,7 +120,7 @@ class AutomationService {
         );
   }
 
-  Future<void> _saveGatewayRuleIndex(
+  Future<void> saveGatewayRuleIndex(
     String gatewayDeviceId,
     List<RuleIndexEntry> index,
   ) async {

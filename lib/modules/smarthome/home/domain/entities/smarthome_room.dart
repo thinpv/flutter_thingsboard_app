@@ -22,4 +22,14 @@ class SmarthomeRoom {
   final String name;
   final String? icon;
   final int order;
+
+  SmarthomeRoom copyWith({String? icon, int? order}) {
+    return SmarthomeRoom(
+      id: id,
+      homeId: homeId,
+      name: name,
+      icon: icon ?? this.icon,
+      order: order ?? this.order,
+    );
+  }
 }

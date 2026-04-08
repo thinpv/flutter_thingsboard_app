@@ -119,8 +119,12 @@ class ProfileTab extends ConsumerWidget {
   Future<void> _addHome(BuildContext context, WidgetRef ref) async {
     final name = await _promptText(context, title: 'Tên nhà mới');
     if (name == null || name.isEmpty) return;
-    await HomeService().createHome(name);
-    ref.invalidate(homesProvider);
+    try {
+      await HomeService().createHome(name);
+      ref.invalidate(homesProvider);
+    } catch (e) {
+      if (context.mounted) _showError(context, 'Không thể tạo nhà: $e');
+    }
   }
 
   Future<void> _deleteHome(
@@ -133,8 +137,12 @@ class ProfileTab extends ConsumerWidget {
       message: 'Xóa nhà "${home.name}"? Hành động không thể hoàn tác.',
     );
     if (!confirmed) return;
-    await HomeService().deleteHome(home.id);
-    ref.invalidate(homesProvider);
+    try {
+      await HomeService().deleteHome(home.id);
+      ref.invalidate(homesProvider);
+    } catch (e) {
+      if (context.mounted) _showError(context, 'Không thể xóa nhà: $e');
+    }
   }
 
   Future<void> _addRoom(
@@ -144,8 +152,12 @@ class ProfileTab extends ConsumerWidget {
   ) async {
     final name = await _promptText(context, title: 'Tên phòng mới');
     if (name == null || name.isEmpty) return;
-    await HomeService().createRoom(home.id, name);
-    ref.invalidate(roomsProvider);
+    try {
+      await HomeService().createRoom(home.id, name);
+      ref.invalidate(roomsProvider);
+    } catch (e) {
+      if (context.mounted) _showError(context, 'Không thể tạo phòng: $e');
+    }
   }
 
   Future<void> _deleteRoom(
@@ -158,8 +170,21 @@ class ProfileTab extends ConsumerWidget {
       message: 'Xóa phòng "${room.name}"?',
     );
     if (!confirmed) return;
-    await HomeService().deleteRoom(room.id);
-    ref.invalidate(roomsProvider);
+    try {
+      await HomeService().deleteRoom(room.id);
+      ref.invalidate(roomsProvider);
+    } catch (e) {
+      if (context.mounted) _showError(context, 'Không thể xóa phòng: $e');
+    }
+  }
+
+  void _showError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
   }
 
   Future<void> _addDevice(BuildContext context, WidgetRef ref) async {
@@ -182,7 +207,7 @@ class ProfileTab extends ConsumerWidget {
   Future<String?> _promptText(
     BuildContext context, {
     required String title,
-  }) async {
+  }) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,

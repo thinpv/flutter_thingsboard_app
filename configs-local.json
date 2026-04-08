@@ -1,3 +1,4 @@
 {
-    "thingsboardApiEndpoint": "http://192.168.90.70:8080"
+    "thingsboardApiEndpoint": "http://192.168.90.70:8080",
+    "middlewareUrl": "http://192.168.90.70:3000"
 }
