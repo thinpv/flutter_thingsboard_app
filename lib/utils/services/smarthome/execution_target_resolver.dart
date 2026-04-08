@@ -57,7 +57,7 @@ class ExecutionTargetResolver {
           try {
             final gw = await _client.getDeviceService().getDevice(rel.from.id!);
             // Gateway devices have type containing 'gateway' or are Is-Gateway
-            if (gw.type.toLowerCase().contains('gateway')) {
+            if (gw != null && gw.type.toLowerCase().contains('gateway')) {
               return rel.from.id!;
             }
           } catch (_) {}
