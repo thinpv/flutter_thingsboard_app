@@ -21,6 +21,7 @@ import 'package:thingsboard_app/config/routes/v2/routes_config/routes/noauth_rou
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/notification_routes.dart';
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/profile_routes.dart';
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/root_routes.dart';
+import 'package:thingsboard_app/config/routes/v2/routes_config/routes/smarthome_routes.dart';
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/tenant_routes.dart';
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/ui_utils_routes.dart';
 import 'package:thingsboard_app/config/routes/v2/routes_config/routes/url_routes.dart';
@@ -37,6 +38,7 @@ List<RouteBase> getRoutes() {
       builder: (context, state, child) => RouteHanlderWidget(child: child),
       routes: [
         ...getMainRoutes(),
+        ...getSmarthomeRoutes(),
         ...loginRoutes,
         ...noAuthRoutes,
         ...versionRoutes,

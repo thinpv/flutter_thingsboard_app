@@ -1,0 +1,332 @@
+import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_device_page.dart';
+import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
+
+class ProfileTab extends ConsumerWidget {
+  const ProfileTab({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final homes = ref.watch(homesProvider);
+    final selectedHome = ref.watch(selectedHomeProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Tôi'), elevation: 0),
+      body: ListView(
+        children: [
+          // ── Home management section ──────────────────────────────────────
+          _SectionHeader(
+            title: 'Nhà của tôi',
+            action: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _addHome(context, ref),
+            ),
+          ),
+          homes.when(
+            loading: () => const _LoadingTile(),
+            error: (e, s) => ListTile(title: Text('Lỗi: $e')),
+            data: (list) {
+              if (list.isEmpty) {
+                return const ListTile(
+                  leading: Icon(Icons.home_outlined),
+                  title: Text('Chưa có nhà nào'),
+                );
+              }
+              return Column(
+                children: list
+                    .map((h) => _HomeTile(
+                          home: h,
+                          isSelected: selectedHome.valueOrNull?.id == h.id,
+                          onSelect: () => ref
+                              .read(selectedHomeIdProvider.notifier)
+                              .state = h.id,
+                          onDelete: () => _deleteHome(context, ref, h),
+                        ))
+                    .toList(),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // ── Room management section ──────────────────────────────────────
+          _SectionHeader(
+            title: 'Phòng',
+            action: selectedHome.valueOrNull != null
+                ? IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => _addRoom(
+                      context,
+                      ref,
+                      selectedHome.valueOrNull!,
+                    ),
+                  )
+                : null,
+          ),
+          ref.watch(roomsProvider).when(
+            loading: () => const _LoadingTile(),
+            error: (e, s) => ListTile(title: Text('Lỗi: $e')),
+            data: (rooms) {
+              if (rooms.isEmpty) {
+                return const ListTile(
+                  leading: Icon(Icons.meeting_room_outlined),
+                  title: Text('Chưa có phòng nào'),
+                );
+              }
+              return Column(
+                children: rooms
+                    .map((r) => _RoomTile(
+                          room: r,
+                          onDelete: () => _deleteRoom(context, ref, r),
+                        ))
+                    .toList(),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // ── Device provisioning section ──────────────────────────────────
+          const _SectionHeader(title: 'Thiết bị'),
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline),
+            title: const Text('Thêm thiết bị mới'),
+            subtitle: const Text('Quét và ghép nối qua gateway'),
+            onTap: () => _addDevice(context, ref),
+          ),
+
+          const Divider(),
+
+          // ── Account section ──────────────────────────────────────────────
+          const _SectionHeader(title: 'Tài khoản'),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Đăng xuất'),
+            onTap: () => _logout(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Actions ────────────────────────────────────────────────────────────────
+
+  Future<void> _addHome(BuildContext context, WidgetRef ref) async {
+    final name = await _promptText(context, title: 'Tên nhà mới');
+    if (name == null || name.isEmpty) return;
+    await HomeService().createHome(name);
+    ref.invalidate(homesProvider);
+  }
+
+  Future<void> _deleteHome(
+    BuildContext context,
+    WidgetRef ref,
+    SmarthomeHome home,
+  ) async {
+    final confirmed = await _confirm(
+      context,
+      message: 'Xóa nhà "${home.name}"? Hành động không thể hoàn tác.',
+    );
+    if (!confirmed) return;
+    await HomeService().deleteHome(home.id);
+    ref.invalidate(homesProvider);
+  }
+
+  Future<void> _addRoom(
+    BuildContext context,
+    WidgetRef ref,
+    SmarthomeHome home,
+  ) async {
+    final name = await _promptText(context, title: 'Tên phòng mới');
+    if (name == null || name.isEmpty) return;
+    await HomeService().createRoom(home.id, name);
+    ref.invalidate(roomsProvider);
+  }
+
+  Future<void> _deleteRoom(
+    BuildContext context,
+    WidgetRef ref,
+    SmarthomeRoom room,
+  ) async {
+    final confirmed = await _confirm(
+      context,
+      message: 'Xóa phòng "${room.name}"?',
+    );
+    if (!confirmed) return;
+    await HomeService().deleteRoom(room.id);
+    ref.invalidate(roomsProvider);
+  }
+
+  Future<void> _addDevice(BuildContext context, WidgetRef ref) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AddDevicePage()),
+    );
+    ref.invalidate(roomsProvider);
+  }
+
+  void _logout(BuildContext context) {
+    // Delegate to existing TB logout mechanism
+    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+      '/login',
+      (route) => false,
+    );
+  }
+
+  // ─── Dialogs ─────────────────────────────────────────────────────────────
+
+  Future<String?> _promptText(
+    BuildContext context, {
+    required String title,
+  }) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Nhập tên…'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Tạo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirm(BuildContext context, {required String message}) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+}
+
+// ─── Reusable tiles ──────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.action});
+
+  final String title;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(color: Theme.of(context).colorScheme.primary),
+          ),
+          const Spacer(),
+          if (action != null) action!,
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingTile extends StatelessWidget {
+  const _LoadingTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ListTile(
+      leading: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      title: Text('Đang tải…'),
+    );
+  }
+}
+
+class _HomeTile extends StatelessWidget {
+  const _HomeTile({
+    required this.home,
+    required this.isSelected,
+    required this.onSelect,
+    required this.onDelete,
+  });
+
+  final SmarthomeHome home;
+  final bool isSelected;
+  final VoidCallback onSelect;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(
+        isSelected ? Icons.home : Icons.home_outlined,
+        color: isSelected ? Theme.of(context).colorScheme.primary : null,
+      ),
+      title: Text(home.name),
+      subtitle: isSelected ? const Text('Đang chọn') : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isSelected)
+            TextButton(onPressed: onSelect, child: const Text('Chọn')),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoomTile extends StatelessWidget {
+  const _RoomTile({required this.room, required this.onDelete});
+
+  final SmarthomeRoom room;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.meeting_room_outlined),
+      title: Text(room.name),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline),
+        onPressed: onDelete,
+      ),
+    );
+  }
+}
