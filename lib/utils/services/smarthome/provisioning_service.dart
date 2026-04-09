@@ -46,16 +46,16 @@ class ProvisioningService {
 
   // ─── Pairing RPC ─────────────────────────────────────────────────────────
 
-  /// Sends start_pairing RPC to gateway (one-way, fire-and-forget).
+  /// Sends startScan RPC to gateway (one-way, fire-and-forget).
   /// Uses one-way RPC so it doesn't block waiting for gateway response.
-  Future<void> startPairing(
+  Future<void> startScan(
     String gatewayId, {
     String? deviceType,
     int timeoutSeconds = 60,
   }) async {
     await _control.sendOneWayRpc(
       gatewayId,
-      'start_pairing',
+      'startScan',
       {
         if (deviceType != null) 'device_type': deviceType,
         'timeout_seconds': timeoutSeconds,
@@ -63,9 +63,9 @@ class ProvisioningService {
     );
   }
 
-  /// Sends stop_pairing RPC to gateway (one-way, fire-and-forget).
-  Future<void> stopPairing(String gatewayId) async {
-    await _control.sendOneWayRpc(gatewayId, 'stop_pairing', {});
+  /// Sends stopScan RPC to gateway (one-way, fire-and-forget).
+  Future<void> stopScan(String gatewayId) async {
+    await _control.sendOneWayRpc(gatewayId, 'stopScan', {});
   }
 
   // ─── Sub-device discovery ─────────────────────────────────────────────────

@@ -47,7 +47,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _stopPairingAll();
+    _stopScanAll();
     super.dispose();
   }
 
@@ -165,9 +165,9 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
 
     if (mounted) setState(() {});
 
-    // Send start_pairing to all gateways
+    // Send startScan to all gateways
     for (final gw in _gateways) {
-      _svc.startPairing(gw.id).catchError((_) {});
+      _svc.startScan(gw.id).catchError((_) {});
     }
 
     // Poll every 3s
@@ -202,16 +202,16 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
     }
   }
 
-  void _stopPairingAll() {
+  void _stopScanAll() {
     for (final gw in _gateways) {
-      _svc.stopPairing(gw.id).catchError((_) {});
+      _svc.stopScan(gw.id).catchError((_) {});
     }
   }
 
   Future<void> _stopScan() async {
     _pollTimer?.cancel();
     _pollTimer = null;
-    _stopPairingAll();
+    _stopScanAll();
     setState(() {
       _scanning = false;
       _bleScanning = false;
