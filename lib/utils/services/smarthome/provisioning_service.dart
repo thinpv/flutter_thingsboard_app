@@ -16,37 +16,18 @@ class ProvisioningService {
 
   // ─── Gateway discovery ────────────────────────────────────────────────────
 
-  /// Finds gateway devices. Searches:
-  /// 1. Direct Home→Device Contains relations
-  /// 2. If none found, all customer devices (gateways may not be assigned to home)
+  /// Finds all gateway devices belonging to the customer.
+  /// Gateways may or may not be assigned to a home, so we always search
+  /// all customer devices and filter by the gateway flag.
   Future<List<SmarthomeDevice>> fetchGatewayDevices(String homeId) async {
-    // 1. Check direct Home→Device relations first
-    final relations = await _client.getEntityRelationService().findByFrom(
-          AssetId(homeId),
-          relationType: _containsRelation,
+    final user = await _client.getUserService().getUser();
+    final customerId = user.customerId?.id;
+    if (customerId == null) return [];
+    final page = await _client.getDeviceService().getCustomerDevices(
+          customerId,
+          PageLink(100),
         );
-    final deviceIds = relations
-        .where((r) => r.to.entityType == EntityType.DEVICE)
-        .map((r) => r.to.id!)
-        .toList();
-
-    List<Device> allDevices;
-    if (deviceIds.isNotEmpty) {
-      allDevices =
-          await _client.getDeviceService().getDevicesByIds(deviceIds);
-    } else {
-      // 2. No devices under home — search all customer devices
-      final user = await _client.getUserService().getUser();
-      final customerId = user.customerId?.id;
-      if (customerId == null) return [];
-      final page = await _client.getDeviceService().getCustomerDevices(
-            customerId,
-            PageLink(100),
-          );
-      allDevices = page.data;
-    }
-
-    return allDevices
+    return page.data
         .where((d) => _isGateway(d))
         .map(SmarthomeDevice.fromDevice)
         .toList();
@@ -89,21 +70,26 @@ class ProvisioningService {
 
   // ─── Sub-device discovery ─────────────────────────────────────────────────
 
-  /// Returns all sub-devices currently registered under the gateway.
-  /// ThingsBoard creates a Contains relation from gateway to sub-device
-  /// when the gateway connects the device via v1/gateway/connect.
+  /// Returns all sub-devices registered under the gateway.
+  /// TB may use different relation types depending on how the device was created:
+  ///  - "Contains" — standard TB gateway protocol (v1/gateway/connect)
+  ///  - "Created" — some gateway implementations create sub-devices this way
+  /// We fetch ALL relations from gateway and filter to DEVICE entities.
   Future<List<SmarthomeDevice>> fetchSubDevices(String gatewayId) async {
     final relations = await _client.getEntityRelationService().findByFrom(
           DeviceId(gatewayId),
-          relationType: _containsRelation,
         );
     final deviceIds = relations
         .where((r) => r.to.entityType == EntityType.DEVICE)
         .map((r) => r.to.id!)
+        .toSet() // deduplicate (same device may have multiple relation types)
         .toList();
     if (deviceIds.isEmpty) return [];
     final devices = await _client.getDeviceService().getDevicesByIds(deviceIds);
-    return devices.map(SmarthomeDevice.fromDevice).toList();
+    return devices
+        .where((d) => !_isGateway(d)) // exclude gateway-to-gateway relations
+        .map(SmarthomeDevice.fromDevice)
+        .toList();
   }
 
   // ─── Claiming ─────────────────────────────────────────────────────────────
@@ -122,6 +108,42 @@ class ProvisioningService {
       throw Exception('Claiming thất bại: ${result.response.toShortString()}');
     }
     return result.device.id!.id!;
+  }
+
+  /// Returns IDs of devices that have a Contains relation FROM the home asset.
+  Future<Set<String>> fetchHomeDeviceIds(String homeId) async {
+    final relations = await _client.getEntityRelationService().findByFrom(
+          AssetId(homeId),
+        );
+    return relations
+        .where((r) => r.to.entityType == EntityType.DEVICE)
+        .map((r) => r.to.id!)
+        .toSet();
+  }
+
+  /// Returns IDs of devices that have a Contains relation FROM any room of the home.
+  Future<Set<String>> fetchRoomDeviceIds(String homeId) async {
+    final roomRelations = await _client.getEntityRelationService().findByFrom(
+          AssetId(homeId),
+          relationType: _containsRelation,
+        );
+    final roomIds = roomRelations
+        .where((r) => r.to.entityType == EntityType.ASSET)
+        .map((r) => r.to.id!)
+        .toList();
+    final ids = <String>{};
+    for (final roomId in roomIds) {
+      final rels = await _client.getEntityRelationService().findByFrom(
+            AssetId(roomId),
+            relationType: _containsRelation,
+          );
+      ids.addAll(
+        rels
+            .where((r) => r.to.entityType == EntityType.DEVICE)
+            .map((r) => r.to.id!),
+      );
+    }
+    return ids;
   }
 
   // ─── Room assignment ──────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
@@ -28,7 +29,8 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   // ── Gateway pairing state ──
   List<SmarthomeDevice> _gateways = [];
   final Map<String, Set<String>> _initialIds = {};
-  List<SmarthomeDevice> _gwFound = [];
+  List<SmarthomeDevice> _gwFound = []; // newly discovered during scan
+  List<SmarthomeDevice> _unassigned = []; // existing sub-devices not in home
   final Set<String> _assigned = {};
   Timer? _pollTimer;
 
@@ -144,11 +146,23 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
     _gateways = await _svc.fetchGatewayDevices(home.id);
     if (_gateways.isEmpty) return;
 
-    // Snapshot existing sub-devices per gateway
+    // Find which devices are already assigned to home or its rooms
+    final homeDeviceIds = await _svc.fetchHomeDeviceIds(home.id);
+    final roomDeviceIds = await _svc.fetchRoomDeviceIds(home.id);
+    final assignedIds = {...homeDeviceIds, ...roomDeviceIds};
+
+    // Collect all existing sub-devices and find unassigned ones
+    final allExisting = <SmarthomeDevice>[];
     for (final gw in _gateways) {
       final existing = await _svc.fetchSubDevices(gw.id);
       _initialIds[gw.id] = existing.map((d) => d.id).toSet();
+      allExisting.addAll(existing);
     }
+    _unassigned = allExisting
+        .where((d) => !assignedIds.contains(d.id))
+        .toList();
+
+    if (mounted) setState(() {});
 
     // Send start_pairing to all gateways
     for (final gw in _gateways) {
@@ -207,6 +221,9 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       await _svc.assignToHome(device.id, home.id);
       if (room != null) await _svc.assignToRoom(device.id, room.id);
       setState(() => _assigned.add(device.id));
+      // Refresh home tab providers so new device appears immediately
+      ref.invalidate(devicesInHomeProvider(home.id));
+      if (room != null) ref.invalidate(devicesInRoomProvider(room.id));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -328,6 +345,8 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   Widget build(BuildContext context) {
     final hasBle = _bleDevices.isNotEmpty;
     final hasGw = _gwFound.isNotEmpty;
+    final hasUnassigned = _unassigned.where((d) => !_assigned.contains(d.id)).isNotEmpty;
+    final hasContent = hasBle || hasGw || hasUnassigned;
     final isScanning = _scanning || _bleScanning;
 
     return Scaffold(
@@ -356,11 +375,33 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
 
           // Content
           Expanded(
-            child: !hasBle && !hasGw
+            child: !hasContent
                 ? _buildEmptyState(isScanning)
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 16),
                     children: [
+                      // ── Unassigned sub-devices section ──
+                      if (hasUnassigned) ...[
+                        _SectionHeader(
+                          icon: Icons.add_circle_outline,
+                          title: 'Chưa gán vào nhà (${_unassigned.where((d) => !_assigned.contains(d.id)).length})',
+                          subtitle: 'Thiết bị đã kết nối qua gateway',
+                        ),
+                        ..._unassigned
+                            .where((d) => !_assigned.contains(d.id))
+                            .map((dev) => ListTile(
+                                  leading: const Icon(Icons.devices_other,
+                                      color: Colors.orange),
+                                  title: Text(dev.name),
+                                  subtitle: Text(dev.type),
+                                  trailing: FilledButton.tonal(
+                                    onPressed: () => _assignDevice(dev),
+                                    child: const Text('Thêm vào nhà'),
+                                  ),
+                                )),
+                        const Divider(height: 1),
+                      ],
+
                       // ── BLE devices section ──
                       if (hasBle) ...[
                         _SectionHeader(
