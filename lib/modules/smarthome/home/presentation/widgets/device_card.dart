@@ -126,6 +126,7 @@ class DeviceCard extends StatelessWidget {
       'temp_humidity' => Icons.thermostat,
       'camera' => Icons.videocam_outlined,
       'gateway' => Icons.router_outlined,
+      'switch' => Icons.toggle_on_outlined,
       _ => Icons.devices_other,
     };
   }

@@ -5,10 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
-import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
-import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
 import 'package:thingsboard_app/utils/services/provisioning/eps_ble/wifi_provisioning_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
@@ -162,6 +160,9 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
         .where((d) => !assignedIds.contains(d.id))
         .toList();
 
+    // Auto-assign unassigned sub-devices to home
+    await _autoAssignAll(_unassigned);
+
     if (mounted) setState(() {});
 
     // Send start_pairing to all gateways
@@ -180,8 +181,24 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       final initial = _initialIds[gw.id] ?? {};
       newFound.addAll(current.where((d) => !initial.contains(d.id)));
     }
+    // Auto-assign newly discovered devices
+    final toAssign = newFound.where((d) => !_assigned.contains(d.id)).toList();
+    if (toAssign.isNotEmpty) await _autoAssignAll(toAssign);
     if (mounted) {
       setState(() => _gwFound = newFound);
+    }
+  }
+
+  Future<void> _autoAssignAll(List<SmarthomeDevice> devices) async {
+    final home = ref.read(selectedHomeProvider).valueOrNull;
+    if (home == null) return;
+    for (final dev in devices) {
+      if (_assigned.contains(dev.id)) continue;
+      try {
+        await _svc.assignToHome(dev.id, home.id);
+        _assigned.add(dev.id);
+        ref.invalidate(devicesInHomeProvider(home.id));
+      } catch (_) {}
     }
   }
 
@@ -199,44 +216,6 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       _scanning = false;
       _bleScanning = false;
     });
-  }
-
-  // ─── Assign gateway sub-device ──────────────────────────────────────────────
-
-  Future<void> _assignDevice(SmarthomeDevice device) async {
-    final home = ref.read(selectedHomeProvider).valueOrNull;
-    if (home == null) return;
-
-    final rooms = ref.read(roomsProvider).valueOrNull ?? [];
-    SmarthomeRoom? room;
-    if (rooms.isNotEmpty && mounted) {
-      room = await showDialog<SmarthomeRoom>(
-        context: context,
-        builder: (_) => _RoomPickerDialog(rooms: rooms),
-      );
-    }
-
-    if (!mounted) return;
-    try {
-      await _svc.assignToHome(device.id, home.id);
-      if (room != null) await _svc.assignToRoom(device.id, room.id);
-      setState(() => _assigned.add(device.id));
-      // Refresh home tab providers so new device appears immediately
-      ref.invalidate(devicesInHomeProvider(home.id));
-      if (room != null) ref.invalidate(devicesInRoomProvider(room.id));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'Đã thêm "${device.name}"${room != null ? ' vào "${room.name}"' : ' vào nhà'}'),
-        ));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
-      }
-    }
   }
 
   // ─── BLE WiFi provisioning flow ─────────────────────────────────────────────
@@ -345,8 +324,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   Widget build(BuildContext context) {
     final hasBle = _bleDevices.isNotEmpty;
     final hasGw = _gwFound.isNotEmpty;
-    final hasUnassigned = _unassigned.where((d) => !_assigned.contains(d.id)).isNotEmpty;
-    final hasContent = hasBle || hasGw || hasUnassigned;
+    final hasContent = hasBle || hasGw || _unassigned.isNotEmpty;
     final isScanning = _scanning || _bleScanning;
 
     return Scaffold(
@@ -380,25 +358,19 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 16),
                     children: [
-                      // ── Unassigned sub-devices section ──
-                      if (hasUnassigned) ...[
+                      // ── Auto-assigned sub-devices section ──
+                      if (_unassigned.isNotEmpty) ...[
                         _SectionHeader(
-                          icon: Icons.add_circle_outline,
-                          title: 'Chưa gán vào nhà (${_unassigned.where((d) => !_assigned.contains(d.id)).length})',
-                          subtitle: 'Thiết bị đã kết nối qua gateway',
+                          icon: Icons.check_circle_outline,
+                          title: 'Đã thêm vào nhà (${_unassigned.length})',
+                          subtitle: 'Thiết bị đã tự động gán vào nhà',
                         ),
-                        ..._unassigned
-                            .where((d) => !_assigned.contains(d.id))
-                            .map((dev) => ListTile(
-                                  leading: const Icon(Icons.devices_other,
-                                      color: Colors.orange),
-                                  title: Text(dev.name),
-                                  subtitle: Text(dev.type),
-                                  trailing: FilledButton.tonal(
-                                    onPressed: () => _assignDevice(dev),
-                                    child: const Text('Thêm vào nhà'),
-                                  ),
-                                )),
+                        ..._unassigned.map((dev) => ListTile(
+                              leading: const Icon(Icons.check_circle,
+                                  color: Colors.green),
+                              title: Text(dev.name),
+                              subtitle: Text(dev.type),
+                            )),
                         const Divider(height: 1),
                       ],
 
@@ -425,25 +397,15 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                         _SectionHeader(
                           icon: Icons.router_outlined,
                           title:
-                              'Thiết bị qua Gateway (${_gwFound.length})',
-                          subtitle: '${_gateways.length} gateway đang quét',
+                              'Mới phát hiện (${_gwFound.length})',
+                          subtitle: '${_gateways.length} gateway đang quét — tự động thêm vào nhà',
                         ),
-                        ..._gwFound.map((dev) {
-                          final added = _assigned.contains(dev.id);
-                          return ListTile(
-                            leading: Icon(Icons.devices_other,
-                                color: added ? Colors.green : null),
-                            title: Text(dev.name),
-                            subtitle: Text(dev.type),
-                            trailing: added
-                                ? const Icon(Icons.check_circle,
-                                    color: Colors.green)
-                                : FilledButton.tonal(
-                                    onPressed: () => _assignDevice(dev),
-                                    child: const Text('Thêm'),
-                                  ),
-                          );
-                        }),
+                        ..._gwFound.map((dev) => ListTile(
+                              leading: const Icon(Icons.check_circle,
+                                  color: Colors.green),
+                              title: Text(dev.name),
+                              subtitle: Text(dev.type),
+                            )),
                       ],
                     ],
                   ),
@@ -611,42 +573,6 @@ class _SectionHeader extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Room picker dialog ───────────────────────────────────────────────────
-
-class _RoomPickerDialog extends StatelessWidget {
-  const _RoomPickerDialog({required this.rooms});
-
-  final List<SmarthomeRoom> rooms;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Chọn phòng'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: rooms.length,
-          itemBuilder: (context, i) {
-            final r = rooms[i];
-            return ListTile(
-              leading: const Icon(Icons.meeting_room_outlined),
-              title: Text(r.name),
-              onTap: () => Navigator.pop(context, r),
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Bỏ qua'),
-        ),
-      ],
     );
   }
 }

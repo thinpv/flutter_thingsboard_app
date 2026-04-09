@@ -306,6 +306,7 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
       'temp_humidity' => Icons.thermostat,
       'camera' => Icons.videocam_outlined,
       'gateway' => Icons.router_outlined,
+      'switch' => Icons.toggle_on_outlined,
       _ => Icons.devices_other,
     };
   }
