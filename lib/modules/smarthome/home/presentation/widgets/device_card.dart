@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:thingsboard_app/constants/app_constants.dart';
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_detail_page.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
@@ -71,10 +75,11 @@ class DeviceCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    _iconFor(device.type),
-                    size: 28,
-                    color: isOn ? colorScheme.primary : Colors.grey.shade400,
+                  _DeviceIcon(
+                    profileImage: device.profileImage,
+                    fallbackIcon: _iconFor(device.effectiveUiType),
+                    isOn: isOn,
+                    primaryColor: colorScheme.primary,
                   ),
                   const Spacer(),
                   // ON/OFF toggle dot
@@ -90,17 +95,17 @@ class DeviceCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                device.name,
+                device.displayName,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (roomName != null || device.label != null) ...[
+              if (roomName != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  [if (roomName != null) roomName!, if (device.label != null) device.label!].join(' · '),
+                  roomName!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey.shade500,
                       ),
@@ -129,6 +134,57 @@ class DeviceCard extends StatelessWidget {
       'switch' => Icons.toggle_on_outlined,
       _ => Icons.devices_other,
     };
+  }
+}
+
+/// Shows device profile image from TB if available, otherwise falls back to icon.
+class _DeviceIcon extends StatelessWidget {
+  const _DeviceIcon({
+    required this.profileImage,
+    required this.fallbackIcon,
+    required this.isOn,
+    required this.primaryColor,
+  });
+
+  final String? profileImage;
+  final IconData fallbackIcon;
+  final bool isOn;
+  final Color primaryColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (profileImage != null && profileImage!.isNotEmpty) {
+      final url =
+          '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
+      final token = getIt<ITbClientService>().client.getJwtToken();
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: 32,
+          height: 32,
+          fit: BoxFit.contain,
+          httpHeaders: {
+            if (token != null) 'X-Authorization': 'Bearer $token',
+          },
+          placeholder: (_, __) => Icon(
+            fallbackIcon,
+            size: 28,
+            color: Colors.grey.shade300,
+          ),
+          errorWidget: (_, __, ___) => Icon(
+            fallbackIcon,
+            size: 28,
+            color: isOn ? primaryColor : Colors.grey.shade400,
+          ),
+        ),
+      );
+    }
+    return Icon(
+      fallbackIcon,
+      size: 28,
+      color: isOn ? primaryColor : Colors.grey.shade400,
+    );
   }
 }
 

@@ -42,19 +42,30 @@ class HomeTab extends ConsumerWidget {
               const Divider(height: 1),
               // Device area
               Expanded(
-                child: selectedRoomId == null
-                    ? _AllDevicesView(
-                        homeId: home.id,
-                        rooms: roomList,
-                      )
-                    : _SingleRoomView(
-                        roomId: selectedRoomId,
-                        roomName: roomList
-                                .where((r) => r.id == selectedRoomId)
-                                .firstOrNull
-                                ?.name ??
-                            '',
-                      ),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(roomsProvider);
+                    ref.invalidate(devicesInHomeProvider(home.id));
+                    for (final r in roomList) {
+                      ref.invalidate(devicesInRoomProvider(r.id));
+                    }
+                    // Wait a moment for providers to reload
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: selectedRoomId == null
+                      ? _AllDevicesView(
+                          homeId: home.id,
+                          rooms: roomList,
+                        )
+                      : _SingleRoomView(
+                          roomId: selectedRoomId,
+                          roomName: roomList
+                                  .where((r) => r.id == selectedRoomId)
+                                  .firstOrNull
+                                  ?.name ??
+                              '',
+                        ),
+                ),
               ),
             ],
           );

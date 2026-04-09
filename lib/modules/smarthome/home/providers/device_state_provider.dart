@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
+import 'package:thingsboard_app/utils/services/smarthome/device_profile_ui_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 /// Resolves isOnline from the combined telemetry + server attribute state.
@@ -88,11 +89,27 @@ Stream<List<SmarthomeDevice>> _liveDeviceStream(
   yield* controller.stream;
 }
 
+/// Resolves uiType + profileImage from server attrs and profile info.
+Future<List<SmarthomeDevice>> _resolveUiTypes(
+    List<SmarthomeDevice> devices) async {
+  final svc = DeviceProfileUiService();
+  final result = <SmarthomeDevice>[];
+  for (final d in devices) {
+    final meta = await svc.getUiMeta(d.id, d.deviceProfileId);
+    result.add(d.copyWith(
+      uiType: meta.uiType,
+      profileImage: meta.profileImage,
+    ));
+  }
+  return result;
+}
+
 /// Streams devices in [roomId] with live telemetry + connectivity updates.
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
-    final initial = await HomeService().fetchDevicesInRoom(roomId);
+    final raw = await HomeService().fetchDevicesInRoom(roomId);
+    final initial = await _resolveUiTypes(raw);
     yield* _liveDeviceStream(initial, ref.onDispose);
   },
 );
@@ -101,7 +118,8 @@ final devicesInRoomProvider =
 final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
-    final initial = await HomeService().fetchDevicesInHome(homeId);
+    final raw = await HomeService().fetchDevicesInHome(homeId);
+    final initial = await _resolveUiTypes(raw);
     yield* _liveDeviceStream(initial, ref.onDispose);
   },
 );

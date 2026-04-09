@@ -8,6 +8,9 @@ class SmarthomeDevice {
     required this.name,
     required this.type,
     this.label,
+    this.deviceProfileId,
+    this.uiType,
+    this.profileImage,
     this.isOnline = false,
     this.telemetry = const {},
   });
@@ -18,6 +21,7 @@ class SmarthomeDevice {
       name: device.name,
       type: device.type,
       label: device.label,
+      deviceProfileId: device.deviceProfileId?.id,
     );
   }
 
@@ -25,13 +29,29 @@ class SmarthomeDevice {
   final String name;
   final String type;
   final String? label;
+  final String? deviceProfileId;
+
+  /// UI type resolved from device server attribute (e.g. "switch", "light").
+  final String? uiType;
+
+  /// Device profile image URL from ThingsBoard (e.g. "tb-image;/api/images/...").
+  final String? profileImage;
   final bool isOnline;
 
   /// Latest telemetry values keyed by short key (e.g. 'onoff0', 'dim', 'temp').
   final Map<String, dynamic> telemetry;
 
+  /// Returns label if set, otherwise falls back to name.
+  String get displayName =>
+      (label != null && label!.isNotEmpty) ? label! : name;
+
+  /// Effective UI type: resolved from server attr, else device type.
+  String get effectiveUiType => uiType ?? type;
+
   SmarthomeDevice copyWith({
     bool? isOnline,
+    String? uiType,
+    String? profileImage,
     Map<String, dynamic>? telemetry,
   }) {
     return SmarthomeDevice(
@@ -39,6 +59,9 @@ class SmarthomeDevice {
       name: name,
       type: type,
       label: label,
+      deviceProfileId: deviceProfileId,
+      uiType: uiType ?? this.uiType,
+      profileImage: profileImage ?? this.profileImage,
       isOnline: isOnline ?? this.isOnline,
       telemetry: telemetry ?? this.telemetry,
     );

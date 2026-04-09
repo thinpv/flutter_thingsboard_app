@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 class DeviceDetailPage extends StatefulWidget {
@@ -17,6 +19,7 @@ class DeviceDetailPage extends StatefulWidget {
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   late Map<String, dynamic> _telemetry;
   bool _isOnline = false;
+  late String _displayName;
   TelemetrySubscriber? _telemetrySub;
   TelemetrySubscriber? _attrSub;
   final _control = DeviceControlService();
@@ -26,6 +29,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     super.initState();
     _telemetry = Map.from(widget.device.telemetry);
     _isOnline = widget.device.isOnline;
+    _displayName = widget.device.displayName;
 
     _telemetrySub = _control.subscribeToLatestTelemetry(widget.device.id);
     _telemetrySub!.attributeDataStream.listen((attrs) {
@@ -76,12 +80,68 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     await _control.sendOneWayRpc(widget.device.id, method, params);
   }
 
+  Future<void> _editLabel() async {
+    final controller = TextEditingController(text: _displayName);
+    final newLabel = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Đổi tên thiết bị'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Nhập tên mới…'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+    if (newLabel == null || newLabel.isEmpty || newLabel == _displayName) return;
+    try {
+      final client = getIt<ITbClientService>().client;
+      final device = await client.getDeviceService().getDevice(widget.device.id);
+      if (device == null) throw Exception('Không tìm thấy thiết bị');
+      device.label = newLabel;
+      await client.getDeviceService().saveDevice(device);
+      if (mounted) setState(() => _displayName = newLabel);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: Text(widget.device.name),
+        title: GestureDetector(
+          onTap: _editLabel,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  _displayName,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.edit_outlined, size: 16),
+            ],
+          ),
+        ),
         centerTitle: true,
         actions: [
           _OnlineBadge(isOnline: _isOnline),
@@ -93,7 +153,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 
   Widget _buildBody() {
-    return switch (widget.device.type) {
+    return switch (widget.device.effectiveUiType) {
       'light' => _LightControl(telemetry: _telemetry, onRpc: _rpc),
       'air_conditioner' => _AcControl(telemetry: _telemetry, onRpc: _rpc),
       'smart_plug' => _SmartPlugControl(telemetry: _telemetry, onRpc: _rpc),
