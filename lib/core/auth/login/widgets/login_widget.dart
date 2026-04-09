@@ -31,9 +31,13 @@ class LoginWidget extends HookConsumerWidget {
     final form = useMemoized(
       () => FormGroup({
         "email": FormControl(
+          value: 'user@smarthome.io',
           validators: [Validators.required, Validators.email],
         ),
-        "password": FormControl(validators: [Validators.required]),
+        "password": FormControl(
+          value: 'smarthome123',
+          validators: [Validators.required],
+        ),
       }),
     );
     useEffect(() {

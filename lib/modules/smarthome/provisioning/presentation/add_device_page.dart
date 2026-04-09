@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
+import 'package:thingsboard_app/utils/services/provisioning/eps_ble/wifi_provisioning_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
-
-enum _Phase { selectGateway, scanning, done }
 
 class AddDevicePage extends ConsumerStatefulWidget {
   const AddDevicePage({super.key});
@@ -19,340 +21,560 @@ class AddDevicePage extends ConsumerStatefulWidget {
 
 class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   final _svc = ProvisioningService();
+  final _bleSvc = BleProvisioningService();
 
-  _Phase _phase = _Phase.selectGateway;
-  bool _loadingGateways = true;
+  bool _scanning = false;
+
+  // ── Gateway pairing state ──
   List<SmarthomeDevice> _gateways = [];
-  SmarthomeDevice? _selectedGateway;
-
-  // scanning phase
-  bool _starting = false;
-  List<SmarthomeDevice> _initialDevices = [];
-  List<SmarthomeDevice> _foundDevices = [];
+  final Map<String, Set<String>> _initialIds = {};
+  List<SmarthomeDevice> _gwFound = [];
+  final Set<String> _assigned = {};
   Timer? _pollTimer;
+
+  // ── BLE scan state ──
+  List<String> _bleDevices = [];
+  bool _bleScanning = false;
+  String? _bleError;
+
 
   @override
   void initState() {
     super.initState();
-    _loadGateways();
+    _startAll();
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
-    // Best-effort stop pairing if page is closed mid-scan
-    if (_phase == _Phase.scanning && _selectedGateway != null) {
-      _svc.stopPairing(_selectedGateway!.id).ignore();
-    }
+    _stopPairingAll();
     super.dispose();
   }
 
-  Future<void> _loadGateways() async {
-    final home = ref.read(selectedHomeProvider).valueOrNull;
-    if (home == null) {
-      setState(() => _loadingGateways = false);
-      return;
-    }
-    try {
-      final gws = await _svc.fetchGatewayDevices(home.id);
-      setState(() {
-        _gateways = gws;
-        _loadingGateways = false;
-      });
-    } catch (_) {
-      setState(() => _loadingGateways = false);
+  Future<void> _startAll() async {
+    setState(() => _scanning = true);
+
+    // Start BLE scan and gateway pairing in parallel
+    await Future.wait([
+      _startBleScan(),
+      _startGatewayPairing(),
+    ]);
+
+    if (mounted) {
+      setState(() => _scanning = _bleScanning || _pollTimer != null);
     }
   }
 
-  Future<void> _startPairing() async {
-    final gw = _selectedGateway;
-    if (gw == null) return;
-    setState(() => _starting = true);
-    try {
-      // Snapshot current sub-devices so we can diff later
-      _initialDevices = await _svc.fetchSubDevices(gw.id);
-      await _svc.startPairing(gw.id);
-      setState(() {
-        _phase = _Phase.scanning;
-        _starting = false;
-        _foundDevices = [];
-      });
-      _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
-    } catch (e) {
-      setState(() => _starting = false);
+  // ─── BLE scan ──────────────────────────────────────────────────────────────
+
+  Future<void> _startBleScan() async {
+    setState(() {
+      _bleScanning = true;
+      _bleError = null;
+    });
+
+    // Check if Bluetooth is enabled before scanning
+    // (flutter_esp_ble_prov crashes at native level if BT is off)
+    final btEnabled = await Permission.bluetooth.serviceStatus.isEnabled;
+    if (!btEnabled) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể bắt đầu quét: $e')),
-        );
+        setState(() {
+          _bleScanning = false;
+          _bleError = 'Vui lòng bật Bluetooth để quét thiết bị';
+        });
+      }
+      return;
+    }
+
+    // Request BLE permissions
+    final granted = await _requestBlePermissions();
+    if (!granted) {
+      if (mounted) {
+        setState(() {
+          _bleScanning = false;
+          _bleError = 'Chưa cấp quyền Bluetooth';
+        });
+      }
+      return;
+    }
+
+    try {
+      // Scan for ESP BLE devices (prefix empty = all ESP devices)
+      final devices = await _bleSvc
+          .scanBleDevices('')
+          .timeout(const Duration(seconds: 15), onTimeout: () => <String>[]);
+      if (mounted) {
+        setState(() {
+          _bleDevices = devices;
+          _bleScanning = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _bleScanning = false;
+          _bleError = 'Lỗi quét BLE: $e';
+        });
       }
     }
+  }
+
+  Future<bool> _requestBlePermissions() async {
+    if (Platform.isIOS) {
+      final status = await Permission.bluetooth.request();
+      return status.isGranted;
+    } else if (Platform.isAndroid) {
+      // Android 12+ needs bluetoothScan + bluetoothConnect
+      final scan = await Permission.bluetoothScan.request();
+      final connect = await Permission.bluetoothConnect.request();
+      if (scan.isGranted && connect.isGranted) return true;
+      // Fallback for older Android: location
+      final location = await Permission.location.request();
+      return location.isGranted;
+    }
+    return true;
+  }
+
+  // ─── Gateway pairing ────────────────────────────────────────────────────────
+
+  Future<void> _startGatewayPairing() async {
+    final home = ref.read(selectedHomeProvider).valueOrNull;
+    if (home == null) return;
+
+    _gateways = await _svc.fetchGatewayDevices(home.id);
+    if (_gateways.isEmpty) return;
+
+    // Snapshot existing sub-devices per gateway
+    for (final gw in _gateways) {
+      final existing = await _svc.fetchSubDevices(gw.id);
+      _initialIds[gw.id] = existing.map((d) => d.id).toSet();
+    }
+
+    // Send start_pairing to all gateways
+    for (final gw in _gateways) {
+      _svc.startPairing(gw.id).catchError((_) {});
+    }
+
+    // Poll every 3s
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
   }
 
   Future<void> _poll() async {
-    final gw = _selectedGateway;
-    if (gw == null) return;
-    try {
+    final newFound = <SmarthomeDevice>[];
+    for (final gw in _gateways) {
       final current = await _svc.fetchSubDevices(gw.id);
-      final initialIds = _initialDevices.map((d) => d.id).toSet();
-      final newDevices =
-          current.where((d) => !initialIds.contains(d.id)).toList();
-      if (mounted) setState(() => _foundDevices = newDevices);
-    } catch (_) {}
+      final initial = _initialIds[gw.id] ?? {};
+      newFound.addAll(current.where((d) => !initial.contains(d.id)));
+    }
+    if (mounted) {
+      setState(() => _gwFound = newFound);
+    }
   }
 
-  Future<void> _stopPairing() async {
+  void _stopPairingAll() {
+    for (final gw in _gateways) {
+      _svc.stopPairing(gw.id).catchError((_) {});
+    }
+  }
+
+  Future<void> _stopScan() async {
     _pollTimer?.cancel();
     _pollTimer = null;
-    if (_selectedGateway != null) {
-      await _svc.stopPairing(_selectedGateway!.id).catchError((_) {});
-    }
-    setState(() => _phase = _Phase.done);
+    _stopPairingAll();
+    setState(() {
+      _scanning = false;
+      _bleScanning = false;
+    });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thêm thiết bị'),
-        actions: [
-          if (_phase == _Phase.scanning)
-            TextButton(
-              onPressed: _stopPairing,
-              child: const Text('Dừng quét'),
-            ),
-        ],
-      ),
-      body: switch (_phase) {
-        _Phase.selectGateway => _buildSelectGateway(),
-        _Phase.scanning => _buildScanning(),
-        _Phase.done => _buildDone(),
-      },
-    );
-  }
+  // ─── Assign gateway sub-device ──────────────────────────────────────────────
 
-  // ─── Phase 1: Select gateway ──────────────────────────────────────────────
+  Future<void> _assignDevice(SmarthomeDevice device) async {
+    final home = ref.read(selectedHomeProvider).valueOrNull;
+    if (home == null) return;
 
-  Widget _buildSelectGateway() {
-    if (_loadingGateways) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_gateways.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Không tìm thấy gateway nào.\n'
-            'Hãy đảm bảo gateway đã được thêm vào nhà.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Chọn gateway để quét thiết bị mới:',
-            style: TextStyle(fontSize: 15),
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _gateways.length,
-            itemBuilder: (context, index) {
-              final gw = _gateways[index];
-              final selected = _selectedGateway?.id == gw.id;
-              return RadioListTile<String>(
-                value: gw.id,
-                groupValue: _selectedGateway?.id,
-                onChanged: (_) => setState(() => _selectedGateway = gw),
-                title: Text(gw.name),
-                subtitle: Text(
-                  gw.isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    color: gw.isOnline ? Colors.green : Colors.grey,
-                  ),
-                ),
-                secondary: Icon(
-                  Icons.router,
-                  color: selected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey,
-                ),
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            onPressed:
-                _selectedGateway != null && !_starting ? _startPairing : null,
-            icon: _starting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.search),
-            label: Text(_starting ? 'Đang kết nối…' : 'Bắt đầu quét'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Phase 2: Scanning ────────────────────────────────────────────────────
-
-  Widget _buildScanning() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Theme.of(context).colorScheme.primaryContainer,
-          child: Row(
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Đang quét qua gateway: ${_selectedGateway!.name}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_foundDevices.isEmpty)
-          const Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.bluetooth_searching, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('Chưa tìm thấy thiết bị nào…'),
-                  SizedBox(height: 8),
-                  Text(
-                    'Hãy bật thiết bị và đưa lại gần gateway.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text(
-              'Thiết bị tìm thấy (${_foundDevices.length})',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _foundDevices.length,
-              itemBuilder: (context, index) =>
-                  _FoundDeviceTile(device: _foundDevices[index], svc: _svc),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  // ─── Phase 3: Done ────────────────────────────────────────────────────────
-
-  Widget _buildDone() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_outline,
-              size: 72, color: Colors.green),
-          const SizedBox(height: 16),
-          Text(
-            'Quét hoàn tất',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tìm thấy ${_foundDevices.length} thiết bị mới.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Xong'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Found device tile ────────────────────────────────────────────────────────
-
-class _FoundDeviceTile extends ConsumerWidget {
-  const _FoundDeviceTile({required this.device, required this.svc});
-
-  final SmarthomeDevice device;
-  final ProvisioningService svc;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      leading: const Icon(Icons.devices_other),
-      title: Text(device.name),
-      subtitle: Text(device.type),
-      trailing: OutlinedButton(
-        onPressed: () => _assignToRoom(context, ref),
-        child: const Text('Thêm vào phòng'),
-      ),
-    );
-  }
-
-  Future<void> _assignToRoom(BuildContext context, WidgetRef ref) async {
     final rooms = ref.read(roomsProvider).valueOrNull ?? [];
-    if (rooms.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chưa có phòng nào. Hãy tạo phòng trước.')),
+    SmarthomeRoom? room;
+    if (rooms.isNotEmpty && mounted) {
+      room = await showDialog<SmarthomeRoom>(
+        context: context,
+        builder: (_) => _RoomPickerDialog(rooms: rooms),
       );
-      return;
     }
 
-    final room = await showDialog<SmarthomeRoom>(
-      context: context,
-      builder: (_) => _RoomPickerDialog(rooms: rooms),
-    );
-    if (room == null) return;
-
+    if (!mounted) return;
     try {
-      await svc.assignToRoom(device.id, room.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã thêm "${device.name}" vào "${room.name}"')),
-        );
+      await _svc.assignToHome(device.id, home.id);
+      if (room != null) await _svc.assignToRoom(device.id, room.id);
+      setState(() => _assigned.add(device.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Đã thêm "${device.name}"${room != null ? ' vào "${room.name}"' : ' vào nhà'}'),
+        ));
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi: $e')),
         );
       }
     }
   }
+
+  // ─── BLE WiFi provisioning flow ─────────────────────────────────────────────
+
+  Future<void> _onBleTap(String deviceName) async {
+    // Ask for proof-of-possession (PIN on device)
+    final pop = await showDialog<String>(
+      context: context,
+      builder: (_) => _PopDialog(deviceName: deviceName),
+    );
+    if (pop == null || !mounted) return;
+
+    // Show loading while scanning WiFi networks
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Expanded(child: Text('Đang kết nối và quét WiFi…')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Connect to device and scan WiFi
+      await _bleSvc.scanBleDevices(''); // workaround for library init
+      final networks = await _bleSvc
+          .scanWifiNetworks(
+            deviceName: deviceName,
+            proofOfPossession: pop,
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+
+      if (networks.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tìm thấy WiFi nào')),
+        );
+        return;
+      }
+
+      // Let user pick WiFi network and enter password
+      final result = await showDialog<_WifiCredentials>(
+        context: context,
+        builder: (_) => _WifiPickerDialog(networks: networks),
+      );
+      if (result == null || !mounted) return;
+
+      // Provision WiFi
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Expanded(child: Text('Đang cấu hình WiFi cho thiết bị…')),
+            ],
+          ),
+        ),
+      );
+
+      final success = await _bleSvc
+          .provisionWifi(
+            deviceName: deviceName,
+            proofOfPossession: pop,
+            ssid: result.ssid,
+            passphrase: result.password,
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+      Navigator.pop(context); // dismiss loading
+
+      if (success == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Đã cấu hình WiFi cho "$deviceName". Thiết bị sẽ tự kết nối.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cấu hình WiFi thất bại')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    }
+  }
+
+  // ─── Build ──────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final hasBle = _bleDevices.isNotEmpty;
+    final hasGw = _gwFound.isNotEmpty;
+    final isScanning = _scanning || _bleScanning;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Thêm thiết bị'),
+        actions: [
+          if (isScanning)
+            TextButton(onPressed: _stopScan, child: const Text('Dừng')),
+          if (!isScanning)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _startAll,
+              tooltip: 'Quét lại',
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Status banner
+          _ScanBanner(
+            scanning: isScanning,
+            gatewayCount: _gateways.length,
+            gwFoundCount: _gwFound.length,
+            bleCount: _bleDevices.length,
+          ),
+
+          // Content
+          Expanded(
+            child: !hasBle && !hasGw
+                ? _buildEmptyState(isScanning)
+                : ListView(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    children: [
+                      // ── BLE devices section ──
+                      if (hasBle) ...[
+                        _SectionHeader(
+                          icon: Icons.bluetooth,
+                          title: 'Thiết bị BLE/WiFi (${_bleDevices.length})',
+                          subtitle: 'Cấu hình WiFi qua BLE',
+                        ),
+                        ..._bleDevices.map((name) => ListTile(
+                              leading: const Icon(Icons.bluetooth,
+                                  color: Colors.blue),
+                              title: Text(name),
+                              subtitle: const Text('Nhấn để cấu hình WiFi'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _onBleTap(name),
+                            )),
+                        const Divider(height: 1),
+                      ],
+
+                      // ── Gateway sub-devices section ──
+                      if (hasGw) ...[
+                        _SectionHeader(
+                          icon: Icons.router_outlined,
+                          title:
+                              'Thiết bị qua Gateway (${_gwFound.length})',
+                          subtitle: '${_gateways.length} gateway đang quét',
+                        ),
+                        ..._gwFound.map((dev) {
+                          final added = _assigned.contains(dev.id);
+                          return ListTile(
+                            leading: Icon(Icons.devices_other,
+                                color: added ? Colors.green : null),
+                            title: Text(dev.name),
+                            subtitle: Text(dev.type),
+                            trailing: added
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green)
+                                : FilledButton.tonal(
+                                    onPressed: () => _assignDevice(dev),
+                                    child: const Text('Thêm'),
+                                  ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+          ),
+
+          // Bottom buttons
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ClaimDevicePage()),
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Thêm thủ công (QR / Claiming)'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isScanning) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isScanning) ...[
+            const SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            const Text('Đang tìm thiết bị…'),
+            const SizedBox(height: 8),
+            Text(
+              _gateways.isEmpty
+                  ? 'Đang quét BLE…\nBật nguồn thiết bị và đưa lại gần.'
+                  : 'Đang quét qua ${_gateways.length} gateway + BLE…\nBật nguồn thiết bị và đưa lại gần.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ] else ...[
+            Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            const Text('Không tìm thấy thiết bị mới'),
+            if (_bleError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _bleError!,
+                style: TextStyle(color: Colors.orange.shade700, fontSize: 13),
+              ),
+            ],
+            if (_gateways.isEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Không có gateway trong nhà.\nBạn vẫn có thể thêm thiết bị WiFi qua BLE\nhoặc sử dụng QR/Claiming bên dưới.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
 }
 
-// ─── Room picker dialog ───────────────────────────────────────────────────────
+// ─── Scan status banner ───────────────────────────────────────────────────
+
+class _ScanBanner extends StatelessWidget {
+  const _ScanBanner({
+    required this.scanning,
+    required this.gatewayCount,
+    required this.gwFoundCount,
+    required this.bleCount,
+  });
+
+  final bool scanning;
+  final int gatewayCount;
+  final int gwFoundCount;
+  final int bleCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primaryContainer;
+    final parts = <String>[];
+    if (gatewayCount > 0) parts.add('$gatewayCount gateway');
+    parts.add('BLE');
+
+    return Container(
+      width: double.infinity,
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          if (scanning)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          if (scanning) const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              scanning
+                  ? 'Đang quét qua ${parts.join(' + ')}…  '
+                      'GW: $gwFoundCount  BLE: $bleCount'
+                  : 'Đã dừng  •  GW: $gwFoundCount  BLE: $bleCount thiết bị',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section header ──────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Room picker dialog ───────────────────────────────────────────────────
 
 class _RoomPickerDialog extends StatelessWidget {
   const _RoomPickerDialog({required this.rooms});
@@ -368,20 +590,160 @@ class _RoomPickerDialog extends StatelessWidget {
         child: ListView.builder(
           shrinkWrap: true,
           itemCount: rooms.length,
-          itemBuilder: (context, index) {
-            final r = rooms[index];
+          itemBuilder: (context, i) {
+            final r = rooms[i];
             return ListTile(
               leading: const Icon(Icons.meeting_room_outlined),
               title: Text(r.name),
-              onTap: () => Navigator.of(context).pop(r),
+              onTap: () => Navigator.pop(context, r),
             );
           },
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Bỏ qua'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── PoP (proof-of-possession) dialog ─────────────────────────────────────
+
+class _PopDialog extends StatefulWidget {
+  const _PopDialog({required this.deviceName});
+  final String deviceName;
+
+  @override
+  State<_PopDialog> createState() => _PopDialogState();
+}
+
+class _PopDialogState extends State<_PopDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Kết nối "${widget.deviceName}"'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Nhập mã PIN hiển thị trên thiết bị (Proof of Possession):'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            decoration: const InputDecoration(
+              labelText: 'PIN',
+              hintText: 'abcd1234',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
           child: const Text('Huỷ'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final pin = _ctrl.text.trim();
+            if (pin.isNotEmpty) Navigator.pop(context, pin);
+          },
+          child: const Text('Kết nối'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── WiFi picker dialog ───────────────────────────────────────────────────
+
+class _WifiCredentials {
+  _WifiCredentials(this.ssid, this.password);
+  final String ssid;
+  final String password;
+}
+
+class _WifiPickerDialog extends StatefulWidget {
+  const _WifiPickerDialog({required this.networks});
+  final List<String> networks;
+
+  @override
+  State<_WifiPickerDialog> createState() => _WifiPickerDialogState();
+}
+
+class _WifiPickerDialogState extends State<_WifiPickerDialog> {
+  String? _selected;
+  final _passCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Chọn mạng WiFi'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: widget.networks.length,
+                itemBuilder: (context, i) {
+                  final ssid = widget.networks[i];
+                  return RadioListTile<String>(
+                    value: ssid,
+                    groupValue: _selected,
+                    title: Text(ssid),
+                    onChanged: (v) => setState(() => _selected = v),
+                  );
+                },
+              ),
+            ),
+            if (_selected != null) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Mật khẩu WiFi "$_selected"',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Huỷ'),
+        ),
+        FilledButton(
+          onPressed: _selected == null
+              ? null
+              : () => Navigator.pop(
+                    context,
+                    _WifiCredentials(_selected!, _passCtrl.text),
+                  ),
+          child: const Text('Kết nối'),
         ),
       ],
     );

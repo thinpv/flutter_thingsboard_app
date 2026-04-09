@@ -188,7 +188,68 @@ class HomeService {
 
     final devices =
         await _client.getDeviceService().getDevicesByIds(deviceIds);
-    return devices.map(SmarthomeDevice.fromDevice).toList();
+    return _attachActiveStatus(devices);
+  }
+
+  /// Devices directly under the home asset (gateways, unassigned devices).
+  /// These are NOT inside any room — they have a Contains relation from home→device.
+  Future<List<SmarthomeDevice>> fetchDevicesInHome(String homeId) async {
+    final relations = await _client.getEntityRelationService().findByFrom(
+          AssetId(homeId),
+          relationType: _containsRelation,
+        );
+    final deviceIds = relations
+        .where((r) => r.to.entityType == EntityType.DEVICE)
+        .map((r) => r.to.id!)
+        .toList();
+    if (deviceIds.isEmpty) return [];
+
+    final devices =
+        await _client.getDeviceService().getDevicesByIds(deviceIds);
+    return _attachActiveStatus(devices);
+  }
+
+  /// Batch-fetch `active` server attribute for [devices] and set initial
+  /// [SmarthomeDevice.isOnline] from it. Falls back to false if unavailable.
+  Future<List<SmarthomeDevice>> _attachActiveStatus(List<Device> devices) async {
+    final result = devices.map(SmarthomeDevice.fromDevice).toList();
+    await Future.wait(result.asMap().entries.map((entry) async {
+      try {
+        final attrs = await _client.getAttributeService().getAttributesByScope(
+              DeviceId(entry.value.id),
+              'SERVER_SCOPE',
+              ['active'],
+            );
+        final active = attrs.isNotEmpty ? attrs.first.getValue() : null;
+        if (active != null) {
+          result[entry.key] = entry.value.copyWith(
+            isOnline: active == true || active == 1 || active == 'true',
+          );
+        }
+      } catch (_) {
+        // Keep default isOnline = false
+      }
+    }));
+    return result;
+  }
+
+  /// Moves a device from home-level to a room.
+  /// Creates Room→Device relation and removes Home→Device relation.
+  Future<void> assignDeviceToRoom(
+    String deviceId,
+    String roomId,
+    String homeId,
+  ) async {
+    await _client.getEntityRelationService().saveRelation(
+          EntityRelation(from: AssetId(roomId), to: DeviceId(deviceId)),
+        );
+    // Remove the direct home→device relation so it no longer appears as unassigned
+    await _client.getEntityRelationService().deleteRelation(
+          AssetId(homeId),
+          _containsRelation,
+          RelationTypeGroup.COMMON,
+          DeviceId(deviceId),
+        );
   }
 
   // ─── Attributes (read/write direct to TB) ───────────────────────────────────

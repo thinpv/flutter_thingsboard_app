@@ -5,45 +5,103 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-/// Streams [SmarthomeDevice] list for [roomId] with live telemetry updates.
+/// Resolves isOnline from the combined telemetry + server attribute state.
+/// Priority: TB's `active` server attribute > device-published `stt` telemetry.
+/// Handles all value types TB may return: bool, int, or String.
+bool _resolveOnline(Map<String, dynamic> state) {
+  final active = state['active'];
+  if (active != null) {
+    return active == true || active == 1 || active == 'true';
+  }
+  final stt = state['stt'];
+  if (stt != null) return stt == 1 || stt == true || stt == 'true';
+  return false;
+}
+
+/// Sets up live subscriptions for a list of devices and emits updated state.
 ///
-/// Each telemetry update from any device in the room causes a new list emission.
+/// Subscribes to:
+///  - LATEST_TELEMETRY: device metrics (onoff0, dim, temp, …, stt)
+///  - SERVER_SCOPE: TB-managed connectivity (`active`)
+Stream<List<SmarthomeDevice>> _liveDeviceStream(
+  List<SmarthomeDevice> initial,
+  void Function(void Function()) onDispose,
+) async* {
+  if (initial.isEmpty) {
+    yield [];
+    return;
+  }
+
+  // Combined state map: deviceId → {telemetry keys + server attr keys}
+  final stateMap = {for (final d in initial) d.id: d};
+  // Separate combined data map for online resolution (merges telemetry + server attrs)
+  final dataMap = {for (final d in initial) d.id: <String, dynamic>{}};
+
+  final controller = StreamController<List<SmarthomeDevice>>.broadcast();
+  onDispose(controller.close);
+
+  final control = DeviceControlService();
+
+  for (final device in initial) {
+    // ── Telemetry subscription (latest values: onoff0, dim, temp, stt…) ──
+    final telSub = control.subscribeToLatestTelemetry(device.id);
+    onDispose(telSub.unsubscribe);
+
+    telSub.attributeDataStream.listen((attrs) {
+      for (final a in attrs) {
+        dataMap[device.id]![a.key] = a.value;
+      }
+      final merged = dataMap[device.id]!;
+      stateMap[device.id] = stateMap[device.id]!.copyWith(
+        isOnline: _resolveOnline(merged),
+        telemetry: Map.unmodifiable({
+          ...stateMap[device.id]!.telemetry,
+          for (final a in attrs) a.key: a.value,
+        }),
+      );
+      if (!controller.isClosed) {
+        controller.add(List.unmodifiable(stateMap.values));
+      }
+    });
+
+    // ── Server attribute subscription (active = TB connectivity status) ──
+    final attrSub = control.subscribeToServerAttributes(
+      device.id,
+      keys: ['active'],
+    );
+    onDispose(attrSub.unsubscribe);
+
+    attrSub.attributeDataStream.listen((attrs) {
+      for (final a in attrs) {
+        dataMap[device.id]![a.key] = a.value;
+      }
+      stateMap[device.id] = stateMap[device.id]!.copyWith(
+        isOnline: _resolveOnline(dataMap[device.id]!),
+      );
+      if (!controller.isClosed) {
+        controller.add(List.unmodifiable(stateMap.values));
+      }
+    });
+  }
+
+  yield List.unmodifiable(stateMap.values);
+  yield* controller.stream;
+}
+
+/// Streams devices in [roomId] with live telemetry + connectivity updates.
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
     final initial = await HomeService().fetchDevicesInRoom(roomId);
-    if (initial.isEmpty) {
-      yield [];
-      return;
-    }
+    yield* _liveDeviceStream(initial, ref.onDispose);
+  },
+);
 
-    // Mutable map: deviceId → latest device state
-    final stateMap = {for (final d in initial) d.id: d};
-    final controller = StreamController<List<SmarthomeDevice>>.broadcast();
-    ref.onDispose(controller.close);
-
-    final control = DeviceControlService();
-    for (final device in initial) {
-      final subscriber = control.subscribeToLatestTelemetry(device.id);
-      ref.onDispose(subscriber.unsubscribe);
-
-      subscriber.attributeDataStream.listen((attrs) {
-        final updated = {
-          ...stateMap[device.id]!.telemetry,
-          for (final a in attrs) a.key: a.value,
-        };
-        stateMap[device.id] = stateMap[device.id]!.copyWith(
-          isOnline: updated['stt'] == 1,
-          telemetry: updated,
-        );
-        if (!controller.isClosed) {
-          controller.add(List.unmodifiable(stateMap.values));
-        }
-      });
-    }
-
-    // Emit initial state, then forward WebSocket-driven updates
-    yield List.unmodifiable(stateMap.values);
-    yield* controller.stream;
+/// Streams devices directly under the home asset (gateways + unassigned).
+final devicesInHomeProvider =
+    StreamProvider.family<List<SmarthomeDevice>, String>(
+  (ref, homeId) async* {
+    final initial = await HomeService().fetchDevicesInHome(homeId);
+    yield* _liveDeviceStream(initial, ref.onDispose);
   },
 );

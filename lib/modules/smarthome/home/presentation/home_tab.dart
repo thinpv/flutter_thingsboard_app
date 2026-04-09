@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/device_card.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/home_header.dart';
-import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/quick_scene_card.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/room_selector.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -24,37 +24,36 @@ class HomeTab extends ConsumerWidget {
       ),
       body: selectedHome.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (home) {
           if (home == null) return const _NoHomeView();
+          final roomList = rooms.valueOrNull ?? [];
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Quick scenes strip
-              const QuickScenesStrip(),
-              const Divider(height: 1),
               // Room selector chips
               rooms.when(
                 loading: () => const SizedBox(
                   height: 48,
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (e, s) => const SizedBox.shrink(),
-                data: (roomList) => RoomSelector(rooms: roomList),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (list) => RoomSelector(rooms: list),
               ),
+              const Divider(height: 1),
               // Device area
               Expanded(
-                child: selectedRoomId != null
-                    ? _RoomDeviceView(roomId: selectedRoomId)
-                    : rooms.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (e, s) => Center(child: Text('Lỗi: $e')),
-                        data: (roomList) => _AllRoomsView(
-                          roomIds: roomList
-                              .map<String>((r) => r.id)
-                              .toList(),
-                        ),
+                child: selectedRoomId == null
+                    ? _AllDevicesView(
+                        homeId: home.id,
+                        rooms: roomList,
+                      )
+                    : _SingleRoomView(
+                        roomId: selectedRoomId,
+                        roomName: roomList
+                                .where((r) => r.id == selectedRoomId)
+                                .firstOrNull
+                                ?.name ??
+                            '',
                       ),
               ),
             ],
@@ -90,66 +89,152 @@ class _NoHomeView extends StatelessWidget {
   }
 }
 
-// ─── Device views ────────────────────────────────────────────────────────────
+// ─── "Tất cả" — home-direct devices + all room sections ──────────────────────
 
-/// Shows devices from ALL rooms.
-class _AllRoomsView extends ConsumerWidget {
-  const _AllRoomsView({required this.roomIds});
+class _AllDevicesView extends ConsumerWidget {
+  const _AllDevicesView({required this.homeId, required this.rooms});
 
-  final List<String> roomIds;
+  final String homeId;
+  final List<SmarthomeRoom> rooms;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (roomIds.isEmpty) {
-      return const Center(child: Text('Chưa có phòng nào'));
+    final homeDevices = ref.watch(devicesInHomeProvider(homeId));
+    final homeList = homeDevices.valueOrNull ?? [];
+
+    if (rooms.isEmpty && homeList.isEmpty) {
+      // Still loading or truly empty
+      if (homeDevices.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.devices_outlined, size: 56, color: Colors.grey),
+            SizedBox(height: 12),
+            Text('Chưa có thiết bị nào trong nhà'),
+            SizedBox(height: 4),
+            Text(
+              'Nhấn + để thêm thiết bị',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ],
+        ),
+      );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8),
-      itemCount: roomIds.length,
-      itemBuilder: (context, index) =>
-          _RoomDeviceSection(roomId: roomIds[index]),
+
+    return CustomScrollView(
+      slivers: [
+        // Home-direct devices (gateways + unassigned)
+        if (homeList.isNotEmpty) ...[
+          const _SliverHeader(title: 'Thiết bị'),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: HomeDeviceGrid(homeId: homeId),
+          ),
+        ],
+
+        // Per-room device sections
+        ...rooms.map((room) => _RoomSliver(room: room)),
+
+        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+      ],
     );
   }
 }
 
-class _RoomDeviceSection extends ConsumerWidget {
-  const _RoomDeviceSection({required this.roomId});
+class _SliverHeader extends StatelessWidget {
+  const _SliverHeader({required this.title});
+  final String title;
 
-  final String roomId;
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      sliver: SliverToBoxAdapter(
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Colors.grey.shade600,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoomSliver extends ConsumerWidget {
+  const _RoomSliver({required this.room});
+  final SmarthomeRoom room;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final devices = ref.watch(devicesInRoomProvider(roomId));
+    final devices = ref.watch(devicesInRoomProvider(room.id));
     return devices.when(
-      loading: () => const SizedBox.shrink(),
-      error: (e, s) => const SizedBox.shrink(),
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
       data: (list) {
-        if (list.isEmpty) return const SizedBox.shrink();
-        final ids = list.map<String>((d) => d.id).toList();
-        return DeviceGrid(roomId: roomId, deviceIds: ids);
+        if (list.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
+        return SliverMainAxisGroup(
+          slivers: [
+            _SliverHeader(title: room.name),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: RoomDeviceGrid(
+                roomId: room.id,
+                roomName: room.name,
+                deviceIds: list.map((d) => d.id).toList(),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
 }
 
-/// Shows devices from a single selected room.
-class _RoomDeviceView extends ConsumerWidget {
-  const _RoomDeviceView({required this.roomId});
+// ─── Single room view ─────────────────────────────────────────────────────────
 
+class _SingleRoomView extends ConsumerWidget {
+  const _SingleRoomView({required this.roomId, required this.roomName});
   final String roomId;
+  final String roomName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final devices = ref.watch(devicesInRoomProvider(roomId));
     return devices.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Lỗi: $e')),
+      error: (e, _) => Center(child: Text('Lỗi: $e')),
       data: (list) {
         if (list.isEmpty) {
-          return const Center(child: Text('Phòng chưa có thiết bị'));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.devices_outlined,
+                    size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 12),
+                Text('$roomName chưa có thiết bị'),
+              ],
+            ),
+          );
         }
-        final ids = list.map<String>((d) => d.id).toList();
-        return DeviceGrid(roomId: roomId, deviceIds: ids);
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: RoomDeviceGrid(
+                roomId: roomId,
+                roomName: roomName,
+                deviceIds: list.map((d) => d.id).toList(),
+              ),
+            ),
+          ],
+        );
       },
     );
   }

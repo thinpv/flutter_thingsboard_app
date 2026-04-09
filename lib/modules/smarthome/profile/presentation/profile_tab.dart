@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/core/auth/login/provider/login_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -107,7 +108,7 @@ class ProfileTab extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Đăng xuất'),
-            onTap: () => _logout(context),
+            onTap: () => _logout(context, ref),
           ),
         ],
       ),
@@ -194,12 +195,13 @@ class ProfileTab extends ConsumerWidget {
     ref.invalidate(roomsProvider);
   }
 
-  void _logout(BuildContext context) {
-    // Delegate to existing TB logout mechanism
-    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-      '/login',
-      (route) => false,
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await _confirm(
+      context,
+      message: 'Bạn có muốn đăng xuất?',
     );
+    if (!confirmed) return;
+    await ref.read(loginProvider.notifier).logout();
   }
 
   // ─── Dialogs ─────────────────────────────────────────────────────────────

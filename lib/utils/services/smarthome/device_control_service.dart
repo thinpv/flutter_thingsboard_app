@@ -60,4 +60,21 @@ class DeviceControlService {
     subscriber.subscribe();
     return subscriber;
   }
+
+  /// Subscribes to SERVER_SCOPE attributes of [deviceId].
+  /// Useful for tracking TB-managed `active` connectivity status.
+  TelemetrySubscriber subscribeToServerAttributes(
+    String deviceId, {
+    List<String>? keys,
+  }) {
+    final entityId = DeviceId(deviceId);
+    final subscriber = TelemetrySubscriber.createEntityAttributesSubscription(
+      telemetryService: _client.getTelemetryService(),
+      entityId: entityId,
+      attributeScope: AttributeScope.SERVER_SCOPE.toShortString(),
+      keys: keys,
+    );
+    subscriber.subscribe();
+    return subscriber;
+  }
 }

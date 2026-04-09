@@ -16,28 +16,62 @@ class DeviceDetailPage extends StatefulWidget {
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   late Map<String, dynamic> _telemetry;
-  TelemetrySubscriber? _subscriber;
+  bool _isOnline = false;
+  TelemetrySubscriber? _telemetrySub;
+  TelemetrySubscriber? _attrSub;
   final _control = DeviceControlService();
 
   @override
   void initState() {
     super.initState();
     _telemetry = Map.from(widget.device.telemetry);
-    _subscriber = _control.subscribeToLatestTelemetry(widget.device.id);
-    _subscriber!.attributeDataStream.listen((attrs) {
+    _isOnline = widget.device.isOnline;
+
+    // Subscribe to latest telemetry (onoff0, dim, temp, stt, …)
+    _telemetrySub = _control.subscribeToLatestTelemetry(widget.device.id);
+    _telemetrySub!.attributeDataStream.listen((attrs) {
       if (mounted) {
         setState(() {
           for (final a in attrs) {
             _telemetry[a.key] = a.value;
           }
+          _isOnline = _resolveOnline();
+        });
+      }
+    });
+
+    // Subscribe to SERVER_SCOPE attributes (active = TB connectivity status)
+    _attrSub = _control.subscribeToServerAttributes(
+      widget.device.id,
+      keys: ['active'],
+    );
+    _attrSub!.attributeDataStream.listen((attrs) {
+      if (mounted) {
+        setState(() {
+          for (final a in attrs) {
+            _telemetry[a.key] = a.value;
+          }
+          _isOnline = _resolveOnline();
         });
       }
     });
   }
 
+  /// Same logic as device_state_provider._resolveOnline
+  bool _resolveOnline() {
+    final active = _telemetry['active'];
+    if (active != null) {
+      return active == true || active == 1 || active == 'true';
+    }
+    final stt = _telemetry['stt'];
+    if (stt != null) return stt == 1 || stt == true || stt == 'true';
+    return false;
+  }
+
   @override
   void dispose() {
-    _subscriber?.unsubscribe();
+    _telemetrySub?.unsubscribe();
+    _attrSub?.unsubscribe();
     super.dispose();
   }
 
@@ -61,14 +95,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: (_telemetry['stt'] == 1)
+                    color: _isOnline
                         ? Colors.green
                         : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  (_telemetry['stt'] == 1) ? 'Online' : 'Offline',
+                  _isOnline ? 'Online' : 'Offline',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
