@@ -134,6 +134,13 @@ class DeviceCard extends StatelessWidget {
       'camera' => Icons.videocam_outlined,
       'gateway' => Icons.router_outlined,
       'switch' => Icons.toggle_on_outlined,
+      'remote' || 'button' || 'scene_switch' => Icons.settings_remote_outlined,
+      'lock' => Icons.lock_outline,
+      'smoke_sensor' => Icons.local_fire_department_outlined,
+      'leak_sensor' => Icons.water_drop_outlined,
+      'air_quality' => Icons.air,
+      'soil_sensor' => Icons.grass,
+      'electrical_switch' => Icons.power_settings_new,
       _ => Icons.devices_other,
     };
   }
@@ -165,19 +172,19 @@ class _DeviceIcon extends StatelessWidget {
       final token = getIt<ITbClientService>().client.getJwtToken();
       inner = CachedNetworkImage(
         imageUrl: url,
-        width: 36,
-        height: 36,
+        width: 44,
+        height: 44,
         fit: BoxFit.contain,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
         placeholder: (_, _) =>
-            Icon(fallbackIcon, size: 32, color: Colors.grey.shade300),
+            Icon(fallbackIcon, size: 40, color: Colors.grey.shade300),
         errorWidget: (_, _, _) =>
-            Icon(fallbackIcon, size: 32, color: iconColor),
+            Icon(fallbackIcon, size: 40, color: iconColor),
       );
     } else {
-      inner = Icon(fallbackIcon, size: 32, color: iconColor);
+      inner = Icon(fallbackIcon, size: 40, color: iconColor);
     }
 
     return inner;

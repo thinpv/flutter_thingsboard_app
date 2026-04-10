@@ -7,6 +7,7 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
+import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 class HomeService {
@@ -250,6 +251,39 @@ class HomeService {
           RelationTypeGroup.COMMON,
           DeviceId(deviceId),
         );
+  }
+
+  // ─── Delete device ───────────────────────────────────────────────────────────
+
+  /// Finds the gateway device that manages [deviceId] as a sub-device.
+  /// Returns the gateway device ID, or null if not found.
+  Future<String?> findGatewayForDevice(String deviceId) async {
+    try {
+      final relations = await _client.getEntityRelationService().findByTo(
+            DeviceId(deviceId),
+          );
+      for (final rel in relations) {
+        if (rel.from.entityType == EntityType.DEVICE) {
+          return rel.from.id!;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Deletes a device from ThingsBoard.
+  /// If [gatewayId] is provided, notifies the gateway first (fire-and-forget).
+  Future<void> deleteDevice(String deviceId, {String? gatewayId}) async {
+    if (gatewayId != null) {
+      try {
+        await DeviceControlService().sendOneWayRpc(
+          gatewayId,
+          'removeDevice',
+          {'deviceId': deviceId},
+        );
+      } catch (_) {}
+    }
+    await _client.getDeviceService().deleteDevice(deviceId);
   }
 
   // ─── Attributes (read/write direct to TB) ───────────────────────────────────

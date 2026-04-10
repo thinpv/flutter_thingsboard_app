@@ -781,6 +781,13 @@ class _DeviceIconBadge extends StatelessWidget {
         'camera' => Icons.videocam_outlined,
         'gateway' => Icons.router_outlined,
         'switch' => Icons.toggle_on_outlined,
+        'remote' || 'button' || 'scene_switch' => Icons.settings_remote_outlined,
+        'lock' => Icons.lock_outline,
+        'smoke_sensor' => Icons.local_fire_department_outlined,
+        'leak_sensor' => Icons.water_drop_outlined,
+        'air_quality' => Icons.air,
+        'soil_sensor' => Icons.grass,
+        'electrical_switch' => Icons.power_settings_new,
         _ => Icons.devices_other,
       };
 
