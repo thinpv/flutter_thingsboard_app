@@ -187,8 +187,7 @@ class HomeService {
         .toList();
     if (deviceIds.isEmpty) return [];
 
-    final devices =
-        await _client.getDeviceService().getDevicesByIds(deviceIds);
+    final devices = await _fetchDevicesBatched(deviceIds);
     return _attachActiveStatus(devices);
   }
 
@@ -205,9 +204,26 @@ class HomeService {
         .toList();
     if (deviceIds.isEmpty) return [];
 
-    final devices =
-        await _client.getDeviceService().getDevicesByIds(deviceIds);
+    final devices = await _fetchDevicesBatched(deviceIds);
     return _attachActiveStatus(devices);
+  }
+
+  /// Fetch devices by ID in chunks. `GET /api/devices?deviceIds=...` packs
+  /// every ID into the query string, so passing a room with 200 devices blows
+  /// past the URL length limit and TB returns 400 / the HTTP layer raises a
+  /// broken pipe. Split into batches of 50 and merge the results.
+  Future<List<Device>> _fetchDevicesBatched(List<String> deviceIds,
+      {int batchSize = 50}) async {
+    if (deviceIds.isEmpty) return [];
+    final svc = _client.getDeviceService();
+    final all = <Device>[];
+    for (var i = 0; i < deviceIds.length; i += batchSize) {
+      final end = (i + batchSize).clamp(0, deviceIds.length);
+      final chunk = deviceIds.sublist(i, end);
+      final batch = await svc.getDevicesByIds(chunk);
+      all.addAll(batch);
+    }
+    return all;
   }
 
   /// Batch-fetch `active` server attribute for [devices] and set initial

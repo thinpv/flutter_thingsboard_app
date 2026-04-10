@@ -85,7 +85,14 @@ class ProvisioningService {
         .toSet() // deduplicate (same device may have multiple relation types)
         .toList();
     if (deviceIds.isEmpty) return [];
-    final devices = await _client.getDeviceService().getDevicesByIds(deviceIds);
+    // Chunk to avoid blowing past the URL length limit (TB packs every ID
+    // into ?deviceIds=...).
+    final svc = _client.getDeviceService();
+    final devices = <Device>[];
+    for (var i = 0; i < deviceIds.length; i += 50) {
+      final end = (i + 50).clamp(0, deviceIds.length);
+      devices.addAll(await svc.getDevicesByIds(deviceIds.sublist(i, end)));
+    }
     return devices
         .where((d) => !_isGateway(d)) // exclude gateway-to-gateway relations
         .map(SmarthomeDevice.fromDevice)
