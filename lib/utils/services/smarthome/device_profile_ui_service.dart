@@ -37,20 +37,38 @@ class DeviceProfileUiService {
     String? uiType;
     String? defaultLabel;
 
-    // 1. Read ui_type from device server attributes
+    // 1. Read ui_type + labels from device attributes
+    // SERVER_SCOPE: ui_type, default_label (set by app/server)
+    // CLIENT_SCOPE: name (pushed by gateway via v1/gateway/attributes on first connect)
     try {
-      final attrs = await _client.getAttributeService().getAttributesByScope(
+      final serverAttrs = await _client.getAttributeService().getAttributesByScope(
             DeviceId(deviceId),
             'SERVER_SCOPE',
             ['ui_type', 'default_label'],
           );
-      for (final attr in attrs) {
+      for (final attr in serverAttrs) {
         if (attr.getKey() == 'ui_type') uiType = attr.getValue()?.toString();
         if (attr.getKey() == 'default_label') {
           defaultLabel = attr.getValue()?.toString();
         }
       }
     } catch (_) {}
+
+    // name from gateway is fallback if no default_label set
+    if (defaultLabel == null) {
+      try {
+        final clientAttrs = await _client.getAttributeService().getAttributesByScope(
+              DeviceId(deviceId),
+              'CLIENT_SCOPE',
+              ['name'],
+            );
+        for (final attr in clientAttrs) {
+          if (attr.getKey() == 'name') {
+            defaultLabel = attr.getValue()?.toString();
+          }
+        }
+      } catch (_) {}
+    }
 
     // 2. Read profile image (cached per profile ID)
     String? profileImage;

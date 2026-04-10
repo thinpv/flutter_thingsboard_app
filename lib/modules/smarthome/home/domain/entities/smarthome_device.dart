@@ -50,6 +50,7 @@ class SmarthomeDevice {
 
   SmarthomeDevice copyWith({
     bool? isOnline,
+    String? label,
     String? uiType,
     String? profileImage,
     Map<String, dynamic>? telemetry,
@@ -58,7 +59,7 @@ class SmarthomeDevice {
       id: id,
       name: name,
       type: type,
-      label: label,
+      label: label ?? this.label,
       deviceProfileId: deviceProfileId,
       uiType: uiType ?? this.uiType,
       profileImage: profileImage ?? this.profileImage,

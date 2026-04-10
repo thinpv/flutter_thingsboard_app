@@ -99,6 +99,8 @@ Future<List<SmarthomeDevice>> _resolveUiTypes(
     result.add(d.copyWith(
       uiType: meta.uiType,
       profileImage: meta.profileImage,
+      // Use device_name from gateway as default label only if no label set yet
+      label: (d.label == null || d.label!.isEmpty) ? meta.defaultLabel : null,
     ));
   }
   return result;

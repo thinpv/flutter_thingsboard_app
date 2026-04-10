@@ -37,6 +37,24 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   bool _bleScanning = false;
   String? _bleError;
 
+  // ── Display name cache: device id → resolved name ──
+  final Map<String, String> _nameCache = {};
+
+  String _displayName(SmarthomeDevice dev) {
+    return _nameCache[dev.id] ?? dev.displayName;
+  }
+
+  Future<void> _resolveNames(List<SmarthomeDevice> devices) async {
+    final svc = ProvisioningService();
+    for (final dev in devices) {
+      if (_nameCache.containsKey(dev.id)) continue;
+      final name = await svc.fetchDeviceName(dev.id);
+      if (name != null && mounted) {
+        setState(() => _nameCache[dev.id] = name);
+      }
+    }
+  }
+
 
   @override
   void initState() {
@@ -164,6 +182,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
     await _autoAssignAll(_unassigned);
 
     if (mounted) setState(() {});
+    _resolveNames(_unassigned);
 
     // Send startScan to all gateways
     for (final gw in _gateways) {
@@ -187,6 +206,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
     if (mounted) {
       setState(() => _gwFound = newFound);
     }
+    _resolveNames(newFound);
   }
 
   Future<void> _autoAssignAll(List<SmarthomeDevice> devices) async {
@@ -368,7 +388,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                         ..._unassigned.map((dev) => ListTile(
                               leading: const Icon(Icons.check_circle,
                                   color: Colors.green),
-                              title: Text(dev.name),
+                              title: Text(_displayName(dev)),
                               subtitle: Text(dev.type),
                             )),
                         const Divider(height: 1),
@@ -403,7 +423,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                         ..._gwFound.map((dev) => ListTile(
                               leading: const Icon(Icons.check_circle,
                                   color: Colors.green),
-                              title: Text(dev.name),
+                              title: Text(_displayName(dev)),
                               subtitle: Text(dev.type),
                             )),
                       ],

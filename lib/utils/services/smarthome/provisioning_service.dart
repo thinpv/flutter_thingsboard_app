@@ -146,6 +146,24 @@ class ProvisioningService {
     return ids;
   }
 
+  // ─── Device display name ──────────────────────────────────────────────────
+
+  /// Reads the `name` client attribute pushed by the gateway on first connect.
+  /// Returns null if the attribute is not set yet.
+  Future<String?> fetchDeviceName(String deviceId) async {
+    try {
+      final attrs = await _client.getAttributeService().getAttributesByScope(
+            DeviceId(deviceId),
+            'CLIENT_SCOPE',
+            ['name'],
+          );
+      for (final attr in attrs) {
+        if (attr.getKey() == 'name') return attr.getValue()?.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
   // ─── Room assignment ──────────────────────────────────────────────────────
 
   /// Creates a Contains relation from [homeId] to [deviceId].
