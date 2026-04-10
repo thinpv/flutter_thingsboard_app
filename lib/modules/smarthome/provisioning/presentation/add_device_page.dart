@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:thingsboard_app/constants/app_constants.dart';
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
 import 'package:thingsboard_app/utils/services/provisioning/eps_ble/wifi_provisioning_service.dart';
+import 'package:thingsboard_app/utils/services/smarthome/device_profile_ui_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 class AddDevicePage extends ConsumerStatefulWidget {
   const AddDevicePage({super.key});
@@ -39,10 +44,14 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
 
   // ── Display name cache: device id → resolved name ──
   final Map<String, String> _nameCache = {};
+  // ── Profile image cache: device id → image URL (null = no image) ──
+  final Map<String, String?> _profileImageCache = {};
 
   String _displayName(SmarthomeDevice dev) {
     return _nameCache[dev.id] ?? dev.displayName;
   }
+
+  String? _profileImage(SmarthomeDevice dev) => _profileImageCache[dev.id];
 
   Future<void> _resolveNames(List<SmarthomeDevice> devices) async {
     final svc = ProvisioningService();
@@ -51,6 +60,17 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       final name = await svc.fetchDeviceName(dev.id);
       if (name != null && mounted) {
         setState(() => _nameCache[dev.id] = name);
+      }
+    }
+  }
+
+  Future<void> _resolveProfileImages(List<SmarthomeDevice> devices) async {
+    final uiSvc = DeviceProfileUiService();
+    for (final dev in devices) {
+      if (_profileImageCache.containsKey(dev.id)) continue;
+      final meta = await uiSvc.getUiMeta(dev.id, dev.deviceProfileId);
+      if (mounted) {
+        setState(() => _profileImageCache[dev.id] = meta.profileImage);
       }
     }
   }
@@ -183,6 +203,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
 
     if (mounted) setState(() {});
     _resolveNames(_unassigned);
+    _resolveProfileImages(_unassigned);
 
     // Send startScan to all gateways
     for (final gw in _gateways) {
@@ -207,6 +228,7 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       setState(() => _gwFound = newFound);
     }
     _resolveNames(newFound);
+    _resolveProfileImages(newFound);
   }
 
   Future<void> _autoAssignAll(List<SmarthomeDevice> devices) async {
@@ -386,8 +408,10 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                           subtitle: 'Thiết bị đã tự động gán vào nhà',
                         ),
                         ..._unassigned.map((dev) => ListTile(
-                              leading: const Icon(Icons.check_circle,
-                                  color: Colors.green),
+                              leading: _DeviceIconBadge(
+                                type: dev.type,
+                                profileImage: _profileImage(dev),
+                              ),
                               title: Text(_displayName(dev)),
                               subtitle: Text(dev.type),
                             )),
@@ -421,8 +445,10 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
                           subtitle: '${_gateways.length} gateway đang quét — tự động thêm vào nhà',
                         ),
                         ..._gwFound.map((dev) => ListTile(
-                              leading: const Icon(Icons.check_circle,
-                                  color: Colors.green),
+                              leading: _DeviceIconBadge(
+                                type: dev.type,
+                                profileImage: _profileImage(dev),
+                              ),
                               title: Text(_displayName(dev)),
                               subtitle: Text(dev.type),
                             )),
@@ -734,5 +760,49 @@ class _WifiPickerDialogState extends State<_WifiPickerDialog> {
         ),
       ],
     );
+  }
+}
+
+// ─── Device icon badge ───────────────────────────────────────────────────────
+
+class _DeviceIconBadge extends StatelessWidget {
+  const _DeviceIconBadge({required this.type, this.profileImage});
+  final String type;
+  final String? profileImage;
+
+  IconData get _icon => switch (type) {
+        'light' => Icons.lightbulb_outline,
+        'air_conditioner' => Icons.ac_unit,
+        'smart_plug' => Icons.electrical_services,
+        'curtain' => Icons.blinds,
+        'door_sensor' => Icons.sensor_door_outlined,
+        'motion_sensor' => Icons.motion_photos_on_outlined,
+        'temp_humidity' => Icons.thermostat,
+        'camera' => Icons.videocam_outlined,
+        'gateway' => Icons.router_outlined,
+        'switch' => Icons.toggle_on_outlined,
+        _ => Icons.devices_other,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    if (profileImage != null && profileImage!.isNotEmpty) {
+      final url =
+          '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
+      final token = getIt<ITbClientService>().client.getJwtToken();
+      return CachedNetworkImage(
+        imageUrl: url,
+        width: 26,
+        height: 26,
+        fit: BoxFit.contain,
+        httpHeaders: {
+          if (token != null) 'X-Authorization': 'Bearer $token',
+        },
+        placeholder: (_, _) => Icon(_icon, size: 26, color: Colors.grey.shade300),
+        errorWidget: (_, _, _) => Icon(_icon, size: 26, color: color),
+      );
+    }
+    return Icon(_icon, size: 26, color: color);
   }
 }

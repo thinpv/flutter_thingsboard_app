@@ -140,6 +140,7 @@ class DeviceCard extends StatelessWidget {
 }
 
 /// Shows device profile image from TB if available, otherwise falls back to icon.
+/// Wrapped in a circular background container (Tuya style).
 class _DeviceIcon extends StatelessWidget {
   const _DeviceIcon({
     required this.profileImage,
@@ -155,38 +156,31 @@ class _DeviceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = isOn ? primaryColor : Colors.grey.shade500;
+
+    Widget inner;
     if (profileImage != null && profileImage!.isNotEmpty) {
       final url =
           '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
       final token = getIt<ITbClientService>().client.getJwtToken();
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          width: 32,
-          height: 32,
-          fit: BoxFit.contain,
-          httpHeaders: {
-            if (token != null) 'X-Authorization': 'Bearer $token',
-          },
-          placeholder: (_, __) => Icon(
-            fallbackIcon,
-            size: 28,
-            color: Colors.grey.shade300,
-          ),
-          errorWidget: (_, __, ___) => Icon(
-            fallbackIcon,
-            size: 28,
-            color: isOn ? primaryColor : Colors.grey.shade400,
-          ),
-        ),
+      inner = CachedNetworkImage(
+        imageUrl: url,
+        width: 36,
+        height: 36,
+        fit: BoxFit.contain,
+        httpHeaders: {
+          if (token != null) 'X-Authorization': 'Bearer $token',
+        },
+        placeholder: (_, _) =>
+            Icon(fallbackIcon, size: 32, color: Colors.grey.shade300),
+        errorWidget: (_, _, _) =>
+            Icon(fallbackIcon, size: 32, color: iconColor),
       );
+    } else {
+      inner = Icon(fallbackIcon, size: 32, color: iconColor);
     }
-    return Icon(
-      fallbackIcon,
-      size: 28,
-      color: isOn ? primaryColor : Colors.grey.shade400,
-    );
+
+    return inner;
   }
 }
 
