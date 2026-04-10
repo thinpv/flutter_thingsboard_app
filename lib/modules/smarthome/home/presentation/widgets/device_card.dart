@@ -34,7 +34,9 @@ class DeviceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOn = device.telemetry['onoff0'] == 1;
+    final t = device.telemetry;
+    final raw = t['onoff0'] ?? t['bt'];
+    final isOn = raw == 1 || raw == '1' || raw == true;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(

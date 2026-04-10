@@ -1541,16 +1541,25 @@ class _SwitchControl extends StatelessWidget {
     Icons.lightbulb_outline,
   ];
 
-  /// Detect how many gangs by scanning onoff0..onoffN keys present in telemetry.
-  int get _gangCount {
-    int count = 0;
-    while (telemetry.containsKey('onoff$count')) {
-      count++;
+  /// Resolves the list of telemetry keys for each gang.
+  /// Pattern: bt, bt2, bt3, bt4, ...
+  List<String> get _gangKeys {
+    final keys = <String>[];
+    if (telemetry.containsKey('bt')) {
+      keys.add('bt');
+      for (int i = 2; telemetry.containsKey('bt$i'); i++) {
+        keys.add('bt$i');
+      }
     }
-    return count < 1 ? 4 : count; // default 4 if no telemetry yet
+    return keys.isNotEmpty ? keys : ['bt', 'bt2', 'bt3', 'bt4'];
   }
 
-  bool _isOn(int index) => telemetry['onoff$index'] == 1;
+  int get _gangCount => _gangKeys.length;
+
+  bool _isOn(int index) {
+    final v = telemetry[_gangKeys[index]];
+    return v == 1 || v == '1' || v == true;
+  }
 
   bool get _allOn {
     for (int i = 0; i < _gangCount; i++) {
@@ -1578,9 +1587,10 @@ class _SwitchControl extends StatelessWidget {
             activeColor: cs.primary,
             onTap: () {
               final target = _allOn ? 0 : 1;
+              final keys = _gangKeys;
               final data = <String, dynamic>{};
-              for (int i = 0; i < gangs; i++) {
-                data['onoff$i'] = target;
+              for (final key in keys) {
+                data[key] = target;
               }
               onRpc('setValue', data);
             },
@@ -1617,7 +1627,7 @@ class _SwitchControl extends StatelessWidget {
                   : Colors.grey.shade100,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => onRpc('setValue', {'onoff$i': on ? 0 : 1}),
+                onTap: () => onRpc('setValue', {_gangKeys[i]: on ? 0 : 1}),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
@@ -1666,7 +1676,7 @@ class _SwitchControl extends StatelessWidget {
                         value: on,
                         activeColor: cs.primary,
                         onChanged: (_) =>
-                            onRpc('setValue', {'onoff$i': on ? 0 : 1}),
+                            onRpc('setValue', {_gangKeys[i]: on ? 0 : 1}),
                       ),
                     ],
                   ),
