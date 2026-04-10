@@ -10,7 +10,17 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
+
+/// UI types that expose a single on/off relay and can be toggled from the
+/// device card without opening the detail page.
+const _switchableUiTypes = {
+  'light',
+  'smart_plug',
+  'switch',
+  'electrical_switch',
+};
 
 // ─── Device card ──────────────────────────────────────────────────────────────
 
@@ -38,6 +48,20 @@ class DeviceCard extends StatelessWidget {
     final raw = t['onoff0'] ?? t['bt'];
     final isOn = raw == 1 || raw == '1' || raw == true;
     final colorScheme = Theme.of(context).colorScheme;
+    final showToggle = _switchableUiTypes.contains(device.effectiveUiType);
+
+    Future<void> toggle() async {
+      try {
+        await DeviceControlService()
+            .sendOneWayRpc(device.id, 'setValue', {'onoff0': isOn ? 0 : 1});
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi điều khiển: $e')),
+          );
+        }
+      }
+    }
 
     return Card(
       elevation: 0,
@@ -84,15 +108,24 @@ class DeviceCard extends StatelessWidget {
                     primaryColor: colorScheme.primary,
                   ),
                   const Spacer(),
-                  // ON/OFF toggle dot
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: device.isOnline ? Colors.green : Colors.grey.shade400,
+                  if (showToggle)
+                    _PowerToggleButton(
+                      isOn: isOn,
+                      enabled: device.isOnline,
+                      onTap: toggle,
+                    )
+                  else
+                    // Online indicator dot (for sensors etc.)
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: device.isOnline
+                            ? Colors.green
+                            : Colors.grey.shade400,
+                      ),
                     ),
-                  ),
                 ],
               ),
               const Spacer(),
@@ -143,6 +176,45 @@ class DeviceCard extends StatelessWidget {
       'electrical_switch' => Icons.power_settings_new,
       _ => Icons.devices_other,
     };
+  }
+}
+
+/// Compact circular power toggle — Tuya-style card corner button.
+class _PowerToggleButton extends StatelessWidget {
+  const _PowerToggleButton({
+    required this.isOn,
+    required this.enabled,
+    required this.onTap,
+  });
+  final bool isOn;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = !enabled
+        ? Colors.grey.shade400
+        : (isOn ? primary : Colors.grey.shade500);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isOn && enabled
+                ? primary.withValues(alpha: 0.18)
+                : Colors.grey.shade200,
+            border: Border.all(color: color, width: 1.5),
+          ),
+          child: Icon(Icons.power_settings_new, size: 18, color: color),
+        ),
+      ),
+    );
   }
 }
 

@@ -11,10 +11,23 @@ import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:uuid/uuid.dart';
 
 class AutomationEditPage extends ConsumerStatefulWidget {
-  const AutomationEditPage({this.rule, super.key});
+  const AutomationEditPage({
+    this.rule,
+    this.prefillName,
+    this.prefillConditions,
+    this.prefillActions,
+    super.key,
+  });
 
   /// null → create new rule.
   final AutomationRule? rule;
+
+  /// Optional seed values used only when [rule] is null (create mode).
+  /// Useful for quick actions on device detail pages that jump into the
+  /// editor with the device already populated as a condition or action.
+  final String? prefillName;
+  final List<RuleCondition>? prefillConditions;
+  final List<RuleAction>? prefillActions;
 
   @override
   ConsumerState<AutomationEditPage> createState() => _AutomationEditPageState();
@@ -55,12 +68,13 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
   void initState() {
     super.initState();
     final r = widget.rule;
-    _name = r?.name ?? '';
+    _name = r?.name ?? widget.prefillName ?? '';
     _icon = r?.icon ?? 'auto_awesome';
     _color = r?.color ?? '#2196F3';
-    _conditions = r?.conditions.toList() ?? [];
+    _conditions =
+        r?.conditions.toList() ?? widget.prefillConditions?.toList() ?? [];
     _conditionMatch = r?.conditionMatch ?? ConditionMatch.all;
-    _actions = r?.actions.toList() ?? [];
+    _actions = r?.actions.toList() ?? widget.prefillActions?.toList() ?? [];
     _schedule = r?.schedule;
   }
 

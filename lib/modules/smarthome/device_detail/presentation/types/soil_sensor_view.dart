@@ -9,13 +9,13 @@ class SoilSensorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final temp = (telemetry['temp'] as num?)?.toDouble();
-    final hum = (telemetry['hum'] as num?)?.toDouble(); // soil moisture %
-    final phSoil = (telemetry['phSoil'] as num?)?.toDouble();
-    final phWater = (telemetry['phWater'] as num?)?.toDouble();
-    final ecSoil = (telemetry['ecSoil'] as num?)?.toDouble();
-    final ecWater = (telemetry['ecWater'] as num?)?.toDouble();
-    final oxyWater = (telemetry['percentOxyWater'] as num?)?.toDouble();
+    final temp = doubleVal(telemetry['temp']);
+    final hum = doubleVal(telemetry['hum']); // soil moisture %
+    final phSoil = doubleVal(telemetry['phSoil']);
+    final phWater = doubleVal(telemetry['phWater']);
+    final ecSoil = doubleVal(telemetry['ecSoil']);
+    final ecWater = doubleVal(telemetry['ecWater']);
+    final oxyWater = doubleVal(telemetry['percentOxyWater']);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

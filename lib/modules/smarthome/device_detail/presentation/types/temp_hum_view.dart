@@ -9,9 +9,9 @@ class TempHumView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final temp = (telemetry['temp'] as num?)?.toDouble();
-    final hum = (telemetry['hum'] as num?)?.toDouble();
-    final pressure = (telemetry['pressure'] as num?)?.toDouble();
+    final temp = doubleVal(telemetry['temp']);
+    final hum = doubleVal(telemetry['hum']);
+    final pressure = doubleVal(telemetry['pressure']);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

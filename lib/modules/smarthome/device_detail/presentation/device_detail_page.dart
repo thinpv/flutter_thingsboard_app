@@ -235,11 +235,20 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
     return switch (widget.device.effectiveUiType) {
       'light' => LightControl(telemetry: _telemetry, onRpc: _rpc),
       'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
-      'smart_plug' => SmartPlugControl(telemetry: _telemetry, onRpc: _rpc),
+      'smart_plug' => SmartPlugControl(
+          deviceId: widget.device.id,
+          deviceName: widget.device.displayName,
+          telemetry: _telemetry,
+          onRpc: _rpc,
+        ),
       'curtain' => CurtainControl(telemetry: _telemetry, onRpc: _rpc),
       'switch' => SwitchControl(telemetry: _telemetry, onRpc: _rpc),
       'electrical_switch' => ElectricalSwitchView(telemetry: _telemetry, onRpc: _rpc),
-      'door_sensor' => DoorSensorView(telemetry: _telemetry),
+      'door_sensor' => DoorSensorView(
+          deviceId: widget.device.id,
+          deviceName: widget.device.displayName,
+          telemetry: _telemetry,
+        ),
       'motion_sensor' => MotionSensorView(telemetry: _telemetry),
       'temp_humidity' => TempHumView(telemetry: _telemetry),
       'smoke_sensor' => SmokeSensorView(telemetry: _telemetry),

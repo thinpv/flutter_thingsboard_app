@@ -38,7 +38,7 @@ class _LightControlState extends State<LightControl> {
   }
 
   double _num(String k, double fallback) =>
-      (widget.telemetry[k] as num?)?.toDouble() ?? fallback;
+      doubleVal(widget.telemetry[k]) ?? fallback;
 
   bool get _isOn =>
       isOn(widget.telemetry['onoff0'] ?? widget.telemetry['onoff']);

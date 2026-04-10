@@ -108,7 +108,7 @@ class ElectricalSwitchView extends StatelessWidget {
           const SizedBox(height: 10),
           // Live power indicator
           if (telemetry['power'] != null) ...[
-            _PowerBar(power: (telemetry['power'] as num).toDouble()),
+            _PowerBar(power: doubleVal(telemetry['power']) ?? 0),
             const SizedBox(height: 16),
           ],
           GridView.count(

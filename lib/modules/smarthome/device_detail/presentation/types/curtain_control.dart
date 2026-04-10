@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
+
 // Keys: pos (0-100%), onoff0 (open/close state)
 class CurtainControl extends StatefulWidget {
   const CurtainControl({required this.telemetry, required this.onRpc, super.key});
@@ -18,14 +20,14 @@ class _CurtainControlState extends State<CurtainControl>
   @override
   void initState() {
     super.initState();
-    _pos = ((widget.telemetry['pos'] as num?)?.toDouble() ?? 0).clamp(0, 100);
+    _pos = (doubleVal(widget.telemetry['pos']) ?? 0).clamp(0, 100);
     _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
   }
 
   @override
   void didUpdateWidget(CurtainControl old) {
     super.didUpdateWidget(old);
-    final p = (widget.telemetry['pos'] as num?)?.toDouble();
+    final p = doubleVal(widget.telemetry['pos']);
     if (p != null) setState(() => _pos = p.clamp(0, 100));
   }
 

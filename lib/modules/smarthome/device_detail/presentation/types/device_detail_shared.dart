@@ -4,12 +4,32 @@ import 'package:flutter/material.dart';
 
 // ─── Helpers (top-level, accessible from all type files) ─────────────────────
 
-/// True if value is on — handles int 1, string "1", or bool true.
-bool isOn(dynamic v) => v == 1 || v == '1' || v == true;
+/// True if value is on — handles int 1, string "1"/"true", or bool true.
+/// Gateway/TB may publish any of these encodings, so be defensive.
+bool isOn(dynamic v) {
+  if (v == null) return false;
+  if (v is bool) return v;
+  if (v is num) return v != 0;
+  if (v is String) return v == '1' || v.toLowerCase() == 'true';
+  return false;
+}
+
+/// Coerce a telemetry value to num. Handles num, numeric String
+/// (e.g. "27.44" — TB stores telemetry as String when gateway publishes
+/// quoted values), and bool (true→1, false→0). Returns null if unparseable.
+num? numVal(dynamic v) {
+  if (v == null) return null;
+  if (v is num) return v;
+  if (v is bool) return v ? 1 : 0;
+  if (v is String) return num.tryParse(v);
+  return null;
+}
+
+double? doubleVal(dynamic v) => numVal(v)?.toDouble();
+int? intVal(dynamic v) => numVal(v)?.toInt();
 
 /// Battery level from `bat` (Zigbee) or `pin` (BLE).
-num? batLevel(Map<String, dynamic> t) =>
-    (t['bat'] as num?) ?? (t['pin'] as num?);
+num? batLevel(Map<String, dynamic> t) => numVal(t['bat']) ?? numVal(t['pin']);
 
 // ─── Online Badge ─────────────────────────────────────────────────────────────
 

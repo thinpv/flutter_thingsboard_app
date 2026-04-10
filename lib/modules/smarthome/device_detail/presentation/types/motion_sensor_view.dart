@@ -12,8 +12,8 @@ class MotionSensorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final detected = _detected;
-    final lux = telemetry['lux'] as num?;
-    final distance = telemetry['distance'] as num?;
+    final lux = numVal(telemetry['lux']);
+    final distance = numVal(telemetry['distance']);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

@@ -9,12 +9,12 @@ class AirQualityView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pm25 = (telemetry['pm2_5'] as num?)?.toDouble();
-    final pm10 = (telemetry['pm10'] as num?)?.toDouble();
-    final pm1 = (telemetry['pm1_0'] as num?)?.toDouble();
-    final co2 = (telemetry['co2'] as num?)?.toDouble();
-    final temp = (telemetry['temp'] as num?)?.toDouble();
-    final hum = (telemetry['hum'] as num?)?.toDouble();
+    final pm25 = doubleVal(telemetry['pm2_5']);
+    final pm10 = doubleVal(telemetry['pm10']);
+    final pm1 = doubleVal(telemetry['pm1_0']);
+    final co2 = doubleVal(telemetry['co2']);
+    final temp = doubleVal(telemetry['temp']);
+    final hum = doubleVal(telemetry['hum']);
 
     final aqi = _calcAqi(pm25);
 

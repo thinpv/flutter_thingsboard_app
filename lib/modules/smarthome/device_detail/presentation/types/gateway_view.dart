@@ -11,10 +11,10 @@ class GatewayView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cpu = (telemetry['cpu'] as num?)?.toDouble();
-    final mem = (telemetry['mem'] as num?)?.toDouble();
-    final uptime = (telemetry['uptime'] as num?)?.toInt();
-    final devCnt = (telemetry['dev_cnt'] as num?)?.toInt();
+    final cpu = doubleVal(telemetry['cpu']);
+    final mem = doubleVal(telemetry['mem']);
+    final uptime = intVal(telemetry['uptime']);
+    final devCnt = intVal(telemetry['dev_cnt']);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

@@ -33,12 +33,12 @@ class _AcControlState extends State<AcControl> {
   @override
   void didUpdateWidget(AcControl old) {
     super.didUpdateWidget(old);
-    final t = (widget.telemetry['temp'] as num?)?.toDouble();
+    final t = doubleVal(widget.telemetry['temp']);
     if (t != null) setState(() => _temp = t.clamp(16, 30));
   }
 
   double _clampTemp() =>
-      ((widget.telemetry['temp'] as num?)?.toDouble() ?? 25).clamp(16, 30);
+      (doubleVal(widget.telemetry['temp']) ?? 25).clamp(16, 30);
 
   bool get _isOn => isOn(widget.telemetry['power']);
   String get _mode => widget.telemetry['mode'] as String? ?? 'cool';

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
@@ -59,6 +60,50 @@ class DeviceControlService {
     );
     subscriber.subscribe();
     return subscriber;
+  }
+
+  /// Fetch historical timeseries for [deviceId]. Values are returned
+  /// oldest-first. Pass [agg] + [interval] for downsampling (e.g. daily max).
+  ///
+  /// Returns a map keyed by telemetry key → list of `(ts, value)` tuples.
+  /// Values come through as [num] (TB REST API converts correctly with
+  /// strict data types).
+  Future<Map<String, List<(int, num)>>> fetchTimeseries(
+    String deviceId,
+    List<String> keys, {
+    required int startTs,
+    required int endTs,
+    int? interval,
+    Aggregation agg = Aggregation.NONE,
+    int limit = 1000,
+  }) async {
+    try {
+      final entries = await _client.getAttributeService().getTimeseries(
+            DeviceId(deviceId),
+            keys,
+            startTime: startTs,
+            endTime: endTs,
+            interval: interval,
+            agg: agg,
+            limit: limit,
+            sortOrder: Direction.ASC,
+          );
+      final result = <String, List<(int, num)>>{};
+      for (final e in entries) {
+        final raw = e.getValue();
+        final n = raw is num
+            ? raw
+            : (raw is String ? num.tryParse(raw) : null);
+        if (n == null) continue;
+        (result[e.getKey()] ??= []).add((e.getTs(), n));
+      }
+      debugPrint(
+          '[fetchTimeseries] dev=$deviceId keys=$keys → ${result.map((k, v) => MapEntry(k, '${v.length} pts'))}');
+      return result;
+    } catch (e, st) {
+      debugPrint('[fetchTimeseries] FAILED dev=$deviceId keys=$keys: $e\n$st');
+      return {};
+    }
   }
 
   /// Subscribes to SERVER_SCOPE attributes of [deviceId].
