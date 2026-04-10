@@ -1,22 +1,24 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
-class DeviceDetailPage extends StatefulWidget {
+class DeviceDetailPage extends ConsumerStatefulWidget {
   const DeviceDetailPage({required this.device, super.key});
 
   final SmarthomeDevice device;
 
   @override
-  State<DeviceDetailPage> createState() => _DeviceDetailPageState();
+  ConsumerState<DeviceDetailPage> createState() => _DeviceDetailPageState();
 }
 
-class _DeviceDetailPageState extends State<DeviceDetailPage> {
+class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
   late Map<String, dynamic> _telemetry;
   bool _isOnline = false;
   late String _displayName;
@@ -111,7 +113,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       if (device == null) throw Exception('Không tìm thấy thiết bị');
       device.label = newLabel;
       await client.getDeviceService().saveDevice(device);
-      if (mounted) setState(() => _displayName = newLabel);
+      if (mounted) {
+        setState(() => _displayName = newLabel);
+        ref.invalidate(devicesInRoomProvider);
+        ref.invalidate(devicesInHomeProvider);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
