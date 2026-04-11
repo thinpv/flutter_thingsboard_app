@@ -187,8 +187,11 @@ class HomeService {
         .toList();
     if (deviceIds.isEmpty) return [];
 
+    // Live telemetry + isOnline come from an EntityDataQuery WebSocket
+    // subscription in device_state_provider — no need to N+1 fetch the
+    // `active` attribute here.
     final devices = await _fetchDevicesBatched(deviceIds);
-    return _attachActiveStatus(devices);
+    return devices.map(SmarthomeDevice.fromDevice).toList();
   }
 
   /// Devices directly under the home asset (gateways, unassigned devices).
@@ -205,7 +208,7 @@ class HomeService {
     if (deviceIds.isEmpty) return [];
 
     final devices = await _fetchDevicesBatched(deviceIds);
-    return _attachActiveStatus(devices);
+    return devices.map(SmarthomeDevice.fromDevice).toList();
   }
 
   /// Fetch devices by ID in chunks. `GET /api/devices?deviceIds=...` packs
@@ -224,30 +227,6 @@ class HomeService {
       all.addAll(batch);
     }
     return all;
-  }
-
-  /// Batch-fetch `active` server attribute for [devices] and set initial
-  /// [SmarthomeDevice.isOnline] from it. Falls back to false if unavailable.
-  Future<List<SmarthomeDevice>> _attachActiveStatus(List<Device> devices) async {
-    final result = devices.map(SmarthomeDevice.fromDevice).toList();
-    await Future.wait(result.asMap().entries.map((entry) async {
-      try {
-        final attrs = await _client.getAttributeService().getAttributesByScope(
-              DeviceId(entry.value.id),
-              'SERVER_SCOPE',
-              ['active'],
-            );
-        final active = attrs.isNotEmpty ? attrs.first.getValue() : null;
-        if (active != null) {
-          result[entry.key] = entry.value.copyWith(
-            isOnline: active == true || active == 1 || active == 'true',
-          );
-        }
-      } catch (_) {
-        // Keep default isOnline = false
-      }
-    }));
-    return result;
   }
 
   /// Moves a device from home-level to a room.
@@ -287,9 +266,21 @@ class HomeService {
     return null;
   }
 
-  /// Deletes a device from ThingsBoard.
-  /// If [gatewayId] is provided, notifies the gateway first (fire-and-forget).
+  /// Removes a device from the customer's home.
+  ///
+  /// Customer users do not have permission to physically delete devices from
+  /// ThingsBoard (`DELETE /api/device/{id}` is tenant-only). Instead we:
+  ///   1. Notify the gateway so it cleans up its local DB and stops talking
+  ///      to the physical device (fire-and-forget — gateway may be offline).
+  ///   2. Delete the room→device Contains relation so the card disappears.
+  ///   3. Unassign the device from the customer so it stops showing up in
+  ///      this customer's queries entirely. The tenant admin can later wipe
+  ///      it via the TB web UI if needed.
+  ///
+  /// This matches the Tuya / Mi Home semantics: "remove from my house" ≠
+  /// "wipe from the universe".
   Future<void> deleteDevice(String deviceId, {String? gatewayId}) async {
+    // 1. Best-effort: tell the gateway to forget the sub-device.
     if (gatewayId != null) {
       try {
         await DeviceControlService().sendOneWayRpc(
@@ -299,7 +290,27 @@ class HomeService {
         );
       } catch (_) {}
     }
-    await _client.getDeviceService().deleteDevice(deviceId);
+
+    // 2. Drop the room→device Contains relation (room may not exist if the
+    // device was unassigned at home level).
+    try {
+      final rels = await _client.getEntityRelationService().findByTo(
+            DeviceId(deviceId),
+          );
+      for (final rel in rels) {
+        if (rel.type == 'Contains' && rel.from.entityType == EntityType.ASSET) {
+          await _client.getEntityRelationService().deleteRelation(
+                rel.from,
+                rel.type,
+                RelationTypeGroup.COMMON,
+                rel.to,
+              );
+        }
+      }
+    } catch (_) {}
+
+    // 3. Unassign — the only delete-equivalent action a customer can perform.
+    await _client.getDeviceService().unassignDeviceFromCustomer(deviceId);
   }
 
   // ─── Attributes (read/write direct to TB) ───────────────────────────────────

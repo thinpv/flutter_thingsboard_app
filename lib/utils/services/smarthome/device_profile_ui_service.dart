@@ -46,6 +46,25 @@ class DeviceProfileUiService {
     return token;
   }
 
+  /// Resolves profile image + uiType parsed from its filename, keyed by
+  /// profile ID only (no per-device work). Designed for the fast path where
+  /// device server attributes (`ui_type`, `default_label`) come through a
+  /// shared EntityDataQuery subscription instead of per-device REST.
+  Future<DeviceUiMeta> getProfileMeta(String? profileId) async {
+    if (profileId == null) return DeviceUiMeta.empty;
+    final cached = _profileMetaCache[profileId];
+    if (cached != null) return cached;
+    final img = await _getProfileImage(profileId);
+    final meta = DeviceUiMeta(
+      uiType: _uiFromImage(img),
+      profileImage: img,
+    );
+    _profileMetaCache[profileId] = meta;
+    return meta;
+  }
+
+  static final _profileMetaCache = <String, DeviceUiMeta>{};
+
   Future<DeviceUiMeta> getUiMeta(
     String deviceId,
     String? profileId,
@@ -131,5 +150,6 @@ class DeviceProfileUiService {
   static void clearCache() {
     _deviceCache.clear();
     _profileImageCache.clear();
+    _profileMetaCache.clear();
   }
 }

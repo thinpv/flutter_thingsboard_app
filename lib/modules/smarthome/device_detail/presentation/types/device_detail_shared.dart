@@ -31,6 +31,56 @@ int? intVal(dynamic v) => numVal(v)?.toInt();
 /// Battery level from `bat` (Zigbee) or `pin` (BLE).
 num? batLevel(Map<String, dynamic> t) => numVal(t['bat']) ?? numVal(t['pin']);
 
+/// Detect on/off switch gang keys regardless of which key convention the
+/// gateway publishes. Returns the keys in physical order with localized
+/// labels. Always returns at least one entry.
+///
+/// Recognised conventions:
+///   - Tuya TS0601:    bt, bt2, bt3, bt4
+///   - BLE relay:      rl0..rlN, or single rl
+///   - Zigbee on/off:  onoff0..onoffN
+List<({String key, String label})> detectSwitchGangs(
+    Map<String, dynamic> telemetry) {
+  // Tuya TS0601: bt, bt2, bt3, bt4
+  if (telemetry.containsKey('bt')) {
+    final keys = ['bt'];
+    for (var i = 2; telemetry.containsKey('bt$i'); i++) {
+      keys.add('bt$i');
+    }
+    return [
+      for (var i = 0; i < keys.length; i++)
+        (key: keys[i], label: 'Nút ${i + 1}'),
+    ];
+  }
+  // BLE relay: rl0, rl1...
+  if (telemetry.containsKey('rl0')) {
+    final keys = <String>[];
+    for (var i = 0; telemetry.containsKey('rl$i'); i++) {
+      keys.add('rl$i');
+    }
+    return [
+      for (var i = 0; i < keys.length; i++)
+        (key: keys[i], label: 'Nút ${i + 1}'),
+    ];
+  }
+  if (telemetry.containsKey('rl')) {
+    return [(key: 'rl', label: 'Công tắc')];
+  }
+  // Zigbee on/off: onoff0, onoff1...
+  if (telemetry.containsKey('onoff0')) {
+    final keys = <String>[];
+    for (var i = 0; telemetry.containsKey('onoff$i'); i++) {
+      keys.add('onoff$i');
+    }
+    return [
+      for (var i = 0; i < keys.length; i++)
+        (key: keys[i], label: 'Nút ${i + 1}'),
+    ];
+  }
+  // Fallback so the UI never renders empty.
+  return [(key: 'onoff0', label: 'Công tắc')];
+}
+
 // ─── Online Badge ─────────────────────────────────────────────────────────────
 
 class OnlineBadge extends StatelessWidget {
@@ -402,6 +452,184 @@ class SliderSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Wall Plate Buttons ───────────────────────────────────────────────────────
+
+/// Tuya-style wall plate visualisation. Each button maps to one gang. Layout
+/// adapts to button count (1: single, 2: row, 3: row, 4: 2×2 grid) to match
+/// real physical wall plates.
+class WallPlateButton {
+  const WallPlateButton({
+    required this.label,
+    required this.isOn,
+    required this.onTap,
+    this.icon = Icons.lightbulb_outline,
+  });
+  final String label;
+  final bool isOn;
+  final VoidCallback onTap;
+  final IconData icon;
+}
+
+class WallPlateView extends StatelessWidget {
+  const WallPlateView({required this.buttons, super.key});
+  final List<WallPlateButton> buttons;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = buttons.length;
+    if (n == 0) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey.shade100,
+            Colors.grey.shade200,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: switch (n) {
+        1 => _singleLayout(),
+        2 => _rowLayout(),
+        3 => _rowLayout(),
+        _ => _gridLayout(),
+      },
+    );
+  }
+
+  Widget _singleLayout() => SizedBox(
+        height: 220,
+        child: _Button(button: buttons[0]),
+      );
+
+  Widget _rowLayout() => SizedBox(
+        height: 200,
+        child: Row(
+          children: [
+            for (var i = 0; i < buttons.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(child: _Button(button: buttons[i])),
+            ],
+          ],
+        ),
+      );
+
+  Widget _gridLayout() {
+    // 2×2 (or 2×ceil(n/2)) grid for 4+ gangs.
+    final rows = <Widget>[];
+    for (var i = 0; i < buttons.length; i += 2) {
+      final left = buttons[i];
+      final right = i + 1 < buttons.length ? buttons[i + 1] : null;
+      if (i > 0) rows.add(const SizedBox(height: 12));
+      rows.add(SizedBox(
+        height: 130,
+        child: Row(
+          children: [
+            Expanded(child: _Button(button: left)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: right != null
+                  ? _Button(button: right)
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ));
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
+}
+
+class _Button extends StatelessWidget {
+  const _Button({required this.button});
+  final WallPlateButton button;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = button.isOn ? cs.primary : Colors.grey.shade400;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: button.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: button.isOn ? Colors.white : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: button.isOn ? cs.primary : Colors.grey.shade300,
+              width: button.isOn ? 2 : 1,
+            ),
+            boxShadow: button.isOn
+                ? [
+                    BoxShadow(
+                      color: cs.primary.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: button.isOn
+                      ? cs.primary.withValues(alpha: 0.15)
+                      : Colors.grey.shade200,
+                ),
+                child: Icon(button.icon, color: color, size: 24),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  button.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: button.isOn ? cs.primary : Colors.grey.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                button.isOn ? 'BẬT' : 'TẮT',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,31 +1,70 @@
 import 'dart:async';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
-import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
+import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_profile_ui_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
-/// Resolves isOnline from the combined telemetry + server attribute state.
-/// Priority: TB's `active` server attribute > device-published `stt` telemetry.
-/// Handles all value types TB may return: bool, int, or String.
-bool _resolveOnline(Map<String, dynamic> state) {
-  final active = state['active'];
-  if (active != null) {
-    return active == true || active == 1 || active == 'true';
-  }
-  final stt = state['stt'];
-  if (stt != null) return stt == 1 || stt == true || stt == 'true';
-  return false;
+/// Telemetry keys the device cards care about. Everything here is pulled in
+/// one shared EntityDataQuery subscription instead of one-per-device, which
+/// keeps WebSocket subscription counts flat regardless of device count.
+const _cardTelemetryKeys = <String>[
+  'onoff0', 'onoff1', 'onoff2', 'onoff3',
+  'bt', 'bt0', 'bt1', 'bt2',
+  'dim', 'h', 's', 'l', 'ct', 'color_mode',
+  'temp', 'hum', 'pressure',
+  'pir', 'lux', 'distance',
+  'door', 'leak', 'smoke', 'gas', 'vibration',
+  'bat', 'pin',
+  'lock', 'action',
+  'pos',
+  'power', 'volt', 'curr', 'energy',
+  'pm1_0', 'pm2_5', 'pm10', 'co2',
+  'stt',
+  'cpu', 'mem', 'uptime', 'dev_cnt',
+];
+
+/// Server attributes pulled in the same subscription.
+const _cardServerAttrs = <String>['active', 'ui_type', 'default_label'];
+
+/// Converts TB's text-encoded active flag to bool. TB returns booleans as
+/// the literal string "true"/"false" through entity data queries.
+bool _resolveOnline(String? active) =>
+    active == 'true' || active == '1' || active == 'True';
+
+/// Resolves profileImage + fallback uiType for every device in parallel.
+/// `DeviceProfileUiService.getProfileMeta` is cached per profile ID, so 400
+/// devices sharing ~20 profiles only hit the network ~20 times.
+Future<List<SmarthomeDevice>> _resolveProfileMeta(
+    List<SmarthomeDevice> devices) {
+  final svc = DeviceProfileUiService();
+  return Future.wait(devices.map((d) async {
+    final meta = await svc.getProfileMeta(d.deviceProfileId);
+    return d.copyWith(
+      uiType: meta.uiType,
+      profileImage: meta.profileImage,
+    );
+  }));
 }
 
-/// Sets up live subscriptions for a list of devices and emits updated state.
+/// Live device stream backed by a single EntityDataQuery WebSocket
+/// subscription.
 ///
-/// Subscribes to:
-///  - LATEST_TELEMETRY: device metrics (onoff0, dim, temp, …, stt)
-///  - SERVER_SCOPE: TB-managed connectivity (`active`)
-Stream<List<SmarthomeDevice>> _liveDeviceStream(
+/// The query resolves all devices related to [rootAssetId] via a Contains
+/// relation and subscribes to their latest telemetry + key server attributes.
+/// TB streams both the initial page and incremental updates on the same cmd
+/// id, so a room with 400 devices still only consumes one subscription
+/// instead of 800 (per-device telemetry + per-device server attr).
+///
+/// The stream yields a snapshot of the current device list whenever TB sends
+/// an update. Updates are merged into the existing state map so partial
+/// payloads (e.g. only `onoff0` changed) don't wipe previously-received keys.
+Stream<List<SmarthomeDevice>> _entityDataStream(
   List<SmarthomeDevice> initial,
+  String rootAssetId,
   void Function(void Function()) onDispose,
 ) async* {
   if (initial.isEmpty) {
@@ -33,77 +72,109 @@ Stream<List<SmarthomeDevice>> _liveDeviceStream(
     return;
   }
 
-  // Combined state map: deviceId → {telemetry keys + server attr keys}
   final stateMap = {for (final d in initial) d.id: d};
-  // Separate combined data map for online resolution (merges telemetry + server attrs)
-  final dataMap = {for (final d in initial) d.id: <String, dynamic>{}};
+  // Separate telemetry cache so partial updates can merge without losing
+  // previously-received keys.
+  final telMap = {for (final d in initial) d.id: <String, dynamic>{}};
 
   final controller = StreamController<List<SmarthomeDevice>>.broadcast();
   onDispose(controller.close);
 
-  final control = DeviceControlService();
+  final latestKeys = <EntityKey>[
+    for (final k in _cardServerAttrs)
+      EntityKey(type: EntityKeyType.SERVER_ATTRIBUTE, key: k),
+    for (final k in _cardTelemetryKeys)
+      EntityKey(type: EntityKeyType.TIME_SERIES, key: k),
+  ];
 
-  for (final device in initial) {
-    // ── Telemetry subscription (latest values: onoff0, dim, temp, stt…) ──
-    final telSub = control.subscribeToLatestTelemetry(device.id);
-    onDispose(telSub.unsubscribe);
+  final query = EntityDataQuery(
+    entityFilter: RelationsQueryFilter(
+      rootEntity: AssetId(rootAssetId),
+      filters: [
+        RelationEntityTypeFilter('Contains', [EntityType.DEVICE]),
+      ],
+    ),
+    // `isDynamic: true` asks TB to keep streaming updates as entities enter
+    // or leave the query result (e.g. gateway provisions a new sub-device).
+    pageLink: EntityDataPageLink(pageSize: 1024, isDynamic: true),
+    entityFields: [
+      EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'name'),
+      EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'label'),
+    ],
+    latestValues: latestKeys,
+  );
 
-    telSub.attributeDataStream.listen((attrs) {
-      for (final a in attrs) {
-        dataMap[device.id]![a.key] = a.value;
+  final cmd = EntityDataCmd(
+    query: query,
+    latestCmd: LatestValueCmd(keys: latestKeys),
+  );
+
+  final telemetryService =
+      getIt<ITbClientService>().client.getTelemetryService();
+  final subscriber = TelemetrySubscriber(telemetryService, [cmd]);
+  onDispose(subscriber.unsubscribe);
+
+  subscriber.entityDataStream.listen((update) {
+    final toProcess = <EntityData>[];
+    if (update.data != null) toProcess.addAll(update.data!.data);
+    if (update.update != null) toProcess.addAll(update.update!);
+
+    for (final ed in toProcess) {
+      final id = ed.entityId.id!;
+      var device = stateMap[id];
+      if (device == null) {
+        // New device appeared in the query result after the initial page
+        // (e.g. gateway just connected a new sub-device).
+        device = SmarthomeDevice(
+          id: id,
+          name: ed.field('name') ?? id,
+          type: '',
+          label: ed.field('label'),
+        );
+        telMap[id] = {};
       }
-      final merged = dataMap[device.id]!;
-      stateMap[device.id] = stateMap[device.id]!.copyWith(
-        isOnline: _resolveOnline(merged),
-        telemetry: Map.unmodifiable({
-          ...stateMap[device.id]!.telemetry,
-          for (final a in attrs) a.key: a.value,
-        }),
+
+      // Merge telemetry values.
+      final tel = telMap[id]!;
+      final tsMap = ed.latest[EntityKeyType.TIME_SERIES];
+      if (tsMap != null) {
+        for (final entry in tsMap.entries) {
+          if (entry.value.value != null) {
+            tel[entry.key] = entry.value.value;
+          }
+        }
+      }
+
+      // Server attrs.
+      final serverAttrs = ed.latest[EntityKeyType.SERVER_ATTRIBUTE];
+      String? active;
+      String? uiType;
+      String? defaultLabel;
+      if (serverAttrs != null) {
+        active = serverAttrs['active']?.value;
+        uiType = serverAttrs['ui_type']?.value;
+        defaultLabel = serverAttrs['default_label']?.value;
+      }
+
+      stateMap[id] = device.copyWith(
+        label: (device.label == null || device.label!.isEmpty)
+            ? defaultLabel
+            : null,
+        uiType: uiType,
+        isOnline: active != null ? _resolveOnline(active) : null,
+        telemetry: Map.unmodifiable(tel),
       );
-      if (!controller.isClosed) {
-        controller.add(List.unmodifiable(stateMap.values));
-      }
-    });
+    }
 
-    // ── Server attribute subscription (active = TB connectivity status) ──
-    final attrSub = control.subscribeToServerAttributes(
-      device.id,
-      keys: ['active'],
-    );
-    onDispose(attrSub.unsubscribe);
+    if (!controller.isClosed) {
+      controller.add(List.unmodifiable(stateMap.values));
+    }
+  });
 
-    attrSub.attributeDataStream.listen((attrs) {
-      for (final a in attrs) {
-        dataMap[device.id]![a.key] = a.value;
-      }
-      stateMap[device.id] = stateMap[device.id]!.copyWith(
-        isOnline: _resolveOnline(dataMap[device.id]!),
-      );
-      if (!controller.isClosed) {
-        controller.add(List.unmodifiable(stateMap.values));
-      }
-    });
-  }
+  subscriber.subscribe();
 
   yield List.unmodifiable(stateMap.values);
   yield* controller.stream;
-}
-
-/// Resolves uiType + profileImage from server attrs and profile info.
-Future<List<SmarthomeDevice>> _resolveUiTypes(
-    List<SmarthomeDevice> devices) async {
-  final svc = DeviceProfileUiService();
-  final result = <SmarthomeDevice>[];
-  for (final d in devices) {
-    final meta = await svc.getUiMeta(d.id, d.deviceProfileId);
-    result.add(d.copyWith(
-      uiType: meta.uiType,
-      profileImage: meta.profileImage,
-      // Use device_name from gateway as default label only if no label set yet
-      label: (d.label == null || d.label!.isEmpty) ? meta.defaultLabel : null,
-    ));
-  }
-  return result;
 }
 
 /// Streams devices in [roomId] with live telemetry + connectivity updates.
@@ -111,8 +182,8 @@ final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
     final raw = await HomeService().fetchDevicesInRoom(roomId);
-    final initial = await _resolveUiTypes(raw);
-    yield* _liveDeviceStream(initial, ref.onDispose);
+    final initial = await _resolveProfileMeta(raw);
+    yield* _entityDataStream(initial, roomId, ref.onDispose);
   },
 );
 
@@ -121,7 +192,7 @@ final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
     final raw = await HomeService().fetchDevicesInHome(homeId);
-    final initial = await _resolveUiTypes(raw);
-    yield* _liveDeviceStream(initial, ref.onDispose);
+    final initial = await _resolveProfileMeta(raw);
+    yield* _entityDataStream(initial, homeId, ref.onDispose);
   },
 );

@@ -105,9 +105,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa thiết bị'),
+        title: const Text('Xóa khỏi nhà'),
         content: Text(
-          'Bạn có chắc muốn xóa "${widget.device.displayName}"?\nThao tác này không thể hoàn tác.',
+          'Bỏ "${widget.device.displayName}" khỏi nhà của bạn?\n'
+          'Thiết bị sẽ ngừng hiển thị nhưng dữ liệu không bị xóa khỏi máy chủ.',
         ),
         actions: [
           TextButton(
@@ -219,7 +220,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                   children: [
                     Icon(Icons.delete_outline, color: Colors.red, size: 20),
                     SizedBox(width: 10),
-                    Text('Xóa thiết bị', style: TextStyle(color: Colors.red)),
+                    Text('Xóa khỏi nhà', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
