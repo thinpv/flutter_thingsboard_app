@@ -31,23 +31,25 @@ const _cardTelemetryKeys = <String>[
 /// Server attributes pulled in the same subscription.
 const _cardServerAttrs = <String>['active', 'ui_type', 'default_label'];
 
+/// Client attributes pulled in the same subscription.
+/// `name` is published by the gateway via v1/gateway/attributes when a
+/// sub-device is provisioned — it holds the human-readable device name.
+const _cardClientAttrs = <String>['name'];
+
 /// Converts TB's text-encoded active flag to bool. TB returns booleans as
 /// the literal string "true"/"false" through entity data queries.
 bool _resolveOnline(String? active) =>
     active == 'true' || active == '1' || active == 'True';
 
-/// Resolves profileImage + fallback uiType for every device in parallel.
+/// Resolves profileImage + uiType + profileName for every device in parallel.
 /// `DeviceProfileUiService.getProfileMeta` is cached per profile ID, so 400
 /// devices sharing ~20 profiles only hit the network ~20 times.
-Future<List<SmarthomeDevice>> _resolveProfileMeta(
+Future<List<MapEntry<String, DeviceUiMeta>>> _resolveProfileMeta(
     List<SmarthomeDevice> devices) {
   final svc = DeviceProfileUiService();
   return Future.wait(devices.map((d) async {
     final meta = await svc.getProfileMeta(d.deviceProfileId);
-    return d.copyWith(
-      uiType: meta.uiType,
-      profileImage: meta.profileImage,
-    );
+    return MapEntry(d.id, meta);
   }));
 }
 
@@ -84,6 +86,8 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
   final latestKeys = <EntityKey>[
     for (final k in _cardServerAttrs)
       EntityKey(type: EntityKeyType.SERVER_ATTRIBUTE, key: k),
+    for (final k in _cardClientAttrs)
+      EntityKey(type: EntityKeyType.CLIENT_ATTRIBUTE, key: k),
     for (final k in _cardTelemetryKeys)
       EntityKey(type: EntityKeyType.TIME_SERIES, key: k),
   ];
@@ -157,9 +161,17 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
         defaultLabel = serverAttrs['default_label']?.value;
       }
 
+      // Client attrs — `name` is the friendly name published by the gateway
+      // via v1/gateway/attributes when it provisions a sub-device.
+      final clientAttrs = ed.latest[EntityKeyType.CLIENT_ATTRIBUTE];
+      String? clientName;
+      if (clientAttrs != null) {
+        clientName = clientAttrs['name']?.value;
+      }
+
       stateMap[id] = device.copyWith(
         label: (device.label == null || device.label!.isEmpty)
-            ? defaultLabel
+            ? (defaultLabel ?? clientName)
             : null,
         uiType: uiType,
         isOnline: active != null ? _resolveOnline(active) : null,
@@ -215,43 +227,120 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   String rootAssetId,
   void Function(void Function()) onDispose,
 ) async* {
-  // profileImage cache: deviceId → image URL (populated by _resolveProfileMeta)
+  // Profile meta caches: deviceId → value (populated by _resolveProfileMeta).
   final imageMap = <String, String?>{};
+  final uiTypeMap = <String, String?>{};
+  // profileName: device type name from profile description (e.g. "LUMI Smart Switch").
+  // Used as label fallback when neither device label nor client attr `name` is set.
+  final profileNameMap = <String, String?>{};
+  // IDs for which profile meta has already been (or is being) resolved.
+  final resolvedIds = <String>{for (final d in raw) d.id};
+
+  // Tracks the most recent WebSocket snapshot so profile-meta resolution can
+  // re-emit it (with images injected) instead of the stale raw list.
+  List<SmarthomeDevice>? lastSnapshot;
 
   // Controller that merges WebSocket updates with profileImage injections.
   final merged = StreamController<List<SmarthomeDevice>>.broadcast();
   onDispose(merged.close);
 
+  List<SmarthomeDevice> injectImages(List<SmarthomeDevice> devices) => devices
+      .map((d) {
+        var dev = d;
+        if (imageMap.containsKey(d.id)) {
+          dev = dev.copyWith(profileImage: imageMap[d.id]);
+        }
+        // Only inject profile uiType if no per-device ui_type server attribute
+        // was received from the WebSocket (per-device override takes priority).
+        if (uiTypeMap.containsKey(d.id) && dev.uiType == null) {
+          dev = dev.copyWith(uiType: uiTypeMap[d.id]);
+        }
+        // Inject profileName as label fallback (lowest priority: label > client
+        // attr `name` handled by WebSocket > profileName).
+        if ((dev.label == null || dev.label!.isEmpty) &&
+            profileNameMap.containsKey(d.id) &&
+            profileNameMap[d.id] != null) {
+          dev = dev.copyWith(label: profileNameMap[d.id]);
+        }
+        return dev;
+      })
+      .toList();
+
   // Start WebSocket stream — yields raw devices immediately.
   final wsStream = _entityDataStream(raw, rootAssetId, onDispose);
 
   // Forward WebSocket updates, overriding profileImage from our cache.
+  // Also detect brand-new devices (added after provider started via isDynamic)
+  // and resolve their profile meta on the fly.
   wsStream.listen(
     (devices) {
       if (merged.isClosed) return;
-      if (imageMap.isEmpty) {
-        merged.add(devices);
-      } else {
-        merged.add(devices
-            .map((d) => imageMap.containsKey(d.id)
-                ? d.copyWith(profileImage: imageMap[d.id])
-                : d)
-            .toList());
+      lastSnapshot = devices;
+
+      // Detect new devices that haven't had profile meta resolved yet.
+      final newIds = devices
+          .where((d) => !resolvedIds.contains(d.id))
+          .map((d) => d.id)
+          .toList();
+      if (newIds.isNotEmpty) {
+        // Mark immediately to avoid duplicate resolution on rapid updates.
+        resolvedIds.addAll(newIds);
+        _resolveNewDevicesMeta(newIds).then((entries) {
+          if (merged.isClosed) return;
+          for (final e in entries) {
+            imageMap[e.key] = e.value.profileImage;
+            if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
+            if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
+          }
+          final snap = lastSnapshot;
+          if (snap != null) merged.add(injectImages(snap));
+        });
       }
+
+      merged.add(injectImages(devices));
     },
     onError: (Object e) { if (!merged.isClosed) merged.addError(e); },
     onDone: () { if (!merged.isClosed) merged.close(); },
   );
 
-  // Resolve profile meta concurrently — re-emit last snapshot with images.
-  _resolveProfileMeta(raw).then((withMeta) {
-    debugPrint('[SmartHome] profile meta resolved for $rootAssetId: ${withMeta.length} devices');
+  // Resolve profile meta for the initial list concurrently.
+  // When done, re-emit the LATEST WebSocket snapshot (not the stale raw list)
+  // so telemetry / online-state / uiType from WebSocket are preserved.
+  _resolveProfileMeta(raw).then((entries) {
+    debugPrint('[SmartHome] profile meta resolved for $rootAssetId: ${entries.length} devices');
     if (merged.isClosed) return;
-    for (final d in withMeta) {
-      imageMap[d.id] = d.profileImage;
+    for (final e in entries) {
+      imageMap[e.key] = e.value.profileImage;
+      if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
+      if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
     }
-    merged.add(withMeta);
+    // Re-emit the latest snapshot with profile meta injected.
+    // Fall back to re-emitting raw list only if WebSocket hasn't emitted yet.
+    final snap = lastSnapshot ?? raw;
+    merged.add(injectImages(snap));
   }).catchError((_) {});
 
   yield* merged.stream;
+}
+
+/// Fetches the TB device record for each [deviceIds] entry to obtain its
+/// [deviceProfileId], then resolves profile meta (image + uiType) via
+/// [DeviceProfileUiService].
+/// Used for devices that appeared dynamically via WebSocket (isDynamic) and
+/// therefore lack [deviceProfileId] in the in-memory state.
+Future<List<MapEntry<String, DeviceUiMeta>>> _resolveNewDevicesMeta(
+    List<String> deviceIds) async {
+  final client = getIt<ITbClientService>().client;
+  final svc = DeviceProfileUiService();
+  final results = await Future.wait(deviceIds.map((id) async {
+    try {
+      final device = await client.getDeviceService().getDevice(id);
+      final profileId = device?.deviceProfileId?.id;
+      final meta = await svc.getProfileMeta(profileId);
+      return MapEntry(id, meta);
+    } catch (_) {
+      return MapEntry(id, DeviceUiMeta.empty);
+    }
+  }));
+  return results;
 }

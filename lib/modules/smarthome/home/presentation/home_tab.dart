@@ -8,6 +8,7 @@ import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/room
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 // Light gray page background — makes white cards pop (Tuya-style).
 const _kBgColor = Color(0xFFF2F3F7);
@@ -97,25 +98,76 @@ class HomeTab extends ConsumerWidget {
 
 // ─── No home placeholder ──────────────────────────────────────────────────────
 
-class _NoHomeView extends StatelessWidget {
+class _NoHomeView extends ConsumerWidget {
   const _NoHomeView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.home_outlined, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text('Chưa có nhà nào',
-              style: Theme.of(context).textTheme.titleMedium),
+          Icon(Icons.home_outlined, size: 72, color: Colors.grey.shade300),
+          const SizedBox(height: 20),
+          Text(
+            'Chưa có nhà nào',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
-          const Text('Vào tab Tôi để thêm nhà mới',
-              style: TextStyle(color: Colors.grey)),
+          Text(
+            'Tạo nhà để bắt đầu quản lý thiết bị',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+          ),
+          const SizedBox(height: 28),
+          FilledButton.icon(
+            onPressed: () => _promptAddHome(context, ref),
+            icon: const Icon(Icons.add),
+            label: const Text('Thêm nhà mới'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _promptAddHome(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thêm nhà mới'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Tên nhà (VD: Nhà tôi)',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Tạo'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    try {
+      await HomeService().createHome(name);
+      ref.invalidate(homesProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tạo nhà: $e')),
+        );
+      }
+    }
   }
 }
 
@@ -161,7 +213,7 @@ class _AllDevicesView extends ConsumerWidget {
 
         // Home-direct devices (gateways + unassigned)
         if (homeList.isNotEmpty) ...[
-          _SectionHeader(title: 'THIẾT BỊ'),
+          const _SectionHeader(title: 'THIẾT BỊ'),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: HomeDeviceGrid(homeId: homeId),

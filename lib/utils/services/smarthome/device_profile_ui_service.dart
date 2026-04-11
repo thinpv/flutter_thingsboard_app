@@ -1,26 +1,37 @@
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
-/// UI metadata for a device: ui_type + image URL + default label.
+/// UI metadata for a device: ui_type + image URL + profile name + default label.
 class DeviceUiMeta {
-  const DeviceUiMeta({this.uiType, this.defaultLabel, this.profileImage});
+  const DeviceUiMeta({
+    this.uiType,
+    this.defaultLabel,
+    this.profileImage,
+    this.profileName,
+  });
 
   final String? uiType;
   final String? defaultLabel;
 
-  /// Profile image URL (e.g. "/api/images/tenant/ui_light.png").
+  /// Profile image URL (e.g. "/api/images/tenant/ui_smart_plug__ZNCZ02LM.png").
   final String? profileImage;
+
+  /// Localized device type name from profile description i18n.
+  /// e.g. "Ổ cắm thông minh" (from i18n.vi.name).
+  final String? profileName;
 
   static const empty = DeviceUiMeta();
 }
 
-/// Resolves device UI metadata.
+/// Resolves device profile UI metadata — image URL and basics for the device stream.
 ///
-/// uiType resolution chain:
-///   1. Device SERVER_SCOPE attribute `ui_type` (per-device override)
-///   2. Filename of the profile image: `ui_{type}[__{imgname}].(png|svg|…)`
-///   3. null → generic widget
+/// This service handles the per-profile REST fetch that cannot live in a
+/// Riverpod provider (it runs inside a raw Stream, not a widget tree).
+///
+/// For full metadata (states, actions, ui_hints) use [ProfileMetadataService]
+/// via `deviceProfileMetadataProvider` inside widgets.
 class DeviceProfileUiService {
   DeviceProfileUiService() : _client = getIt<ITbClientService>().client;
 
@@ -29,30 +40,19 @@ class DeviceProfileUiService {
   /// Cache: device ID → metadata.
   static final _deviceCache = <String, DeviceUiMeta>{};
 
-  /// Cache: profile ID → image URL.
-  static final _profileImageCache = <String, String?>{};
+  /// Cache: profile ID → full UI metadata (image + uiType + profileName).
+  static final _profileMetaCache = <String, DeviceUiMeta>{};
 
-  /// Parses uiType from the profile image URL. Returns null if the image does
-  /// not follow the `ui_{type}[__{imgname}].ext` convention, or if the type
-  /// token is `generic`.
-  static final _imgTypeRx =
-      RegExp(r'/ui_([a-z_]+?)(?:__[^/]*)?\.(?:png|svg|jpg|jpeg|webp)$');
+  /// In-flight deduplication for profile meta fetches.
+  static final _inflightMeta = <String, Future<DeviceUiMeta>>{};
 
-  static String? _uiFromImage(String? image) {
-    if (image == null) return null;
-    final m = _imgTypeRx.firstMatch(image);
-    final token = m?.group(1);
-    if (token == null || token == 'generic') return null;
-    return token;
-  }
-
-  /// Resolves profile image + uiType parsed from its filename, keyed by
-  /// profile ID only (no per-device work). Designed for the fast path where
-  /// device server attributes (`ui_type`, `default_label`) come through a
-  /// shared EntityDataQuery subscription instead of per-device REST.
+  /// Resolves profile image, uiType, and localized profileName for a profile ID.
   ///
-  /// Uses an in-flight deduplication map so N rooms loading in parallel for
-  /// the same profile ID result in exactly 1 network request, not N.
+  /// - `profileImage` : from `DeviceProfileInfo.image` (TB REST)
+  /// - `uiType`       : from `description.ui_type` → fallback image-filename hack
+  /// - `profileName`  : from `description.i18n.vi.name` (or en)
+  ///
+  /// Uses in-flight deduplication: 400 devices sharing 20 profiles → 20 requests.
   Future<DeviceUiMeta> getProfileMeta(String? profileId) {
     if (profileId == null) return Future.value(DeviceUiMeta.empty);
     final cached = _profileMetaCache[profileId];
@@ -64,16 +64,51 @@ class DeviceProfileUiService {
   }
 
   Future<DeviceUiMeta> _fetchProfileMeta(String profileId) async {
-    final img = await _getProfileImage(profileId);
-    final meta = DeviceUiMeta(uiType: _uiFromImage(img), profileImage: img);
-    _profileMetaCache[profileId] = meta;
-    return meta;
+    String? img;
+    String? uiType;
+    String? profileName;
+
+    try {
+      // Use raw HTTP so we get the `description` field.
+      // SDK DeviceProfileInfo.fromJson does NOT parse description.
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/deviceProfileInfo/$profileId',
+      );
+      final json = response.data;
+      if (json != null) {
+        img = json['image'] as String?;
+
+        // Parse description with ProfileMetadata.tryParse (handles both
+        // JSON-string and JSON-object formats, tolerant on parse errors).
+        final meta = ProfileMetadata.tryParse(json['description'] as String?);
+        if (!meta.isEmpty) {
+          uiType = meta.uiType == 'auto' ? null : meta.uiType;
+          profileName = meta.localizedName('vi');
+        }
+      }
+    } catch (_) {}
+
+    // Strip tb-image; prefix.
+    if (img != null && img.startsWith('tb-image;')) {
+      img = img.substring('tb-image;'.length);
+    }
+
+    // Fall back to image-filename convention if description.ui_type not set.
+    uiType ??= _uiFromImage(img);
+
+    final result = DeviceUiMeta(
+      uiType: uiType,
+      profileImage: img,
+      profileName: profileName,
+    );
+    _profileMetaCache[profileId] = result;
+    return result;
   }
 
-  static final _profileMetaCache = <String, DeviceUiMeta>{};
-  static final _inflightMeta = <String, Future<DeviceUiMeta>>{};
-  static final _inflightImage = <String, Future<String?>>{};
-
+  /// Resolves per-device UI metadata — server attr overrides take priority.
+  ///
+  /// Used by the "scan devices" page which needs per-device REST calls anyway.
+  /// For the home screen stream, `getProfileMeta` is preferred (faster, per-profile).
   Future<DeviceUiMeta> getUiMeta(
     String deviceId,
     String? profileId,
@@ -84,7 +119,7 @@ class DeviceProfileUiService {
     String? uiType;
     String? defaultLabel;
 
-    // 1. Device-level override + label from attributes.
+    // 1. Device-level server attribute overrides.
     try {
       final serverAttrs = await _client
           .getAttributeService()
@@ -101,6 +136,7 @@ class DeviceProfileUiService {
       }
     } catch (_) {}
 
+    // 2. Fallback: client attribute `name` set by gateway on provision.
     if (defaultLabel == null) {
       try {
         final clientAttrs = await _client
@@ -118,56 +154,35 @@ class DeviceProfileUiService {
       } catch (_) {}
     }
 
-    // 2. Profile image (cached per profile ID) + uiType parsed from its URL.
-    String? profileImage;
-    if (profileId != null) {
-      profileImage = await _getProfileImage(profileId);
-    }
+    // 3. Profile-level metadata (image + uiType fallback + profileName).
+    final profileMeta = await getProfileMeta(profileId);
 
-    final resolvedUiType = uiType ?? _uiFromImage(profileImage);
-
-    final meta = DeviceUiMeta(
-      uiType: resolvedUiType,
+    final result = DeviceUiMeta(
+      uiType: uiType ?? profileMeta.uiType,
       defaultLabel: defaultLabel,
-      profileImage: profileImage,
+      profileImage: profileMeta.profileImage,
+      profileName: profileMeta.profileName,
     );
-    _deviceCache[deviceId] = meta;
-    return meta;
-  }
-
-  Future<String?> _getProfileImage(String profileId) {
-    if (_profileImageCache.containsKey(profileId)) {
-      return Future.value(_profileImageCache[profileId]);
-    }
-    return _inflightImage[profileId] ??=
-        _fetchProfileImage(profileId).whenComplete(
-      () => _inflightImage.remove(profileId),
-    );
-  }
-
-  Future<String?> _fetchProfileImage(String profileId) async {
-    try {
-      final info = await _client
-          .getDeviceProfileService()
-          .getDeviceProfileInfo(profileId);
-      String? image = info?.image;
-      // TB stores image as "tb-image;/api/images/..." — extract the URL part.
-      if (image != null && image.startsWith('tb-image;')) {
-        image = image.substring('tb-image;'.length);
-      }
-      _profileImageCache[profileId] = image;
-      return image;
-    } catch (_) {
-      _profileImageCache[profileId] = null;
-      return null;
-    }
+    _deviceCache[deviceId] = result;
+    return result;
   }
 
   static void clearCache() {
     _deviceCache.clear();
-    _profileImageCache.clear();
     _profileMetaCache.clear();
     _inflightMeta.clear();
-    _inflightImage.clear();
+  }
+
+  // ─── Legacy image-filename convention ─────────────────────────────────────
+
+  static final _imgTypeRx =
+      RegExp(r'/ui_([a-z_]+?)(?:__[^/]*)?\.(?:png|svg|jpg|jpeg|webp)$');
+
+  static String? _uiFromImage(String? image) {
+    if (image == null) return null;
+    final m = _imgTypeRx.firstMatch(image);
+    final token = m?.group(1);
+    if (token == null || token == 'generic') return null;
+    return token;
   }
 }

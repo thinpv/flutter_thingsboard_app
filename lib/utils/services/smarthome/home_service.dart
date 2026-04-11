@@ -96,8 +96,23 @@ class HomeService {
     return SmarthomeHome(id: assetId, name: name);
   }
 
+  Future<void> updateHome(String homeId, {required String name}) async {
+    await _mw('PATCH', '/assets/$homeId', body: {'name': name});
+  }
+
   Future<void> deleteHome(String homeId) async {
     await _mw('DELETE', '/assets/$homeId');
+  }
+
+  Future<void> saveHomeLocation(String homeId, double lat, double lng) async {
+    await saveServerAttributes(AssetId(homeId), {
+      'location': {'lat': lat, 'lng': lng},
+    });
+  }
+
+  Future<Map<String, dynamic>?> fetchHomeLocation(String homeId) async {
+    final attrs = await getServerAttributes(AssetId(homeId), ['location']);
+    return attrs['location'] as Map<String, dynamic>?;
   }
 
   // ─── Room ───────────────────────────────────────────────────────────────────
