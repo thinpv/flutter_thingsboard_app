@@ -8,6 +8,16 @@ class DeviceControlService {
 
   final ThingsboardClient _client;
 
+  // ─── High-level helpers ─────────────────────────────────────────────────────
+
+  /// Đặt giá trị một key bằng RPC `setValue`.
+  ///
+  /// Đây là command dùng bởi ToggleTile, SliderTile khi [StateDef.controllable].
+  /// Gateway nhận params `{key: value}` và dispatch tới đúng ZCL attribute.
+  Future<void> setValue(String deviceId, String key, dynamic value) {
+    return sendOneWayRpc(deviceId, 'setValue', {key: value});
+  }
+
   // ─── RPC ────────────────────────────────────────────────────────────────────
 
   /// Fire-and-forget command (e.g. toggle, setPosition).

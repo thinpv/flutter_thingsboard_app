@@ -21,6 +21,8 @@ import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/typ
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/temp_hum_view.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/detail_composer.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
@@ -232,7 +234,23 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
     );
   }
 
+  // ─── B-A-6: Route tới DetailComposer nếu profile metadata có states ──────
+
   Widget _buildBody() {
+    final profileId = widget.device.deviceProfileId ?? '';
+    if (profileId.isNotEmpty) {
+      final metaAsync = ref.watch(deviceProfileMetadataProvider(profileId));
+      // Nếu metadata đã load và có states → dùng DetailComposer
+      final meta = metaAsync.valueOrNull;
+      if (meta != null && !meta.isEmpty) {
+        return DetailComposer.build(context, meta, widget.device.id);
+      }
+      // Loading / error / metadata empty → fallback xuống legacy switch
+    }
+    return _buildLegacyBody();
+  }
+
+  Widget _buildLegacyBody() {
     return switch (widget.device.effectiveUiType) {
       'light' => LightControl(telemetry: _telemetry, onRpc: _rpc),
       'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
