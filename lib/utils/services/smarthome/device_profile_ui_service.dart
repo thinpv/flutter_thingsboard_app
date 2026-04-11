@@ -50,20 +50,29 @@ class DeviceProfileUiService {
   /// profile ID only (no per-device work). Designed for the fast path where
   /// device server attributes (`ui_type`, `default_label`) come through a
   /// shared EntityDataQuery subscription instead of per-device REST.
-  Future<DeviceUiMeta> getProfileMeta(String? profileId) async {
-    if (profileId == null) return DeviceUiMeta.empty;
+  ///
+  /// Uses an in-flight deduplication map so N rooms loading in parallel for
+  /// the same profile ID result in exactly 1 network request, not N.
+  Future<DeviceUiMeta> getProfileMeta(String? profileId) {
+    if (profileId == null) return Future.value(DeviceUiMeta.empty);
     final cached = _profileMetaCache[profileId];
-    if (cached != null) return cached;
-    final img = await _getProfileImage(profileId);
-    final meta = DeviceUiMeta(
-      uiType: _uiFromImage(img),
-      profileImage: img,
+    if (cached != null) return Future.value(cached);
+    return _inflightMeta[profileId] ??=
+        _fetchProfileMeta(profileId).whenComplete(
+      () => _inflightMeta.remove(profileId),
     );
+  }
+
+  Future<DeviceUiMeta> _fetchProfileMeta(String profileId) async {
+    final img = await _getProfileImage(profileId);
+    final meta = DeviceUiMeta(uiType: _uiFromImage(img), profileImage: img);
     _profileMetaCache[profileId] = meta;
     return meta;
   }
 
   static final _profileMetaCache = <String, DeviceUiMeta>{};
+  static final _inflightMeta = <String, Future<DeviceUiMeta>>{};
+  static final _inflightImage = <String, Future<String?>>{};
 
   Future<DeviceUiMeta> getUiMeta(
     String deviceId,
@@ -126,10 +135,17 @@ class DeviceProfileUiService {
     return meta;
   }
 
-  Future<String?> _getProfileImage(String profileId) async {
+  Future<String?> _getProfileImage(String profileId) {
     if (_profileImageCache.containsKey(profileId)) {
-      return _profileImageCache[profileId];
+      return Future.value(_profileImageCache[profileId]);
     }
+    return _inflightImage[profileId] ??=
+        _fetchProfileImage(profileId).whenComplete(
+      () => _inflightImage.remove(profileId),
+    );
+  }
+
+  Future<String?> _fetchProfileImage(String profileId) async {
     try {
       final info = await _client
           .getDeviceProfileService()
@@ -151,5 +167,7 @@ class DeviceProfileUiService {
     _deviceCache.clear();
     _profileImageCache.clear();
     _profileMetaCache.clear();
+    _inflightMeta.clear();
+    _inflightImage.clear();
   }
 }

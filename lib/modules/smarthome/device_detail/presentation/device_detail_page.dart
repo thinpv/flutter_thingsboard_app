@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_history_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/ac_control.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/air_quality_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/camera_view.dart';
@@ -39,17 +40,20 @@ class DeviceDetailPage extends ConsumerStatefulWidget {
   ConsumerState<DeviceDetailPage> createState() => _DeviceDetailPageState();
 }
 
-class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
+class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
+    with SingleTickerProviderStateMixin {
   late Map<String, dynamic> _telemetry;
   bool _isOnline = false;
   late String _displayName;
   TelemetrySubscriber? _telemetrySub;
   TelemetrySubscriber? _attrSub;
   final _control = DeviceControlService();
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _telemetry = Map.from(widget.device.telemetry);
     _isOnline = widget.device.isOnline;
     _displayName = widget.device.displayName;
@@ -94,6 +98,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _telemetrySub?.unsubscribe();
     _attrSub?.unsubscribe();
     super.dispose();
@@ -229,8 +234,24 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
             ],
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Chi tiết'),
+            Tab(text: 'Lịch sử'),
+          ],
+        ),
       ),
-      body: _buildBody(),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildBody(),
+          DeviceHistoryView(
+            deviceId: widget.device.id,
+            telemetry: _telemetry,
+          ),
+        ],
+      ),
     );
   }
 
