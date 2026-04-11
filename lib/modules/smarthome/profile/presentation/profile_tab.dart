@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/core/auth/login/provider/login_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
@@ -6,6 +7,7 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_device_page.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/providers/unknown_devices_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 class ProfileTab extends ConsumerWidget {
@@ -100,6 +102,9 @@ class ProfileTab extends ConsumerWidget {
             subtitle: const Text('Quét và ghép nối qua gateway'),
             onTap: () => _addDevice(context, ref),
           ),
+
+          // ── Unknown / pending devices section (C-A-14) ──────────────────
+          const _UnknownDevicesSection(),
 
           const Divider(),
 
@@ -355,5 +360,139 @@ class _RoomTile extends StatelessWidget {
         onPressed: onDelete,
       ),
     );
+  }
+}
+
+// ─── Unknown / pending devices section (C-A-14/15) ───────────────────────────
+
+/// Hiển thị danh sách thiết bị gateway đã phát hiện nhưng chưa có profile.
+/// Người dùng có thể copy fingerprint → tạo profile trên TB admin →
+/// bấm "Thử lại" để gateway nhận dạng lại.
+class _UnknownDevicesSection extends ConsumerWidget {
+  const _UnknownDevicesSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final devicesAsync = ref.watch(unknownDevicesProvider);
+
+    return devicesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (devices) {
+        if (devices.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(),
+            _SectionHeader(
+              title: 'Thiết bị chờ cấu hình',
+              action: Chip(
+                label: Text('${devices.length}'),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Các thiết bị dưới đây đã được gateway phát hiện nhưng '
+                'chưa có device profile. Hãy thêm profile trên TB admin '
+                'rồi bấm "Thử lại".',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey.shade600),
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...devices.map((d) => _UnknownDeviceTile(device: d, ref: ref)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _UnknownDeviceTile extends StatelessWidget {
+  const _UnknownDeviceTile({
+    required this.device,
+    required this.ref,
+  });
+
+  final UnknownDevice device;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final timeLabel = _formatTime(device.detectedAt);
+    final proto = device.protocol;
+
+    return ListTile(
+      leading: const Icon(Icons.device_unknown_outlined),
+      title: Text(
+        device.fingerprint,
+        style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+      ),
+      subtitle: Text(
+        [
+          if (proto != null) proto.toUpperCase(),
+          timeLabel,
+        ].join(' · '),
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Copy fingerprint button
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18),
+            tooltip: 'Sao chép fingerprint',
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: device.fingerprint));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Đã sao chép fingerprint'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          // Retry button (C-A-15)
+          TextButton.icon(
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Thử lại'),
+            onPressed: () => _retry(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _retry(BuildContext context) async {
+    try {
+      await retryPendingDevices(device.gatewayId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã gửi lệnh thử lại đến gateway'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    }
+  }
+
+  static String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'vừa xong';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    return '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }

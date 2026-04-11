@@ -3,6 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/providers/automation_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/automation_service.dart';
@@ -893,17 +896,61 @@ class _DeviceConditionDialog extends ConsumerStatefulWidget {
 class _DeviceConditionDialogState
     extends ConsumerState<_DeviceConditionDialog> {
   SmarthomeDevice? _device;
-  String _key = 'temp';
+  ProfileMetadata? _meta;
+  String? _key;
   String _op = '>';
-  String _value = '30';
+  String _value = '';
 
-  static const _ops = ['>', '<', '>=', '<=', '==', '!='];
-  static const _commonKeys = [
+  static const _defaultKeys = [
     'temp', 'hum', 'onoff0', 'dim', 'pir', 'lux', 'door', 'co2', 'pos',
   ];
+  static const _allOps = ['>', '<', '>=', '<=', '==', '!='];
+  static const _boolOps = ['==', '!='];
+
+  List<String> get _availableKeys {
+    final metaKeys = _meta?.states.keys.toList();
+    if (metaKeys != null && metaKeys.isNotEmpty) return metaKeys;
+    return _defaultKeys;
+  }
+
+  List<String> get _availableOps {
+    if (_key != null) {
+      final def = _meta?.states[_key!];
+      if (def?.type == 'bool' || def?.type == 'enum') return _boolOps;
+      // automation caps override
+      final capOps = _meta?.automation?.conditions
+          .where((c) => c.key == _key)
+          .firstOrNull
+          ?.ops;
+      if (capOps != null && capOps.isNotEmpty) return capOps;
+    }
+    return _allOps;
+  }
+
+  Future<void> _loadMeta(SmarthomeDevice device) async {
+    final profileId = device.deviceProfileId ?? '';
+    if (profileId.isEmpty) {
+      setState(() => _meta = null);
+      return;
+    }
+    final meta = await ref
+        .read(profileMetadataServiceProvider)
+        .getForProfile(profileId);
+    if (mounted) {
+      setState(() {
+        _meta = meta;
+        // reset key to first available
+        _key = _availableKeys.isNotEmpty ? _availableKeys.first : null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final keys = _availableKeys;
+    final ops = _availableOps;
+    final currentKey = _key ?? (keys.isNotEmpty ? keys.first : null);
+
     return AlertDialog(
       title: const Text('Thêm điều kiện thiết bị'),
       content: SingleChildScrollView(
@@ -911,31 +958,50 @@ class _DeviceConditionDialogState
           mainAxisSize: MainAxisSize.min,
           children: [
             _DevicePicker(
-              onSelected: (d) => setState(() => _device = d),
+              onSelected: (d) {
+                setState(() {
+                  _device = d;
+                  _meta = null;
+                  _key = null;
+                });
+                _loadMeta(d);
+              },
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _key,
+              value: keys.contains(currentKey) ? currentKey : null,
               decoration: const InputDecoration(labelText: 'Key'),
-              items: _commonKeys
-                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+              items: keys
+                  .map((k) {
+                    final label =
+                        _meta?.states[k]?.labelDefault ?? k;
+                    return DropdownMenuItem(
+                      value: k,
+                      child: Text('$label ($k)'),
+                    );
+                  })
                   .toList(),
-              onChanged: (v) => setState(() => _key = v!),
+              onChanged: (v) => setState(() {
+                _key = v;
+                // Reset op to first valid for new key
+                final newOps = _availableOps;
+                if (!newOps.contains(_op)) _op = newOps.first;
+              }),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _op,
+              value: ops.contains(_op) ? _op : ops.first,
               decoration: const InputDecoration(labelText: 'Toán tử'),
-              items: _ops
+              items: ops
                   .map((o) => DropdownMenuItem(value: o, child: Text(o)))
                   .toList(),
               onChanged: (v) => setState(() => _op = v!),
             ),
             const SizedBox(height: 8),
-            TextField(
-              decoration: const InputDecoration(labelText: 'Giá trị'),
-              keyboardType: TextInputType.number,
-              controller: TextEditingController(text: _value),
+            _ValueInput(
+              stateKey: _key,
+              def: _key != null ? _meta?.states[_key!] : null,
+              initial: _value,
               onChanged: (v) => _value = v,
             ),
           ],
@@ -947,13 +1013,13 @@ class _DeviceConditionDialogState
           child: const Text('Hủy'),
         ),
         FilledButton(
-          onPressed: _device == null
+          onPressed: (_device == null || _key == null)
               ? null
               : () {
                   final cond = RuleCondition(raw: {
                     'type': 'device',
                     'device_id': _device!.id,
-                    'key': _key,
+                    'key': _key!,
                     'op': _op,
                     'value': num.tryParse(_value) ?? _value,
                   });
@@ -1067,8 +1133,9 @@ class _DeviceActionDialog extends ConsumerStatefulWidget {
 
 class _DeviceActionDialogState extends ConsumerState<_DeviceActionDialog> {
   SmarthomeDevice? _device;
-  // Simple key→value map for the action data
+  ProfileMetadata? _meta;
   final Map<String, dynamic> _data = {};
+  // Controllers for manual key/value entry (fallback when no metadata)
   final _keyController = TextEditingController();
   final _valController = TextEditingController();
 
@@ -1079,8 +1146,36 @@ class _DeviceActionDialogState extends ConsumerState<_DeviceActionDialog> {
     super.dispose();
   }
 
+  Future<void> _loadMeta(SmarthomeDevice device) async {
+    final profileId = device.deviceProfileId ?? '';
+    if (profileId.isEmpty) {
+      setState(() => _meta = null);
+      return;
+    }
+    final meta = await ref
+        .read(profileMetadataServiceProvider)
+        .getForProfile(profileId);
+    if (mounted) {
+      setState(() {
+        _meta = meta;
+        _data.clear();
+        // Pre-fill controllable keys with default values
+        if (meta != null && !meta.isEmpty) {
+          for (final e in meta.states.entries) {
+            if (e.value.controllable) {
+              _data[e.key] = e.value.type == 'bool' ? 1 : 0;
+            }
+          }
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasMetaKeys =
+        _meta != null && _meta!.states.values.any((d) => d.controllable);
+
     return AlertDialog(
       title: const Text('Thêm hành động thiết bị'),
       content: SingleChildScrollView(
@@ -1089,61 +1184,83 @@ class _DeviceActionDialogState extends ConsumerState<_DeviceActionDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _DevicePicker(
-              onSelected: (d) => setState(() {
-                _device = d;
-                _data.clear();
-              }),
+              onSelected: (d) {
+                setState(() {
+                  _device = d;
+                  _meta = null;
+                  _data.clear();
+                });
+                _loadMeta(d);
+              },
             ),
             if (_device != null) ...[
               const SizedBox(height: 12),
               Text('Dữ liệu điều khiển',
                   style: Theme.of(context).textTheme.labelMedium),
-              ..._data.entries.map((e) => ListTile(
-                    dense: true,
-                    title: Text('${e.key} = ${e.value}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, size: 18),
-                      onPressed: () => setState(() => _data.remove(e.key)),
-                    ),
-                  )),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _keyController,
-                      decoration: const InputDecoration(
-                        hintText: 'key (onoff0…)',
-                        isDense: true,
+              const SizedBox(height: 8),
+              if (hasMetaKeys)
+                // Metadata-driven: show editable fields per controllable key
+                ..._meta!.states.entries
+                    .where((e) => e.value.controllable)
+                    .map((e) => _ActionKeyEditor(
+                          stateKey: e.key,
+                          def: e.value,
+                          value: _data[e.key],
+                          onChanged: (v) =>
+                              setState(() => _data[e.key] = v),
+                        ))
+              else ...[
+                // Fallback: manual key/value input
+                ..._data.entries.map((e) => ListTile(
+                      dense: true,
+                      title: Text('${e.key} = ${e.value}'),
+                      trailing: IconButton(
+                        icon: const Icon(
+                            Icons.remove_circle_outline,
+                            size: 18),
+                        onPressed: () =>
+                            setState(() => _data.remove(e.key)),
+                      ),
+                    )),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _keyController,
+                        decoration: const InputDecoration(
+                          hintText: 'key (onoff0…)',
+                          isDense: true,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _valController,
-                      decoration: const InputDecoration(
-                        hintText: 'value',
-                        isDense: true,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _valController,
+                        decoration: const InputDecoration(
+                          hintText: 'value',
+                          isDense: true,
+                        ),
+                        keyboardType: TextInputType.number,
                       ),
-                      keyboardType: TextInputType.number,
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      final k = _keyController.text.trim();
-                      final v = _valController.text.trim();
-                      if (k.isNotEmpty && v.isNotEmpty) {
-                        setState(() {
-                          _data[k] = num.tryParse(v) ?? v;
-                          _keyController.clear();
-                          _valController.clear();
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {
+                        final k = _keyController.text.trim();
+                        final v = _valController.text.trim();
+                        if (k.isNotEmpty && v.isNotEmpty) {
+                          setState(() {
+                            _data[k] = num.tryParse(v) ?? v;
+                            _keyController.clear();
+                            _valController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ],
           ],
         ),
@@ -1168,6 +1285,243 @@ class _DeviceActionDialogState extends ConsumerState<_DeviceActionDialog> {
         ),
       ],
     );
+  }
+}
+
+// ─── Metadata-driven value input (C-A-11) ────────────────────────────────────
+
+/// Smart input widget that adapts to [StateDef.type], [StateDef.range],
+/// and [StateDef.enumValues] to show the most appropriate input control.
+class _ValueInput extends StatefulWidget {
+  const _ValueInput({
+    required this.stateKey,
+    required this.def,
+    required this.initial,
+    required this.onChanged,
+  });
+
+  final String? stateKey;
+  final StateDef? def;
+  final String initial;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_ValueInput> createState() => _ValueInputState();
+}
+
+class _ValueInputState extends State<_ValueInput> {
+  late String _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initial;
+  }
+
+  @override
+  void didUpdateWidget(_ValueInput old) {
+    super.didUpdateWidget(old);
+    if (old.stateKey != widget.stateKey) {
+      _current = '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final def = widget.def;
+    if (def == null) {
+      return _textField('Giá trị');
+    }
+
+    switch (def.type) {
+      case 'bool':
+        return DropdownButtonFormField<String>(
+          value: ['0', '1'].contains(_current) ? _current : '1',
+          decoration: const InputDecoration(labelText: 'Giá trị'),
+          items: const [
+            DropdownMenuItem(value: '1', child: Text('Bật (1)')),
+            DropdownMenuItem(value: '0', child: Text('Tắt (0)')),
+          ],
+          onChanged: (v) {
+            setState(() => _current = v!);
+            widget.onChanged(v!);
+          },
+        );
+
+      case 'enum':
+        final values = def.enumValues ?? [];
+        if (values.isEmpty) return _textField('Giá trị');
+        final safeVal = values.contains(_current) ? _current : values.first;
+        return DropdownButtonFormField<String>(
+          value: safeVal,
+          decoration: const InputDecoration(labelText: 'Giá trị'),
+          items: values
+              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+              .toList(),
+          onChanged: (v) {
+            setState(() => _current = v!);
+            widget.onChanged(v!);
+          },
+        );
+
+      case 'number':
+        if (def.range != null) {
+          final range = def.range!;
+          final numVal =
+              double.tryParse(_current) ?? range.min;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Giá trị',
+                      style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    '${numVal.toStringAsFixed(def.precision ?? 0)} ${def.unit ?? ''}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              Slider(
+                value: numVal.clamp(range.min, range.max),
+                min: range.min,
+                max: range.max,
+                divisions: ((range.max - range.min) / (def.precision == 0 ? 1 : 0.1))
+                    .round()
+                    .clamp(1, 200),
+                onChanged: (v) {
+                  final s = v.toStringAsFixed(def.precision ?? 0);
+                  setState(() => _current = s);
+                  widget.onChanged(s);
+                },
+              ),
+            ],
+          );
+        }
+        return _textField(
+          'Giá trị${def.unit != null ? ' (${def.unit})' : ''}',
+          type: TextInputType.number,
+        );
+
+      default:
+        return _textField('Giá trị');
+    }
+  }
+
+  Widget _textField(String label, {TextInputType? type}) {
+    return TextFormField(
+      initialValue: _current,
+      decoration: InputDecoration(labelText: label),
+      keyboardType: type ?? TextInputType.text,
+      onChanged: (v) {
+        _current = v;
+        widget.onChanged(v);
+      },
+    );
+  }
+}
+
+/// Row for editing a single action key in metadata-driven mode.
+class _ActionKeyEditor extends StatelessWidget {
+  const _ActionKeyEditor({
+    required this.stateKey,
+    required this.def,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String stateKey;
+  final StateDef def;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = def.labelDefault ?? stateKey;
+
+    switch (def.type) {
+      case 'bool':
+        final isOn = value == 1 || value == true || value == '1';
+        return SwitchListTile(
+          dense: true,
+          title: Text(label,
+              style: const TextStyle(fontSize: 14)),
+          value: isOn,
+          onChanged: (v) => onChanged(v ? 1 : 0),
+        );
+
+      case 'enum':
+        final values = def.enumValues ?? [];
+        final current = value?.toString();
+        return DropdownButtonFormField<String>(
+          value: values.contains(current) ? current : null,
+          decoration: InputDecoration(
+            labelText: label,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 8),
+          ),
+          items: values
+              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+              .toList(),
+          onChanged: (v) => onChanged(v),
+        );
+
+      case 'number':
+        if (def.range != null) {
+          final range = def.range!;
+          final numVal = (value is num
+                  ? (value as num).toDouble()
+                  : double.tryParse(value?.toString() ?? '') ?? range.min)
+              .clamp(range.min, range.max);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(label,
+                      style: const TextStyle(fontSize: 14)),
+                  Text(
+                    '${numVal.toStringAsFixed(def.precision ?? 0)} ${def.unit ?? ''}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              Slider(
+                value: numVal,
+                min: range.min,
+                max: range.max,
+                divisions: ((range.max - range.min) /
+                        (def.precision == 0 ? 1 : 0.1))
+                    .round()
+                    .clamp(1, 200),
+                onChanged: (v) => onChanged(
+                    num.tryParse(v.toStringAsFixed(
+                            def.precision ?? 0)) ??
+                        v),
+              ),
+            ],
+          );
+        }
+        return TextFormField(
+          initialValue: value?.toString() ?? '0',
+          decoration: InputDecoration(
+            labelText: '$label${def.unit != null ? ' (${def.unit})' : ''}',
+            isDense: true,
+          ),
+          keyboardType: TextInputType.number,
+          onChanged: (v) => onChanged(num.tryParse(v) ?? v),
+        );
+
+      default:
+        return TextFormField(
+          initialValue: value?.toString() ?? '',
+          decoration: InputDecoration(labelText: label, isDense: true),
+          onChanged: onChanged,
+        );
+    }
   }
 }
 

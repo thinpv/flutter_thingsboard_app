@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:thingsboard_app/constants/app_constants.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_detail_page.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/card_composer.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
@@ -26,7 +28,7 @@ const _switchableUiTypes = {
 
 /// A card displaying a device's status. Receives the device object directly so
 /// live updates come from the parent grid (which watches the appropriate provider).
-class DeviceCard extends StatelessWidget {
+class DeviceCard extends ConsumerWidget {
   const DeviceCard({
     required this.device,
     this.roomName,
@@ -43,12 +45,32 @@ class DeviceCard extends StatelessWidget {
   final VoidCallback? onAssignToRoom;
 
   @override
-  Widget build(BuildContext context) {
-    final t = device.telemetry;
-    final raw = t['onoff0'] ?? t['bt'];
-    final isOn = raw == 1 || raw == '1' || raw == true;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Load profile metadata — if available, delegate icon/toggle logic to
+    // CardComposer; otherwise fall back to the legacy hardcoded logic.
+    final profileId = device.deviceProfileId ?? '';
+    final metaAsync = profileId.isNotEmpty
+        ? ref.watch(deviceProfileMetadataProvider(profileId))
+        : null;
+    final meta = metaAsync?.valueOrNull;
+
+    bool isOn;
+    bool showToggle;
+    IconData fallbackIcon;
+
+    if (meta != null && CardComposer.canCompose(meta)) {
+      isOn = CardComposer.resolveIsOn(device, meta);
+      showToggle = CardComposer.hasPrimaryToggle(meta);
+      fallbackIcon = CardComposer.resolveIcon(device, meta);
+    } else {
+      final t = device.telemetry;
+      final raw = t['onoff0'] ?? t['bt'];
+      isOn = raw == 1 || raw == '1' || raw == true;
+      showToggle = _switchableUiTypes.contains(device.effectiveUiType);
+      fallbackIcon = _iconFor(device.effectiveUiType);
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
-    final showToggle = _switchableUiTypes.contains(device.effectiveUiType);
 
     Future<void> toggle() async {
       try {
@@ -103,7 +125,7 @@ class DeviceCard extends StatelessWidget {
                 children: [
                   _DeviceIcon(
                     profileImage: device.profileImage,
-                    fallbackIcon: _iconFor(device.effectiveUiType),
+                    fallbackIcon: fallbackIcon,
                     isOn: isOn,
                     primaryColor: colorScheme.primary,
                   ),
@@ -137,7 +159,16 @@ class DeviceCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (roomName != null) ...[
+              if (meta != null && CardComposer.canCompose(meta))
+                Builder(builder: (ctx) {
+                  final summary = CardComposer.buildSummaryRow(ctx, device, meta);
+                  if (summary == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: summary,
+                  );
+                })
+              else if (roomName != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   roomName!,

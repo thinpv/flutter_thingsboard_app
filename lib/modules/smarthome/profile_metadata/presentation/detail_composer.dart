@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/action_button_row.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/color_picker_tile.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/enum_tile.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/gauge_tile.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/number_display.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/range_chart.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/slider_tile.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/status_tile.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/toggle_tile.dart';
 
 /// Tự động build detail page từ [ProfileMetadata.states].
@@ -12,7 +17,10 @@ import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/
 /// Các states được phân nhóm vào 3 section:
 /// - **Điều khiển** — `controllable == true`
 /// - **Trạng thái** — `!controllable && !chartable`
-/// - **Biểu đồ** — `chartable == true` (Phase C: sẽ dùng RangeChart thật)
+/// - **Biểu đồ** — `chartable == true`
+///
+/// Quick actions từ [ProfileMetadata.uiHints.quickActions] được hiển thị
+/// dưới dạng [ActionButtonRow] trước section điều khiển.
 ///
 /// Escape hatch: đăng ký custom builder theo `uiType` hoặc `detailLayout`
 /// trong [_customLayoutRegistry] để bypass auto-build cho các device đặc biệt
@@ -78,18 +86,38 @@ class DetailComposer {
   ///
   /// Quy tắc:
   /// - bool + controllable → [ToggleTile]
-  /// - bool + read-only → [ToggleTile] (onChanged null)
+  /// - bool + read-only → [StatusTile]
+  /// - enum + controllable → [EnumTile] (dropdown)
+  /// - enum + read-only → [EnumTile] (chip display)
+  /// - string → [StatusTile]
+  /// - color keys (h, ct) + controllable → [ColorPickerTile]
   /// - number + controllable + range → [SliderTile]
-  /// - number + chartable → [NumberDisplay] (chart ở section riêng)
+  /// - number + chartable → [RangeChart]
   /// - number + range (read-only) → [GaugeTile]
   /// - number → [NumberDisplay]
   /// - fallback → [NumberDisplay]
   static Widget widgetFor(String deviceId, String key, StateDef def) {
     switch (def.type) {
       case 'bool':
-        return ToggleTile(deviceId: deviceId, stateKey: key, def: def);
+        if (def.controllable) {
+          return ToggleTile(deviceId: deviceId, stateKey: key, def: def);
+        }
+        return StatusTile(deviceId: deviceId, stateKey: key, def: def);
+
+      case 'enum':
+        return EnumTile(deviceId: deviceId, stateKey: key, def: def);
+
+      case 'string':
+        return StatusTile(deviceId: deviceId, stateKey: key, def: def);
 
       case 'number':
+        // Color picker for light hue / color temp
+        if (def.controllable && (key == 'h' || key == 'ct')) {
+          return ColorPickerTile(deviceId: deviceId, stateKey: key, def: def);
+        }
+        if (def.chartable) {
+          return RangeChart(deviceId: deviceId, stateKey: key, def: def);
+        }
         if (def.controllable && def.range != null) {
           return SliderTile(deviceId: deviceId, stateKey: key, def: def);
         }
@@ -104,7 +132,7 @@ class DetailComposer {
   }
 }
 
-// ─── _AutoDetailPage ───────────────────────────────────────────���──────────────
+// ─── _AutoDetailPage ──────────────────────────────────────────────────────────
 
 class _AutoDetailPage extends StatelessWidget {
   const _AutoDetailPage({required this.meta, required this.deviceId});
@@ -115,6 +143,12 @@ class _AutoDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = <Widget>[];
+
+    // Quick actions row (from ui_hints)
+    final quickActions = meta.uiHints?.quickActions ?? [];
+    if (quickActions.isNotEmpty) {
+      sections.add(ActionButtonRow(deviceId: deviceId, actions: quickActions));
+    }
 
     // Section 1: Điều khiển (controllable)
     final controls = meta.states.entries
@@ -134,11 +168,10 @@ class _AutoDetailPage extends StatelessWidget {
       sections.add(SectionCard(title: 'Trạng thái', children: sensors));
     }
 
-    // Section 3: Biểu đồ (chartable) — Phase B: NumberDisplay placeholder
-    // Phase C: thay bằng RangeChart thật
+    // Section 3: Biểu đồ (chartable) — Phase C: RangeChart thật
     final chartables = meta.states.entries
         .where((e) => e.value.chartable)
-        .map((e) => NumberDisplay(deviceId: deviceId, stateKey: e.key, def: e.value))
+        .map((e) => RangeChart(deviceId: deviceId, stateKey: e.key, def: e.value))
         .toList();
     if (chartables.isNotEmpty) {
       sections.add(SectionCard(title: 'Biểu đồ', children: chartables));
