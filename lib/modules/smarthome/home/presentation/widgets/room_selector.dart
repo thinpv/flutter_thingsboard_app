@@ -7,6 +7,7 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.d
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
+/// Tuya-style horizontal room tab bar with underline indicator.
 class RoomSelector extends ConsumerWidget {
   const RoomSelector({required this.rooms, super.key});
 
@@ -15,41 +16,51 @@ class RoomSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedRoomId = ref.watch(selectedRoomIdProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
-    return SizedBox(
-      height: 48,
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      height: 44,
       child: Row(
         children: [
           Expanded(
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _RoomChip(
+                _RoomTab(
                   label: 'Tất cả',
                   selected: selectedRoomId == null,
+                  primaryColor: primary,
                   onTap: () =>
                       ref.read(selectedRoomIdProvider.notifier).state = null,
                 ),
                 ...rooms.map(
-                  (room) => _RoomChip(
+                  (room) => _RoomTab(
                     label: room.name,
                     selected: selectedRoomId == room.id,
-                    onTap: () =>
-                        ref.read(selectedRoomIdProvider.notifier).state =
-                            room.id,
+                    primaryColor: primary,
+                    onTap: () => ref
+                        .read(selectedRoomIdProvider.notifier)
+                        .state = room.id,
                   ),
                 ),
               ],
             ),
           ),
-          // Room management menu (Tuya ≡ style)
+          // Room management
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.grey.shade200,
+          ),
           IconButton(
-            icon: Icon(Icons.tune, size: 20, color: Colors.grey.shade600),
+            icon: Icon(Icons.tune, size: 18, color: Colors.grey.shade500),
             tooltip: 'Quản lý phòng',
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              backgroundColor: Colors.transparent,
               builder: (_) => _RoomManagementSheet(rooms: rooms),
             ),
           ),
@@ -59,32 +70,50 @@ class RoomSelector extends ConsumerWidget {
   }
 }
 
-class _RoomChip extends StatelessWidget {
-  const _RoomChip({
+class _RoomTab extends StatelessWidget {
+  const _RoomTab({
     required this.label,
     required this.selected,
+    required this.primaryColor,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
+  final Color primaryColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        showCheckmark: false,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? primaryColor : Colors.transparent,
+              width: 2.5,
+            ),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              color: selected ? primaryColor : Colors.grey.shade600,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-// ─── Room management sheet ───────────────────────────────────────────────────
+// ─── Room management sheet ─────────────────────────────────────────────────────
 
 class _RoomManagementSheet extends ConsumerWidget {
   const _RoomManagementSheet({required this.rooms});
@@ -102,58 +131,62 @@ class _RoomManagementSheet extends ConsumerWidget {
       minChildSize: 0.3,
       maxChildSize: 0.85,
       expand: false,
-      builder: (context, scrollController) => Column(
-        children: [
-          _handle(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Quản lý phòng',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            _handle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Text(
+                    'Quản lý phòng',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              controller: scrollController,
-              children: [
-                // Unassigned devices section
-                if (unassigned.isNotEmpty)
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  if (unassigned.isNotEmpty) ...[
+                    _SectionHeader(
+                      title: 'Thiết bị chưa gán phòng (${unassigned.length})',
+                      color: Colors.orange.shade700,
+                    ),
+                    ...unassigned.map(
+                      (dev) => _UnassignedDeviceTile(
+                        device: dev,
+                        rooms: rooms,
+                        homeId: homeId,
+                      ),
+                    ),
+                    const Divider(height: 1),
+                  ],
                   _SectionHeader(
-                    title:
-                        'Thiết bị chưa gán phòng (${unassigned.length})',
-                    color: Colors.orange.shade700,
+                    title: 'Phòng',
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ...unassigned.map(
-                  (dev) => _UnassignedDeviceTile(
-                    device: dev,
-                    rooms: rooms,
-                    homeId: homeId,
-                  ),
-                ),
-                if (unassigned.isNotEmpty) const Divider(height: 1),
-                // Room list with device counts
-                _SectionHeader(
-                  title: 'Phòng',
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                ...rooms.map((room) => _RoomRow(room: room)),
-                if (rooms.isEmpty)
-                  const ListTile(
-                    leading: Icon(Icons.info_outline, color: Colors.grey),
-                    title: Text('Chưa có phòng nào'),
-                    subtitle: Text('Vào tab Tôi để tạo phòng'),
-                  ),
-              ],
+                  ...rooms.map((room) => _RoomRow(room: room)),
+                  if (rooms.isEmpty)
+                    const ListTile(
+                      leading: Icon(Icons.info_outline, color: Colors.grey),
+                      title: Text('Chưa có phòng nào'),
+                      subtitle: Text('Vào tab Tôi để tạo phòng'),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -191,7 +224,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Unassigned device tile with room picker ────────────────────────────────
+// ─── Unassigned device tile ────────────────────────────────────────────────────
 
 class _UnassignedDeviceTile extends ConsumerStatefulWidget {
   const _UnassignedDeviceTile({
@@ -223,22 +256,19 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
       ref.invalidate(devicesInHomeProvider(widget.homeId));
       ref.invalidate(devicesInRoomProvider(roomId));
       if (mounted) {
-        final name = widget.rooms
-            .where((r) => r.id == roomId)
-            .firstOrNull
-            ?.name;
+        final name =
+            widget.rooms.where((r) => r.id == roomId).firstOrNull?.name;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Đã gán "${widget.device.name}" vào "${name ?? 'phòng'}"'),
+            content:
+                Text('Đã gán "${widget.device.name}" vào "${name ?? 'phòng'}"'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -249,7 +279,7 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(
-        _iconFor(widget.device.type),
+        Icons.devices_other,
         color: widget.device.isOnline ? Colors.green : Colors.grey,
       ),
       title: Text(widget.device.name),
@@ -294,25 +324,9 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
             ),
     );
   }
-
-  IconData _iconFor(String type) {
-    return switch (type) {
-      'light' => Icons.lightbulb_outline,
-      'air_conditioner' => Icons.ac_unit,
-      'smart_plug' => Icons.electrical_services,
-      'curtain' => Icons.blinds,
-      'door_sensor' => Icons.sensor_door_outlined,
-      'motion_sensor' => Icons.motion_photos_on_outlined,
-      'temp_humidity' => Icons.thermostat,
-      'camera' => Icons.videocam_outlined,
-      'gateway' => Icons.router_outlined,
-      'switch' => Icons.toggle_on_outlined,
-      _ => Icons.devices_other,
-    };
-  }
 }
 
-// ─── Room row with device count ──────────────────────────────────────────────
+// ─── Room row with device count ────────────────────────────────────────────────
 
 class _RoomRow extends ConsumerWidget {
   const _RoomRow({required this.room});
@@ -326,10 +340,7 @@ class _RoomRow extends ConsumerWidget {
     return ListTile(
       leading: const Icon(Icons.meeting_room_outlined),
       title: Text(room.name),
-      trailing: Text(
-        '$count',
-        style: Theme.of(context).textTheme.bodyLarge,
-      ),
+      trailing: Text('$count', style: Theme.of(context).textTheme.bodyLarge),
     );
   }
 }

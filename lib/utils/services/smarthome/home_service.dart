@@ -211,22 +211,20 @@ class HomeService {
     return devices.map(SmarthomeDevice.fromDevice).toList();
   }
 
-  /// Fetch devices by ID in chunks. `GET /api/devices?deviceIds=...` packs
-  /// every ID into the query string, so passing a room with 200 devices blows
-  /// past the URL length limit and TB returns 400 / the HTTP layer raises a
-  /// broken pipe. Split into batches of 50 and merge the results.
+  /// Fetch devices by ID in parallel chunks. `GET /api/devices?deviceIds=...`
+  /// packs every ID into the query string, so large rooms need chunking to stay
+  /// under URL length limits. Chunks are fired in parallel via Future.wait to
+  /// avoid the sequential waterfall that caused slow loading with many devices.
   Future<List<Device>> _fetchDevicesBatched(List<String> deviceIds,
       {int batchSize = 50}) async {
     if (deviceIds.isEmpty) return [];
     final svc = _client.getDeviceService();
-    final all = <Device>[];
+    final chunks = <List<String>>[];
     for (var i = 0; i < deviceIds.length; i += batchSize) {
-      final end = (i + batchSize).clamp(0, deviceIds.length);
-      final chunk = deviceIds.sublist(i, end);
-      final batch = await svc.getDevicesByIds(chunk);
-      all.addAll(batch);
+      chunks.add(deviceIds.sublist(i, (i + batchSize).clamp(0, deviceIds.length)));
     }
-    return all;
+    final results = await Future.wait(chunks.map((chunk) => svc.getDevicesByIds(chunk)));
+    return results.expand((r) => r).toList();
   }
 
   /// Moves a device from home-level to a room.

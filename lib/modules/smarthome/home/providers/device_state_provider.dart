@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
@@ -181,9 +182,14 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
+    debugPrint('[SmartHome] devicesInRoomProvider start: roomId=$roomId');
     final raw = await HomeService().fetchDevicesInRoom(roomId);
-    final initial = await _resolveProfileMeta(raw);
-    yield* _entityDataStream(initial, roomId, ref.onDispose);
+    debugPrint('[SmartHome] devicesInRoomProvider fetched ${raw.length} devices for room=$roomId');
+    // Yield raw devices immediately so cards appear without waiting for
+    // profile image resolution (which can take seconds with many devices).
+    // Profile meta resolves concurrently and the WebSocket stream will
+    // push uiType via server attribute anyway.
+    yield* _entityDataStreamWithMeta(raw, roomId, ref.onDispose);
   },
 );
 
@@ -191,8 +197,61 @@ final devicesInRoomProvider =
 final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
+    debugPrint('[SmartHome] devicesInHomeProvider start: homeId=$homeId');
     final raw = await HomeService().fetchDevicesInHome(homeId);
-    final initial = await _resolveProfileMeta(raw);
-    yield* _entityDataStream(initial, homeId, ref.onDispose);
+    debugPrint('[SmartHome] devicesInHomeProvider fetched ${raw.length} devices for home=$homeId');
+    yield* _entityDataStreamWithMeta(raw, homeId, ref.onDispose);
   },
 );
+
+/// Starts the entity data stream immediately (no wait for profile meta), then
+/// injects profileImage once it resolves in the background.
+///
+/// Devices appear in the UI as soon as REST fetch completes. uiType arrives
+/// via the WebSocket server-attribute subscription. profileImage arrives once
+/// profile meta resolves — typically within a few hundred ms for cached profiles.
+Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
+  List<SmarthomeDevice> raw,
+  String rootAssetId,
+  void Function(void Function()) onDispose,
+) async* {
+  // profileImage cache: deviceId → image URL (populated by _resolveProfileMeta)
+  final imageMap = <String, String?>{};
+
+  // Controller that merges WebSocket updates with profileImage injections.
+  final merged = StreamController<List<SmarthomeDevice>>.broadcast();
+  onDispose(merged.close);
+
+  // Start WebSocket stream — yields raw devices immediately.
+  final wsStream = _entityDataStream(raw, rootAssetId, onDispose);
+
+  // Forward WebSocket updates, overriding profileImage from our cache.
+  wsStream.listen(
+    (devices) {
+      if (merged.isClosed) return;
+      if (imageMap.isEmpty) {
+        merged.add(devices);
+      } else {
+        merged.add(devices
+            .map((d) => imageMap.containsKey(d.id)
+                ? d.copyWith(profileImage: imageMap[d.id])
+                : d)
+            .toList());
+      }
+    },
+    onError: (Object e) { if (!merged.isClosed) merged.addError(e); },
+    onDone: () { if (!merged.isClosed) merged.close(); },
+  );
+
+  // Resolve profile meta concurrently — re-emit last snapshot with images.
+  _resolveProfileMeta(raw).then((withMeta) {
+    debugPrint('[SmartHome] profile meta resolved for $rootAssetId: ${withMeta.length} devices');
+    if (merged.isClosed) return;
+    for (final d in withMeta) {
+      imageMap[d.id] = d.profileImage;
+    }
+    merged.add(withMeta);
+  }).catchError((_) {});
+
+  yield* merged.stream;
+}

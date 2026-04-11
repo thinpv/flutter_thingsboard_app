@@ -85,12 +85,15 @@ class DeviceCard extends ConsumerWidget {
     }
 
     return Card(
-      elevation: 0,
-      color: isOn ? colorScheme.primaryContainer : colorScheme.surfaceContainerLow,
+      elevation: isOn ? 2 : 0.5,
+      shadowColor: isOn
+          ? colorScheme.primary.withValues(alpha: 0.18)
+          : Colors.black.withValues(alpha: 0.06),
+      color: isOn ? colorScheme.primaryContainer : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.of(context).push(
+        onTap: () => Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (_) => DeviceDetailPage(device: device),
           ),
@@ -407,9 +410,9 @@ class HomeDeviceGrid extends ConsumerWidget {
 
 const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   crossAxisCount: 2,
-  mainAxisSpacing: 12,
-  crossAxisSpacing: 12,
-  childAspectRatio: 1.2,
+  mainAxisSpacing: 10,
+  crossAxisSpacing: 10,
+  childAspectRatio: 1.15,
 );
 
 // ─── Legacy DeviceGrid kept for any remaining callers ─────────────────────────
