@@ -101,13 +101,11 @@ class _SliderTileState extends ConsumerState<SliderTile> {
     return double.tryParse(v.toString()) ?? 0;
   }
 
-  static int? _divisions(dynamic range) {
+  static int? _divisions(StateRange? range) {
     if (range == null) return null;
-    final r = range as dynamic;
-    final span = (r.max - r.min).toDouble();
+    final span = (range.max - range.min);
     if (span <= 0) return null;
     // Tối đa 100 bậc, tối thiểu 1 bậc / 1 đơn vị
-    final d = span.round();
-    return d.clamp(1, 100);
+    return span.round().clamp(1, 100);
   }
 }

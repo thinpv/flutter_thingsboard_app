@@ -1160,7 +1160,7 @@ class _DeviceActionDialogState extends ConsumerState<_DeviceActionDialog> {
         _meta = meta;
         _data.clear();
         // Pre-fill controllable keys with default values
-        if (meta != null && !meta.isEmpty) {
+        if (!meta.isEmpty) {
           for (final e in meta.states.entries) {
             if (e.value.controllable) {
               _data[e.key] = e.value.type == 'bool' ? 1 : 0;

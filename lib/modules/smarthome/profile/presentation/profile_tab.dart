@@ -404,7 +404,7 @@ class _UnknownDevicesSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 4),
-            ...devices.map((d) => _UnknownDeviceTile(device: d, ref: ref)),
+            ...devices.map((d) => _UnknownDeviceTile(device: d)),
           ],
         );
       },
@@ -413,13 +413,9 @@ class _UnknownDevicesSection extends ConsumerWidget {
 }
 
 class _UnknownDeviceTile extends StatelessWidget {
-  const _UnknownDeviceTile({
-    required this.device,
-    required this.ref,
-  });
+  const _UnknownDeviceTile({required this.device});
 
   final UnknownDevice device;
-  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {

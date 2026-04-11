@@ -10,7 +10,6 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
-import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';

@@ -170,7 +170,8 @@ class _LineChartPainter extends CustomPainter {
     final maxX = points.last.$1.toDouble();
     final xRange = (maxX - minX).clamp(1.0, double.infinity);
 
-    double minY, maxY;
+    double minY;
+    double maxY;
     if (range != null) {
       minY = range!.min;
       maxY = range!.max;
