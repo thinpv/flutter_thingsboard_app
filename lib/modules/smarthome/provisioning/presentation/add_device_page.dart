@@ -53,24 +53,25 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
 
   String? _profileImage(SmarthomeDevice dev) => _profileImageCache[dev.id];
 
-  Future<void> _resolveNames(List<SmarthomeDevice> devices) async {
-    final svc = ProvisioningService();
-    for (final dev in devices) {
-      if (_nameCache.containsKey(dev.id)) continue;
-      final name = await svc.fetchDeviceName(dev.id);
-      if (name != null && mounted) {
-        setState(() => _nameCache[dev.id] = name);
-      }
-    }
-  }
-
   Future<void> _resolveProfileImages(List<SmarthomeDevice> devices) async {
     final uiSvc = DeviceProfileUiService();
     for (final dev in devices) {
       if (_profileImageCache.containsKey(dev.id)) continue;
       final meta = await uiSvc.getUiMeta(dev.id, dev.deviceProfileId);
       if (mounted) {
-        setState(() => _profileImageCache[dev.id] = meta.profileImage);
+        setState(() {
+          _profileImageCache[dev.id] = meta.profileImage;
+          // profileName (i18n.vi.name from TB device profile) is the human-readable
+          // device type name — always preferred over the model string that gateway
+          // pushes as CLIENT_SCOPE 'name' (e.g. "211.030602").
+          // Only skip if the device has a user-set label (dev.label takes priority).
+          if (dev.label == null || dev.label!.isEmpty) {
+            final n = meta.profileName?.isNotEmpty == true
+                ? meta.profileName
+                : meta.defaultLabel;
+            if (n != null && n.isNotEmpty) _nameCache[dev.id] = n;
+          }
+        });
       }
     }
   }
@@ -198,9 +199,10 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
         .where((d) => !assignedIds.contains(d.id))
         .toList();
 
-    // Auto-assign unassigned sub-devices to home
-    // (also resolves names + profile images before invalidating home provider)
+    // Auto-assign unassigned sub-devices to home, then resolve profile
+    // metadata so they display with correct names immediately.
     await _autoAssignAll(_unassigned);
+    await _resolveProfileImages(_unassigned);
 
     if (mounted) setState(() {});
 
@@ -224,12 +226,12 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
     // (also resolves names + profile images before invalidating home provider)
     final toAssign = newFound.where((d) => !_assigned.contains(d.id)).toList();
     if (toAssign.isNotEmpty) await _autoAssignAll(toAssign);
+    // Resolve profile metadata (name + image) BEFORE showing devices so names
+    // are correct from the first render — no intermediate wrong-name flash.
+    await _resolveProfileImages(newFound);
     if (mounted) {
       setState(() => _gwFound = newFound);
     }
-    // Resolve names/images for already-assigned devices that might not have been resolved yet
-    _resolveNames(newFound);
-    _resolveProfileImages(newFound);
   }
 
   Future<void> _autoAssignAll(List<SmarthomeDevice> devices) async {

@@ -22,6 +22,7 @@ import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/typ
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/temp_hum_view.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/detail_composer.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -278,14 +279,20 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       if (meta != null && meta.states.isNotEmpty && uiType == 'auto') {
         return DetailComposer.build(context, meta, widget.device.id);
       }
+
+      return _buildLegacyBody(uiType, meta: meta);
     }
 
     return _buildLegacyBody(uiType);
   }
 
-  Widget _buildLegacyBody(String uiType) {
+  Widget _buildLegacyBody(String uiType, {ProfileMetadata? meta}) {
     return switch (uiType) {
-      'light' => LightControl(telemetry: _telemetry, onRpc: _rpc),
+      'light' => LightControl(
+          telemetry: _telemetry,
+          onRpc: _rpc,
+          meta: meta ?? const ProfileMetadata(),
+        ),
       'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
       'smart_plug' => SmartPlugControl(
           deviceId: widget.device.id,
