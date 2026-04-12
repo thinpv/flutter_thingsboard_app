@@ -280,11 +280,14 @@ class _DeviceIcon extends StatelessWidget {
         width: 44,
         height: 44,
         fit: BoxFit.contain,
+        fadeInDuration: const Duration(milliseconds: 150),
+        fadeOutDuration: Duration.zero,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
-        placeholder: (_, _) =>
-            Icon(fallbackIcon, size: 40, color: Colors.grey.shade300),
+        // Dùng placeholder trung tính thay vì fallbackIcon để tránh flash
+        // từ icon sai → icon đúng khi image vừa load xong.
+        placeholder: (_, _) => SizedBox(width: 44, height: 44),
         errorWidget: (_, _, _) =>
             Icon(fallbackIcon, size: 40, color: iconColor),
       );

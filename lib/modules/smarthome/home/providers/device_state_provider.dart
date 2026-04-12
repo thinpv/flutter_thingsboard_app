@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_profile_ui_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
@@ -51,6 +52,43 @@ Future<List<MapEntry<String, DeviceUiMeta>>> _resolveProfileMeta(
     final meta = await svc.getProfileMeta(d.deviceProfileId);
     return MapEntry(d.id, meta);
   }));
+}
+
+/// Fast Hive-only resolve: returns uiType + profileName + profileImage (if cached).
+/// Used to pre-populate maps before WebSocket connects so the first
+/// `injectImages()` call already has full data — no HTTP needed for cached profiles.
+Future<List<MapEntry<String, DeviceUiMeta>>> _resolveProfileMetaFromHive(
+    List<SmarthomeDevice> devices) {
+  final cache = ProfileMetadataCache.instance;
+  // Deduplicate by profileId so we don't read Hive multiple times for the same profile.
+  final profileToDevices = <String, List<String>>{};
+  for (final d in devices) {
+    if (d.deviceProfileId != null) {
+      profileToDevices.putIfAbsent(d.deviceProfileId!, () => []).add(d.id);
+    }
+  }
+
+  return Future.wait(profileToDevices.entries.map((entry) async {
+    final profileId = entry.key;
+    final deviceIds = entry.value;
+    final cachedMeta = await cache.get(profileId);
+    final cachedImage = await cache.getImage(profileId);
+
+    final uiType = (cachedMeta != null && !cachedMeta.isEmpty)
+        ? (cachedMeta.uiType == 'auto' ? null : cachedMeta.uiType)
+        : null;
+    final profileName = (cachedMeta != null && !cachedMeta.isEmpty)
+        ? cachedMeta.localizedName('vi')
+        : null;
+
+    final meta = DeviceUiMeta(
+      uiType: uiType,
+      profileName: profileName,
+      profileImage: cachedImage,
+    );
+    // Return one entry per device sharing this profile
+    return deviceIds.map((id) => MapEntry(id, meta));
+  })).then((lists) => lists.expand((e) => e).toList());
 }
 
 /// Live device stream backed by a single EntityDataQuery WebSocket
@@ -235,6 +273,23 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   final profileNameMap = <String, String?>{};
   // IDs for which profile meta has already been (or is being) resolved.
   final resolvedIds = <String>{for (final d in raw) d.id};
+
+  // Pre-populate maps from Hive (local, ~1-5ms) BEFORE WebSocket connects.
+  // This ensures the first `injectImages()` call already has uiType, profileName,
+  // and profileImage from cache — names and icons appear on first frame.
+  if (raw.isNotEmpty) {
+    final hiveMetas = await _resolveProfileMetaFromHive(raw);
+    for (final e in hiveMetas) {
+      if (e.value.profileImage != null) imageMap[e.key] = e.value.profileImage;
+      if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
+      if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
+    }
+    debugPrint(
+      '[SmartHome] Hive preload for $rootAssetId: '
+      '${hiveMetas.where((e) => e.value.uiType != null).length} uiTypes, '
+      '${hiveMetas.where((e) => e.value.profileImage != null).length} images',
+    );
+  }
 
   // Tracks the most recent WebSocket snapshot so profile-meta resolution can
   // re-emit it (with images injected) instead of the stale raw list.

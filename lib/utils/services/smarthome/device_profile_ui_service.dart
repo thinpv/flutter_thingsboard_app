@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
@@ -67,30 +71,55 @@ class DeviceProfileUiService {
     String? img;
     String? uiType;
     String? profileName;
+    final hiveCache = ProfileMetadataCache.instance;
 
-    try {
-      // Use raw HTTP so we get the `description` field.
-      // SDK DeviceProfileInfo.fromJson does NOT parse description.
-      final response = await _client.get<Map<String, dynamic>>(
-        '/api/deviceProfileInfo/$profileId',
-      );
-      final json = response.data;
-      if (json != null) {
-        img = json['image'] as String?;
+    // 1. Try Hive cache for metadata (uiType + profileName).
+    final cachedMeta = await hiveCache.get(profileId);
+    if (cachedMeta != null && !cachedMeta.isEmpty) {
+      uiType = cachedMeta.uiType == 'auto' ? null : cachedMeta.uiType;
+      profileName = cachedMeta.localizedName('vi');
+    }
 
-        // Parse description with ProfileMetadata.tryParse (handles both
-        // JSON-string and JSON-object formats, tolerant on parse errors).
-        final meta = ProfileMetadata.tryParse(json['description'] as String?);
-        if (!meta.isEmpty) {
-          uiType = meta.uiType == 'auto' ? null : meta.uiType;
-          profileName = meta.localizedName('vi');
+    // 2. Try Hive cache for image URL (stored separately, no TTL).
+    img = await hiveCache.getImage(profileId);
+
+    // 3. If both metadata and image are cached → skip HTTP entirely.
+    if (!((uiType != null || profileName != null) && img != null)) {
+      // Need HTTP: either image missing or metadata missing.
+      try {
+        final response = await _client.get<Map<String, dynamic>>(
+          '/api/deviceProfileInfo/$profileId',
+        );
+        final json = response.data;
+        if (json != null) {
+          // Extract and strip image URL, then cache it.
+          var rawImg = json['image'] as String?;
+          if (rawImg != null) {
+            if (rawImg.startsWith('tb-image;')) {
+              rawImg = rawImg.substring('tb-image;'.length);
+            }
+            img = rawImg;
+            unawaited(hiveCache.putImage(profileId, img!));
+          }
+
+          // Parse + cache description only if metadata was a Hive miss.
+          if (uiType == null && profileName == null) {
+            final rawDesc = json['description'];
+            String? descJson;
+            if (rawDesc is String) {
+              descJson = rawDesc;
+            } else if (rawDesc is Map<String, dynamic>) {
+              descJson = jsonEncode(rawDesc);
+            }
+            final meta = ProfileMetadata.tryParse(descJson);
+            if (!meta.isEmpty) {
+              uiType = meta.uiType == 'auto' ? null : meta.uiType;
+              profileName = meta.localizedName('vi');
+              unawaited(hiveCache.put(profileId, meta));
+            }
+          }
         }
-      }
-    } catch (_) {}
-
-    // Strip tb-image; prefix.
-    if (img != null && img.startsWith('tb-image;')) {
-      img = img.substring('tb-image;'.length);
+      } catch (_) {}
     }
 
     // Fall back to image-filename convention if description.ui_type not set.

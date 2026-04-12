@@ -259,20 +259,32 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
 
   Widget _buildBody() {
     final profileId = widget.device.deviceProfileId ?? '';
+    // uiType ưu tiên: per-device server attr → profile description → device.type
+    String uiType = widget.device.uiType ?? widget.device.type;
+
     if (profileId.isNotEmpty) {
       final metaAsync = ref.watch(deviceProfileMetadataProvider(profileId));
-      // Nếu metadata đã load và có states → dùng DetailComposer
       final meta = metaAsync.valueOrNull;
-      if (meta != null && !meta.isEmpty) {
+
+      // Lấy uiType từ metadata nếu có (không phải 'auto'), kể cả khi states rỗng.
+      // Điều này fix trường hợp device.uiType chưa resolve khi mở trang.
+      if (meta != null && meta.uiType != 'auto') {
+        uiType = meta.uiType;
+      }
+
+      // DetailComposer chỉ dùng khi uiType='auto' (profile mới, chưa có legacy view).
+      // Các uiType cụ thể (smart_plug, light, door_sensor...) luôn dùng legacy view
+      // đã thiết kế kỹ — SmartPlugControl, LightControl, DoorSensorView, v.v.
+      if (meta != null && meta.states.isNotEmpty && uiType == 'auto') {
         return DetailComposer.build(context, meta, widget.device.id);
       }
-      // Loading / error / metadata empty → fallback xuống legacy switch
     }
-    return _buildLegacyBody();
+
+    return _buildLegacyBody(uiType);
   }
 
-  Widget _buildLegacyBody() {
-    return switch (widget.device.effectiveUiType) {
+  Widget _buildLegacyBody(String uiType) {
+    return switch (uiType) {
       'light' => LightControl(telemetry: _telemetry, onRpc: _rpc),
       'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
       'smart_plug' => SmartPlugControl(
