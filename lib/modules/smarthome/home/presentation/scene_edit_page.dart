@@ -4,6 +4,7 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dar
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 
@@ -146,7 +147,8 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
       final svc = HomeService();
       final rooms = await svc.fetchRooms(home.id);
       for (final room in rooms) {
-        final devs = await svc.fetchDevicesInRoom(room.id);
+        final devs = await resolveDeviceProfileMetaFromCache(
+            await svc.fetchDevicesInRoom(room.id));
         for (final d in devs) {
           if (_devices.containsKey(d.id)) {
             if (mounted) setState(() => _deviceInfo[d.id] = d);
@@ -269,10 +271,11 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
     try {
       final svc = HomeService();
       final rooms = await svc.fetchRooms(home.id);
-      final all = <SmarthomeDevice>[];
+      final raw = <SmarthomeDevice>[];
       for (final room in rooms) {
-        all.addAll(await svc.fetchDevicesInRoom(room.id));
+        raw.addAll(await svc.fetchDevicesInRoom(room.id));
       }
+      final all = await resolveDeviceProfileMetaFromCache(raw);
 
       if (!mounted) return;
       final device = await showModalBottomSheet<SmarthomeDevice>(

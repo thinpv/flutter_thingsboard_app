@@ -8,6 +8,7 @@ class SmarthomeDevice {
     required this.name,
     required this.type,
     this.label,
+    this.profileName,
     this.deviceProfileId,
     this.uiType,
     this.profileImage,
@@ -29,6 +30,11 @@ class SmarthomeDevice {
   final String name;
   final String type;
   final String? label;
+
+  /// Localized device type name from profile `description.i18n.vi.name`
+  /// (e.g. "Ổ cắm thông minh"). Populated asynchronously from the profile
+  /// metadata cache — may be null until resolution completes.
+  final String? profileName;
   final String? deviceProfileId;
 
   /// UI type resolved from device server attribute (e.g. "switch", "light").
@@ -41,9 +47,15 @@ class SmarthomeDevice {
   /// Latest telemetry values keyed by short key (e.g. 'onoff0', 'dim', 'temp').
   final Map<String, dynamic> telemetry;
 
-  /// Returns label if set, otherwise falls back to name.
-  String get displayName =>
-      (label != null && label!.isNotEmpty) ? label! : name;
+  /// 3-level display name priority:
+  ///   1. `label`        — TB device label (user-set)
+  ///   2. `profileName`  — from `description.i18n.vi.name` of device profile
+  ///   3. `name`         — TB device name (raw identifier)
+  String get displayName {
+    if (label != null && label!.isNotEmpty) return label!;
+    if (profileName != null && profileName!.isNotEmpty) return profileName!;
+    return name;
+  }
 
   /// Effective UI type: resolved from server attr, else device type.
   String get effectiveUiType => uiType ?? type;
@@ -51,6 +63,7 @@ class SmarthomeDevice {
   SmarthomeDevice copyWith({
     bool? isOnline,
     String? label,
+    String? profileName,
     String? uiType,
     String? profileImage,
     Map<String, dynamic>? telemetry,
@@ -60,6 +73,7 @@ class SmarthomeDevice {
       name: name,
       type: type,
       label: label ?? this.label,
+      profileName: profileName ?? this.profileName,
       deviceProfileId: deviceProfileId,
       uiType: uiType ?? this.uiType,
       profileImage: profileImage ?? this.profileImage,

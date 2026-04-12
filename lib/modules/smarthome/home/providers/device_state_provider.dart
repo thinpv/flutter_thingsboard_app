@@ -91,6 +91,25 @@ Future<List<MapEntry<String, DeviceUiMeta>>> _resolveProfileMetaFromHive(
   })).then((lists) => lists.expand((e) => e).toList());
 }
 
+/// Populates `profileName` and `profileImage` on a list of devices using the
+/// Hive-cached profile metadata. For places that don't subscribe to the live
+/// device stream (e.g. automation device picker) but still need the unified
+/// 3-level display name priority.
+Future<List<SmarthomeDevice>> resolveDeviceProfileMetaFromCache(
+    List<SmarthomeDevice> devices) async {
+  if (devices.isEmpty) return devices;
+  final entries = await _resolveProfileMetaFromHive(devices);
+  final metaById = {for (final e in entries) e.key: e.value};
+  return devices.map((d) {
+    final meta = metaById[d.id];
+    if (meta == null) return d;
+    return d.copyWith(
+      profileName: meta.profileName,
+      profileImage: meta.profileImage,
+    );
+  }).toList();
+}
+
 /// Live device stream backed by a single EntityDataQuery WebSocket
 /// subscription.
 ///
@@ -310,12 +329,12 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
         if (uiTypeMap.containsKey(d.id) && dev.uiType == null) {
           dev = dev.copyWith(uiType: uiTypeMap[d.id]);
         }
-        // Inject profileName as label fallback (lowest priority: label > client
-        // attr `name` handled by WebSocket > profileName).
-        if ((dev.label == null || dev.label!.isEmpty) &&
-            profileNameMap.containsKey(d.id) &&
-            profileNameMap[d.id] != null) {
-          dev = dev.copyWith(label: profileNameMap[d.id]);
+        // Populate profileName field (3-level displayName priority handles
+        // fallback: label > profileName > name).
+        if (profileNameMap.containsKey(d.id) &&
+            profileNameMap[d.id] != null &&
+            dev.profileName != profileNameMap[d.id]) {
+          dev = dev.copyWith(profileName: profileNameMap[d.id]);
         }
         return dev;
       })

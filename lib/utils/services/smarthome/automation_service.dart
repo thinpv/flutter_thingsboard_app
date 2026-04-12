@@ -10,7 +10,7 @@ class AutomationService {
 
   final ThingsboardClient _client;
 
-  static const _serverAttrKey = 'server_automations';
+  static const _serverAttrKey = 'automations';
   static const _ruleIndexKey = 'rule_index';
 
   // ─── Server rules (stored on Home Asset server_attr) ─────────────────────

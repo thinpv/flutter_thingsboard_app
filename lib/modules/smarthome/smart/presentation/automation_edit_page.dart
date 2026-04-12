@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
@@ -186,7 +188,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
   /// Fire-and-forget: load device names for existing rules (edit mode).
   Future<void> _resolveDeviceNamesFromRule(AutomationRule r) async {
-    final home = ref.read(selectedHomeProvider).valueOrNull;
+    final home = await _awaitHome();
     if (home == null) return;
     final ids = {
       ..._conditions
@@ -214,6 +216,20 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
   String _deviceName(String id) =>
       _deviceNames[id] ?? '${id.substring(0, 8)}…';
 
+  Future<SmarthomeHome?> _awaitHome() async {
+    try {
+      final homes = await ref.read(homesProvider.future);
+      if (homes.isEmpty) return null;
+      final selectedId = ref.read(selectedHomeIdProvider);
+      return selectedId == null
+          ? homes.first
+          : homes.firstWhere((h) => h.id == selectedId,
+              orElse: () => homes.first);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ─── Save ────────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
@@ -232,7 +248,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     }
     setState(() => _saving = true);
     try {
-      final home = ref.read(selectedHomeProvider).valueOrNull;
+      final home = await _awaitHome();
       if (home == null) return;
 
       final deviceIds = [
@@ -243,7 +259,8 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
             .where((a) => a.type == 'device' && a.raw['device_id'] != null)
             .map((a) => a.raw['device_id'] as String),
       ];
-      final target = await ExecutionTargetResolver().resolve(deviceIds);
+      final target = await ExecutionTargetResolver()
+          .resolve(deviceIds, homeId: home.id);
 
       final id = widget.rule?.id ?? const Uuid().v4();
       final rule = AutomationRule(
@@ -261,12 +278,31 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       );
 
       final svc = AutomationService();
+
+      // If editing and the execution target changed (gw→server, server→gw,
+      // or gw A→gw B), delete the stale copy from its previous location so
+      // the rule doesn't run twice.
+      final oldTarget = widget.rule?.executionTarget;
+      if (oldTarget != null && oldTarget != target) {
+        if (oldTarget.startsWith('gw:')) {
+          final oldGwId = oldTarget.substring(3);
+          final oldIndex = await svc.fetchGatewayRuleIndex(oldGwId);
+          await svc.deleteGatewayRule(oldGwId, id, oldIndex);
+          ref.invalidate(gatewayRuleIndexProvider(oldGwId));
+        } else if (oldTarget == 'server') {
+          final currentRules = await svc.fetchServerRules(home.id);
+          final pruned = currentRules.where((r) => r.id != id).toList();
+          await svc.saveServerRules(home.id, pruned);
+        }
+      }
+
       if (rule.isGatewayRule) {
         final currentIndex =
             await ref.read(gatewayRuleIndexProvider(rule.gatewayId!).future);
         await svc.saveGatewayRule(rule.gatewayId!, rule, currentIndex);
+        ref.invalidate(gatewayRuleIndexProvider(rule.gatewayId!));
       } else {
-        final currentRules = await ref.read(serverRulesProvider.future);
+        final currentRules = await svc.fetchServerRules(home.id);
         final updated = [
           ...currentRules.where((r) => r.id != id),
           rule,
@@ -275,6 +311,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       }
 
       ref.invalidate(serverRulesProvider);
+      ref.invalidate(allRulesProvider);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -1889,15 +1926,37 @@ class _DevicePickerState extends ConsumerState<_DevicePicker> {
   }
 
   Future<List<SmarthomeDevice>> _loadAll() async {
-    final home = ref.read(selectedHomeProvider).valueOrNull;
+    final home = await _awaitHome();
     if (home == null) return [];
     final svc = HomeService();
     final rooms = await svc.fetchRooms(home.id);
     final all = <SmarthomeDevice>[];
+    final seen = <String>{};
     for (final r in rooms) {
-      all.addAll(await svc.fetchDevicesInRoom(r.id));
+      for (final d in await svc.fetchDevicesInRoom(r.id)) {
+        if (seen.add(d.id)) all.add(d);
+      }
     }
-    return all;
+    for (final d in await svc.fetchDevicesInHome(home.id)) {
+      if (seen.add(d.id)) all.add(d);
+    }
+    // Populate profileName so `displayName` applies the 3-level priority
+    // (label > profileName > name) — same as device cards.
+    return resolveDeviceProfileMetaFromCache(all);
+  }
+
+  Future<SmarthomeHome?> _awaitHome() async {
+    try {
+      final homes = await ref.read(homesProvider.future);
+      if (homes.isEmpty) return null;
+      final selectedId = ref.read(selectedHomeIdProvider);
+      return selectedId == null
+          ? homes.first
+          : homes.firstWhere((h) => h.id == selectedId,
+              orElse: () => homes.first);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -1908,6 +1967,7 @@ class _DevicePickerState extends ConsumerState<_DevicePicker> {
         final devices = snap.data ?? [];
         return DropdownButtonFormField<SmarthomeDevice>(
           value: _selected,
+          isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Thiết bị',
             border: OutlineInputBorder(),
