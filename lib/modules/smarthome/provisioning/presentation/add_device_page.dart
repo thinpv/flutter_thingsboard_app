@@ -199,11 +199,10 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
         .toList();
 
     // Auto-assign unassigned sub-devices to home
+    // (also resolves names + profile images before invalidating home provider)
     await _autoAssignAll(_unassigned);
 
     if (mounted) setState(() {});
-    _resolveNames(_unassigned);
-    _resolveProfileImages(_unassigned);
 
     // Send startScan to all gateways
     for (final gw in _gateways) {
@@ -222,11 +221,13 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
       newFound.addAll(current.where((d) => !initial.contains(d.id)));
     }
     // Auto-assign newly discovered devices
+    // (also resolves names + profile images before invalidating home provider)
     final toAssign = newFound.where((d) => !_assigned.contains(d.id)).toList();
     if (toAssign.isNotEmpty) await _autoAssignAll(toAssign);
     if (mounted) {
       setState(() => _gwFound = newFound);
     }
+    // Resolve names/images for already-assigned devices that might not have been resolved yet
     _resolveNames(newFound);
     _resolveProfileImages(newFound);
   }
@@ -234,13 +235,17 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
   Future<void> _autoAssignAll(List<SmarthomeDevice> devices) async {
     final home = ref.read(selectedHomeProvider).valueOrNull;
     if (home == null) return;
+    bool anyAssigned = false;
     for (final dev in devices) {
       if (_assigned.contains(dev.id)) continue;
       try {
         await _svc.assignToHome(dev.id, home.id);
         _assigned.add(dev.id);
-        ref.invalidate(devicesInHomeProvider(home.id));
+        anyAssigned = true;
       } catch (_) {}
+    }
+    if (anyAssigned) {
+      ref.invalidate(devicesInHomeProvider(home.id));
     }
   }
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_device_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
 
@@ -81,7 +83,7 @@ class HomeHeader extends ConsumerWidget {
           // Add button
           _HeaderIconButton(
             icon: Icons.add,
-            onTap: () => _showAddMenu(context),
+            onTap: () => _showAddMenu(context, ref),
           ),
         ],
       ),
@@ -143,7 +145,7 @@ class HomeHeader extends ConsumerWidget {
     );
   }
 
-  void _showAddMenu(BuildContext context) {
+  void _showAddMenu(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -186,7 +188,17 @@ class HomeHeader extends ConsumerWidget {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const AddDevicePage()));
+                        builder: (_) => const AddDevicePage()),
+                ).then((_) {
+                  final home = ref.read(selectedHomeProvider).valueOrNull;
+                  if (home != null) {
+                    ref.invalidate(devicesInHomeProvider(home.id));
+                    for (final r
+                        in ref.read(roomsProvider).valueOrNull ?? []) {
+                      ref.invalidate(devicesInRoomProvider(r.id));
+                    }
+                  }
+                });
               },
             ),
             ListTile(
