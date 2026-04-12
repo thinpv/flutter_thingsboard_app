@@ -13,6 +13,11 @@ class AutomationService {
   static const _serverAttrKey = 'automations';
   static const _ruleIndexKey = 'rule_index';
 
+  /// Cache of TB device UUID → device name (the name used in
+  /// v1/gateway/connect, e.g. MAC or Zigbee IEEE address).
+  /// Populated on demand by [_resolveDeviceName].
+  final Map<String, String> _deviceNameCache = {};
+
   // ─── Server rules (stored on Home Asset server_attr) ─────────────────────
 
   Future<List<AutomationRule>> fetchServerRules(String homeId) async {
@@ -80,17 +85,24 @@ class AutomationService {
   }
 
   /// Write rule detail FIRST, then update the index.
+  ///
+  /// Before writing, translates every `device_id` (TB UUID) in conditions
+  /// and actions to the device **name** that the gateway knows (the name
+  /// registered via `v1/gateway/connect`). The gateway's DeviceManager is
+  /// keyed by this name, not by TB UUIDs.
   Future<void> saveGatewayRule(
     String gatewayDeviceId,
     AutomationRule rule,
     List<RuleIndexEntry> currentIndex,
   ) async {
     final key = 'rule_${rule.id}';
-    // Step 1: write full rule detail
+    // Step 1: translate device_id → device name for gateway consumption
+    final gwJson = await _toGatewayJson(rule);
+    // Step 2: write full rule detail
     await _client.getAttributeService().saveEntityAttributesV2(
           DeviceId(gatewayDeviceId),
           'SHARED_SCOPE',
-          {key: rule.toJson()},
+          {key: gwJson},
         );
     // Step 2: upsert index entry
     final entry = RuleIndexEntry.fromRule(rule);
@@ -129,5 +141,46 @@ class AutomationService {
           'SHARED_SCOPE',
           {_ruleIndexKey: index.map((e) => e.toJson()).toList()},
         );
+  }
+
+  // ─── device_id → device name translation for gateway rules ────────────────
+
+  Future<String> _resolveDeviceName(String tbDeviceId) async {
+    final cached = _deviceNameCache[tbDeviceId];
+    if (cached != null) return cached;
+    final device = await _client.getDeviceService().getDevice(tbDeviceId);
+    final name = device?.name ?? tbDeviceId;
+    _deviceNameCache[tbDeviceId] = name;
+    return name;
+  }
+
+  /// Produces a gateway-friendly copy of the rule JSON.
+  /// Adds `device_name` (the name registered via v1/gateway/connect) next to
+  /// each `device_id` (TB UUID) so the gateway can look up devices locally.
+  /// Keeps `device_id` intact so the app can still read rules back for editing.
+  Future<Map<String, dynamic>> _toGatewayJson(AutomationRule rule) async {
+    final json = rule.toJson();
+
+    final conditions = json['conditions'] as List<dynamic>? ?? [];
+    for (final c in conditions) {
+      if (c is Map<String, dynamic> &&
+          c['type'] == 'device' &&
+          c['device_id'] != null) {
+        c['device_name'] =
+            await _resolveDeviceName(c['device_id'] as String);
+      }
+    }
+
+    final actions = json['actions'] as List<dynamic>? ?? [];
+    for (final a in actions) {
+      if (a is Map<String, dynamic> &&
+          a['type'] == 'device' &&
+          a['device_id'] != null) {
+        a['device_name'] =
+            await _resolveDeviceName(a['device_id'] as String);
+      }
+    }
+
+    return json;
   }
 }

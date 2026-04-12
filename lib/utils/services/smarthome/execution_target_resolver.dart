@@ -48,6 +48,9 @@ class ExecutionTargetResolver {
     final map = <String, String>{};
     final gateways = await _provisioning.fetchGatewayDevices(homeId ?? '');
     for (final gw in gateways) {
+      // Map the gateway itself so rules referencing gateway telemetry
+      // (e.g. cpu, mem) are recognized as belonging to this gateway.
+      map.putIfAbsent(gw.id, () => gw.id);
       try {
         final relations = await _client.getEntityRelationService().findByFrom(
               DeviceId(gw.id),

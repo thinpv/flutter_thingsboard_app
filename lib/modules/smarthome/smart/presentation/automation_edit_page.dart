@@ -202,12 +202,15 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     try {
       final svc = HomeService();
       final rooms = await svc.fetchRooms(home.id);
+      final all = <SmarthomeDevice>[];
       for (final room in rooms) {
-        final devices = await svc.fetchDevicesInRoom(room.id);
-        for (final d in devices) {
-          if (ids.contains(d.id) && mounted) {
-            setState(() => _deviceNames[d.id] = d.displayName);
-          }
+        all.addAll(await svc.fetchDevicesInRoom(room.id));
+      }
+      all.addAll(await svc.fetchDevicesInHome(home.id));
+      final resolved = await resolveDeviceProfileMetaFromCache(all);
+      for (final d in resolved) {
+        if (ids.contains(d.id) && mounted) {
+          setState(() => _deviceNames[d.id] = d.displayName);
         }
       }
     } catch (_) {}
@@ -387,6 +390,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
                   deviceName: _conditions[i].type == 'device'
                       ? _deviceName(_conditions[i].raw['device_id'] as String? ?? '')
                       : null,
+                  onTap: () => _editCondition(i),
                   onDelete: () =>
                       setState(() => _conditions.removeAt(i)),
                 ),
@@ -414,6 +418,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
                   deviceName: _actions[i].type == 'device'
                       ? _deviceName(_actions[i].raw['device_id'] as String? ?? '')
                       : null,
+                  onTap: () => _editAction(i),
                   onDelete: () =>
                       setState(() => _actions.removeAt(i)),
                 ),
@@ -525,6 +530,71 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
     if (result != null) {
       setState(() => _actions.add(result!));
+      if (result.type == 'device') {
+        final devId = result.raw['device_id'] as String?;
+        final devName = result.raw.remove('_device_name') as String?;
+        if (devId != null && devName != null) {
+          _deviceNames[devId] = devName;
+        }
+      }
+    }
+  }
+
+  // ─── Edit existing condition ──────────────────────────────────────────────
+
+  Future<void> _editCondition(int index) async {
+    final existing = _conditions[index];
+    RuleCondition? result;
+    if (existing.type == 'device') {
+      result = await showModalBottomSheet<RuleCondition>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _DeviceConditionSheet(
+          parentRef: ref,
+          initial: existing,
+        ),
+      );
+    } else if (existing.type == 'timer') {
+      result = await showModalBottomSheet<RuleCondition>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _TimerConditionSheet(initial: existing),
+      );
+    }
+    if (result != null && mounted) {
+      setState(() => _conditions[index] = result!);
+      if (result.type == 'device') {
+        final devId = result.raw['device_id'] as String?;
+        final devName = result.raw.remove('_device_name') as String?;
+        if (devId != null && devName != null) {
+          _deviceNames[devId] = devName;
+        }
+      }
+    }
+  }
+
+  // ─── Edit existing action ────────────────────────────────────────────────
+
+  Future<void> _editAction(int index) async {
+    final existing = _actions[index];
+    RuleAction? result;
+    if (existing.type == 'device') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _DeviceActionSheet(
+          parentRef: ref,
+          initial: existing,
+        ),
+      );
+    } else if (existing.type == 'delay') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        builder: (ctx) => _DelaySheet(initial: existing),
+      );
+    }
+    if (result != null && mounted) {
+      setState(() => _actions[index] = result!);
       if (result.type == 'device') {
         final devId = result.raw['device_id'] as String?;
         final devName = result.raw.remove('_device_name') as String?;
@@ -798,69 +868,80 @@ class _ConditionCard extends StatelessWidget {
     required this.condition,
     required this.onDelete,
     this.deviceName,
+    this.onTap,
   });
   final RuleCondition condition;
   final String? deviceName;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final (icon, color) = _iconColor(condition);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                left: BorderSide(color: color, width: 3),
+              ),
             ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  _conditionTitle(condition),
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                if (deviceName != null || _conditionSubtitle(condition).isNotEmpty)
-                  Text(
-                    [
-                      if (deviceName != null) deviceName!,
-                      if (_conditionSubtitle(condition).isNotEmpty)
-                        _conditionSubtitle(condition),
-                    ].join(' · '),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.55)),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
                   ),
+                  child: Icon(icon, size: 18, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _conditionTitle(condition),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                      if (deviceName != null || _conditionSubtitle(condition).isNotEmpty)
+                        Text(
+                          [
+                            if (deviceName != null) deviceName!,
+                            if (_conditionSubtitle(condition).isNotEmpty)
+                              _conditionSubtitle(condition),
+                          ].join(' · '),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.55)),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.close_rounded,
-                size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
-            onPressed: onDelete,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -892,69 +973,80 @@ class _ActionCard extends StatelessWidget {
     required this.action,
     required this.onDelete,
     this.deviceName,
+    this.onTap,
   });
   final RuleAction action;
   final String? deviceName;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final (icon, color) = _iconColor(action);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                left: BorderSide(color: color, width: 3),
+              ),
             ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  action.type == 'delay'
-                      ? 'Chờ ${_actionSubtitle(action)}'
-                      : (deviceName ?? _actionTitle(action)),
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (action.type == 'device')
-                  Text(
-                    _actionTitle(action),
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.55)),
-                    overflow: TextOverflow.ellipsis,
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
                   ),
+                  child: Icon(icon, size: 18, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        action.type == 'delay'
+                            ? 'Chờ ${_actionSubtitle(action)}'
+                            : (deviceName ?? _actionTitle(action)),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (action.type == 'device')
+                        Text(
+                          _actionTitle(action),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurface.withValues(alpha: 0.55)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.close_rounded,
-                size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
-            onPressed: onDelete,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1349,8 +1441,9 @@ class _TypePickerSheet extends StatelessWidget {
 // ─── Device condition sheet ───────────────────────────────────────────────────
 
 class _DeviceConditionSheet extends ConsumerStatefulWidget {
-  const _DeviceConditionSheet({required this.parentRef});
+  const _DeviceConditionSheet({required this.parentRef, this.initial});
   final WidgetRef parentRef;
+  final RuleCondition? initial;
 
   @override
   ConsumerState<_DeviceConditionSheet> createState() =>
@@ -1364,6 +1457,18 @@ class _DeviceConditionSheetState
   String? _key;
   String _op = '>';
   String _value = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    if (init != null) {
+      _key = init.raw['key'] as String?;
+      _op = init.raw['op'] as String? ?? '>';
+      final v = init.raw['value'];
+      _value = v?.toString() ?? '';
+    }
+  }
 
   static const _defaultKeys = [
     'temp', 'hum', 'onoff0', 'dim', 'pir', 'lux', 'door', 'co2', 'pos',
@@ -1402,8 +1507,28 @@ class _DeviceConditionSheetState
     if (mounted) {
       setState(() {
         _meta = meta;
-        _key = _availableKeys.isNotEmpty ? _availableKeys.first : null;
+        final keys = _availableKeys;
+        if (_key == null || !keys.contains(_key)) {
+          _key = keys.isNotEmpty ? keys.first : null;
+          _syncOpAndValue();
+        } else {
+          final ops = _availableOps;
+          if (!ops.contains(_op)) _op = ops.first;
+        }
       });
+    }
+  }
+
+  void _syncOpAndValue() {
+    final ops = _availableOps;
+    if (!ops.contains(_op)) _op = ops.first;
+    final def = _key != null ? _meta?.states[_key!] : null;
+    if (def?.type == 'bool') {
+      if (_value.isEmpty) _value = '0';
+    } else if (def?.type == 'enum' && def!.enumValues != null && def.enumValues!.isNotEmpty) {
+      if (_value.isEmpty) _value = def.enumValues!.first;
+    } else if (_value.isEmpty && def?.type == 'number') {
+      _value = '0';
     }
   }
 
@@ -1423,15 +1548,19 @@ class _DeviceConditionSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Thêm điều kiện thiết bị',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(widget.initial != null ? 'Sửa điều kiện thiết bị' : 'Thêm điều kiện thiết bị',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
+              initialDeviceId: widget.initial?.raw['device_id'] as String?,
               onSelected: (d) {
                 setState(() {
                   _device = d;
                   _meta = null;
-                  _key = null;
+                  if (widget.initial == null ||
+                      d.id != widget.initial?.raw['device_id']) {
+                    _key = null;
+                  }
                 });
                 _loadMeta(d);
               },
@@ -1450,8 +1579,7 @@ class _DeviceConditionSheetState
                 }).toList(),
                 onChanged: (v) => setState(() {
                   _key = v;
-                  final newOps = _availableOps;
-                  if (!newOps.contains(_op)) _op = newOps.first;
+                  _syncOpAndValue();
                 }),
               ),
               const SizedBox(height: 8),
@@ -1500,7 +1628,7 @@ class _DeviceConditionSheetState
                           },
                     style: FilledButton.styleFrom(
                         backgroundColor: cs.primary),
-                    child: const Text('Thêm'),
+                    child: Text(widget.initial != null ? 'Lưu' : 'Thêm'),
                   ),
                 ),
               ],
@@ -1515,15 +1643,24 @@ class _DeviceConditionSheetState
 // ─── Timer condition sheet ────────────────────────────────────────────────────
 
 class _TimerConditionSheet extends StatefulWidget {
-  const _TimerConditionSheet();
+  const _TimerConditionSheet({this.initial});
+  final RuleCondition? initial;
 
   @override
   State<_TimerConditionSheet> createState() => _TimerConditionSheetState();
 }
 
 class _TimerConditionSheetState extends State<_TimerConditionSheet> {
-  int _days = 127;
-  String _time = '07:00';
+  late int _days;
+  late String _time;
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    _days = init?.raw['days'] as int? ?? 127;
+    _time = init?.raw['time'] as String? ?? '07:00';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1654,8 +1791,9 @@ class _TimerConditionSheetState extends State<_TimerConditionSheet> {
 // ─── Device action sheet ──────────────────────────────────────────────────────
 
 class _DeviceActionSheet extends ConsumerStatefulWidget {
-  const _DeviceActionSheet({required this.parentRef});
+  const _DeviceActionSheet({required this.parentRef, this.initial});
   final WidgetRef parentRef;
+  final RuleAction? initial;
 
   @override
   ConsumerState<_DeviceActionSheet> createState() =>
@@ -1669,6 +1807,18 @@ class _DeviceActionSheetState
   final _data = <String, dynamic>{};
   final _keyCtrl = TextEditingController();
   final _valCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    if (init != null) {
+      final raw = init.raw['data'];
+      if (raw is Map) {
+        _data.addAll(Map<String, dynamic>.from(raw));
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -1689,8 +1839,8 @@ class _DeviceActionSheetState
     if (mounted) {
       setState(() {
         _meta = meta;
-        _data.clear();
-        if (!meta.isEmpty) {
+        // Only populate defaults if data is empty (new action or switched device).
+        if (_data.isEmpty && !meta.isEmpty) {
           for (final e in meta.states.entries) {
             if (e.value.controllable) {
               _data[e.key] = e.value.type == 'bool' ? 1 : 0;
@@ -1716,15 +1866,19 @@ class _DeviceActionSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Thêm hành động thiết bị',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text(widget.initial != null ? 'Sửa hành động thiết bị' : 'Thêm hành động thiết bị',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
+              initialDeviceId: widget.initial?.raw['device_id'] as String?,
               onSelected: (d) {
                 setState(() {
                   _device = d;
                   _meta = null;
-                  _data.clear();
+                  if (widget.initial == null ||
+                      d.id != widget.initial?.raw['device_id']) {
+                    _data.clear();
+                  }
                 });
                 _loadMeta(d);
               },
@@ -1836,14 +1990,21 @@ class _DeviceActionSheetState
 // ─── Delay sheet ──────────────────────────────────────────────────────────────
 
 class _DelaySheet extends StatefulWidget {
-  const _DelaySheet();
+  const _DelaySheet({this.initial});
+  final RuleAction? initial;
 
   @override
   State<_DelaySheet> createState() => _DelaySheetState();
 }
 
 class _DelaySheetState extends State<_DelaySheet> {
-  int _seconds = 30;
+  late int _seconds;
+
+  @override
+  void initState() {
+    super.initState();
+    _seconds = widget.initial?.raw['seconds'] as int? ?? 30;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1907,9 +2068,10 @@ class _DelaySheetState extends State<_DelaySheet> {
 // ─── Shared: Device picker ────────────────────────────────────────────────────
 
 class _DevicePicker extends ConsumerStatefulWidget {
-  const _DevicePicker({required this.onSelected});
+  const _DevicePicker({required this.onSelected, this.initialDeviceId});
 
   final ValueChanged<SmarthomeDevice> onSelected;
+  final String? initialDeviceId;
 
   @override
   ConsumerState<_DevicePicker> createState() => _DevicePickerState();
@@ -1965,6 +2127,20 @@ class _DevicePickerState extends ConsumerState<_DevicePicker> {
       future: _future,
       builder: (ctx, snap) {
         final devices = snap.data ?? [];
+        // Auto-select initial device once loaded.
+        if (_selected == null &&
+            widget.initialDeviceId != null &&
+            devices.isNotEmpty) {
+          final match = devices
+              .where((d) => d.id == widget.initialDeviceId)
+              .firstOrNull;
+          if (match != null) {
+            _selected = match;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              widget.onSelected(match);
+            });
+          }
+        }
         return DropdownButtonFormField<SmarthomeDevice>(
           value: _selected,
           isExpanded: true,

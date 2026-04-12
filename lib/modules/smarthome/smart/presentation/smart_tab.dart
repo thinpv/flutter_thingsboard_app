@@ -341,8 +341,23 @@ class AutomationCard extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () async {
+          // For gateway rules created from rule_index (no conditions/actions),
+          // fetch the full rule detail before opening the editor.
+          var fullRule = rule;
+          final et = rule.executionTarget;
+          if (et != null &&
+              et.startsWith('gw:') &&
+              rule.conditions.isEmpty &&
+              rule.actions.isEmpty) {
+            final gwId = et.substring(3);
+            final detail =
+                await AutomationService().fetchGatewayRule(gwId, rule.id);
+            if (detail != null) fullRule = detail;
+          }
+          if (!context.mounted) return;
           final saved = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(builder: (_) => AutomationEditPage(rule: rule)),
+            MaterialPageRoute(
+                builder: (_) => AutomationEditPage(rule: fullRule)),
           );
           if (saved == true) ref.invalidate(allRulesProvider);
         },
