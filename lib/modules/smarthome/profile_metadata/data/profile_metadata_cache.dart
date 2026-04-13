@@ -90,14 +90,32 @@ class ProfileMetadataCache {
   // ─── Image URL cache ─────────────────────────────────────────────────────
 
   /// Lấy image URL (đã strip prefix "tb-image;") cho profileId.
-  /// Trả về null nếu chưa cache.
+  /// Trả về null nếu chưa cache hoặc đã hết TTL (cùng 24h với metadata).
   Future<String?> getImage(String profileId) async {
-    return _imageBox?.get(profileId);
+    final raw = _imageBox?.get(profileId);
+    if (raw == null) return null;
+    try {
+      final entry = jsonDecode(raw) as Map<String, dynamic>;
+      final ts = entry['ts'] as int;
+      if (DateTime.now().millisecondsSinceEpoch - ts > _ttlMs) {
+        await _imageBox!.delete(profileId);
+        return null;
+      }
+      return entry['url'] as String?;
+    } catch (_) {
+      // Entry cũ không có JSON (format cũ, string thẳng) → xóa
+      await _imageBox?.delete(profileId);
+      return null;
+    }
   }
 
-  /// Lưu image URL vào cache (không TTL — profile image thay đổi rất ít).
+  /// Lưu image URL vào cache với TTL 24h (cùng TTL với metadata).
   Future<void> putImage(String profileId, String imageUrl) async {
-    await _imageBox?.put(profileId, imageUrl);
+    final entry = jsonEncode({
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'url': imageUrl,
+    });
+    await _imageBox?.put(profileId, entry);
   }
 
   /// Xóa image cache của một profile.
@@ -126,7 +144,7 @@ class ProfileMetadataCache {
 
   /// Version cache hiện tại. Tăng lên khi format/source thay đổi để buộc
   /// clear một lần duy nhất trên thiết bị cũ.
-  static const _currentVersion = 2;
+  static const _currentVersion = 3;
   static const _versionKey = '__cache_version__';
 
   /// Xóa cache nếu version cũ hơn [_currentVersion]. Chỉ chạy 1 lần/version.
@@ -135,6 +153,7 @@ class ProfileMetadataCache {
     final stored = int.tryParse(_box!.get(_versionKey) ?? '') ?? 0;
     if (stored < _currentVersion) {
       await _box!.clear();
+      await _imageBox?.clear(); // clear image cache khi format thay đổi
       await _box!.put(_versionKey, '$_currentVersion');
     }
   }

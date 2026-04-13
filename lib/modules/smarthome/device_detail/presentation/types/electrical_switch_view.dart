@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
 /// Energy-metering wall switch — same gang detection as [SwitchControl] but
 /// adds live power monitoring (W/V/A/kWh). Suits products that report relay
 /// state plus electrical readings (e.g. Aqara T1, Lumi ctrl_ln1/2).
+///
+/// [meta] — profile metadata used to determine the authoritative channel count
+/// even when some channels have no telemetry in ThingsBoard yet.
 class ElectricalSwitchView extends StatelessWidget {
   const ElectricalSwitchView({
     required this.telemetry,
     required this.onRpc,
+    this.meta,
     super.key,
   });
   final Map<String, dynamic> telemetry;
   final Future<void> Function(String, Map<String, dynamic>) onRpc;
+  final ProfileMetadata? meta;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final gangs = detectSwitchGangs(telemetry);
+    final gangs = detectSwitchGangs(telemetry, meta: meta);
     final anyOn = gangs.any((g) => isOn(telemetry[g.key]));
     final allOn = gangs.every((g) => isOn(telemetry[g.key]));
 

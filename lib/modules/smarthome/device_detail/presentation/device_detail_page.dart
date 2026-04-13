@@ -301,8 +301,9 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
           onRpc: _rpc,
         ),
       'curtain' => CurtainControl(telemetry: _telemetry, onRpc: _rpc),
-      'switch' => SwitchControl(telemetry: _telemetry, onRpc: _rpc),
-      'electrical_switch' => ElectricalSwitchView(telemetry: _telemetry, onRpc: _rpc),
+      'switch' => SwitchControl(telemetry: _telemetry, onRpc: _rpc, meta: meta),
+      'electrical_switch' =>
+        ElectricalSwitchView(telemetry: _telemetry, onRpc: _rpc, meta: meta),
       'door_sensor' => DoorSensorView(
           deviceId: widget.device.id,
           deviceName: widget.device.displayName,

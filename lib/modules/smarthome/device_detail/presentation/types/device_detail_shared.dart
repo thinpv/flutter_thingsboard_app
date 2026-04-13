@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
 // ─── Helpers (top-level, accessible from all type files) ─────────────────────
 
@@ -35,12 +36,36 @@ num? batLevel(Map<String, dynamic> t) => numVal(t['bat']) ?? numVal(t['pin']);
 /// gateway publishes. Returns the keys in physical order with localized
 /// labels. Always returns at least one entry.
 ///
-/// Recognised conventions:
-///   - Tuya TS0601:    bt, bt2, bt3, bt4
-///   - BLE relay:      rl0..rlN, or single rl
-///   - Zigbee on/off:  onoff0..onoffN
+/// Detected gang list for a multi-channel switch.
+///
+/// Detection priority:
+///   1. [meta] — if profile defines `onoff*` states, use those (authoritative
+///      channel count even if some channels have no telemetry yet).
+///   2. Telemetry keys — fall back to continuous-key scan for each convention:
+///      - Tuya TS0601:    bt, bt2, bt3, bt4
+///      - BLE relay:      rl0..rlN, or single rl
+///      - Zigbee on/off:  onoff0..onoffN
+///
+/// Using [meta] ensures the correct number of buttons is shown from the moment
+/// the profile loads, even if some channels have never changed state and
+/// therefore have no entry in ThingsBoard telemetry yet.
 List<({String key, String label})> detectSwitchGangs(
-    Map<String, dynamic> telemetry) {
+    Map<String, dynamic> telemetry, {ProfileMetadata? meta}) {
+  // ── 1. Profile metadata takes precedence for onoff* channels ──────────────
+  if (meta != null && meta.states.isNotEmpty) {
+    final onoffKeys = meta.states.keys
+        .where((k) => k.startsWith('onoff'))
+        .toList()
+      ..sort();
+    if (onoffKeys.isNotEmpty) {
+      return [
+        for (var i = 0; i < onoffKeys.length; i++)
+          (key: onoffKeys[i], label: 'Nút ${i + 1}'),
+      ];
+    }
+  }
+
+  // ── 2. Telemetry-based detection (fallback when no meta) ──────────────────
   // Tuya TS0601: bt, bt2, bt3, bt4
   if (telemetry.containsKey('bt')) {
     final keys = ['bt'];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
 /// Generic on/off wall switch — auto-adapts to 1/2/3/4-gang layouts using
 /// [WallPlateView]. Detects gangs from any of the supported key conventions
@@ -8,12 +9,22 @@ import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/typ
 ///   - Tuya TS0601:    bt, bt2, bt3, bt4
 ///   - BLE relay:      rl0..rlN, or single rl
 ///   - Zigbee on/off:  onoff0..onoffN
+///
+/// [meta] — profile metadata used to determine the authoritative channel count
+/// even when some channels have no telemetry in ThingsBoard yet.
 class SwitchControl extends StatelessWidget {
-  const SwitchControl({required this.telemetry, required this.onRpc, super.key});
+  const SwitchControl({
+    required this.telemetry,
+    required this.onRpc,
+    this.meta,
+    super.key,
+  });
   final Map<String, dynamic> telemetry;
   final Future<void> Function(String, Map<String, dynamic>) onRpc;
+  final ProfileMetadata? meta;
 
-  List<({String key, String label})> get _gangs => detectSwitchGangs(telemetry);
+  List<({String key, String label})> get _gangs =>
+      detectSwitchGangs(telemetry, meta: meta);
 
   bool _gangOn(String key) => isOn(telemetry[key]);
 
