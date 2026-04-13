@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:thingsboard_app/constants/app_constants.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
@@ -35,20 +39,27 @@ class ProfileMetadataService {
     final cached = await _cache.get(profileId);
     if (cached != null) return cached;
 
-    // 2. Fetch từ TB
+    // 2. Fetch raw JSON trực tiếp — SDK class DeviceProfileInfo.fromJson không
+    //    parse field `description` nên phải đọc từ raw response.
     try {
-      final info =
-          await _tbClient.getDeviceProfileService().getDeviceProfileInfo(profileId);
-      // `description` field được thêm bởi backend patch A-S-2.
-      // Trước khi deploy patch → info.description == null → tryParse trả về empty.
-      final metadata = ProfileMetadata.tryParse(
-        info?.description as String?,
+      final token = _tbClient.getJwtToken() ?? '';
+      final baseUrl = ThingsboardAppConstants.thingsBoardApiEndpoint;
+      final resp = await http.get(
+        Uri.parse('$baseUrl/api/deviceProfileInfo/$profileId'),
+        headers: {'X-Authorization': 'Bearer $token'},
       );
-      await _cache.put(profileId, metadata);
-      return metadata;
-    } catch (_) {
-      return const ProfileMetadata();
-    }
+      if (resp.statusCode == 200) {
+        final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        final description = json['description'] as String?;
+        final metadata = ProfileMetadata.tryParse(description);
+        // Chỉ cache khi parse được data thực sự.
+        if (!metadata.isEmpty) {
+          await _cache.put(profileId, metadata);
+        }
+        return metadata;
+      }
+    } catch (_) {}
+    return const ProfileMetadata();
   }
 
   /// Xóa cache của một profile cụ thể, buộc fetch lại lần sau.

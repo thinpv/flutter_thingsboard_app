@@ -218,6 +218,9 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // profileImage cache: deviceId → image URL (populated by _resolveProfileMeta)
   final imageMap = <String, String?>{};
 
+  // Giữ snapshot cuối cùng từ WS để merge image vào đúng data
+  List<SmarthomeDevice>? lastSnapshot;
+
   // Controller that merges WebSocket updates with profileImage injections.
   final merged = StreamController<List<SmarthomeDevice>>.broadcast();
   onDispose(merged.close);
@@ -228,6 +231,7 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // Forward WebSocket updates, overriding profileImage from our cache.
   wsStream.listen(
     (devices) {
+      lastSnapshot = devices;
       if (merged.isClosed) return;
       if (imageMap.isEmpty) {
         merged.add(devices);
@@ -243,15 +247,33 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
     onDone: () { if (!merged.isClosed) merged.close(); },
   );
 
-  // Resolve profile meta concurrently — re-emit last snapshot with images.
+  // Resolve profile meta concurrently — re-emit LAST WS snapshot với images.
+  // Không dùng `withMeta` trực tiếp vì nó là stale REST data (không có telemetry).
   _resolveProfileMeta(raw).then((withMeta) {
     debugPrint('[SmartHome] profile meta resolved for $rootAssetId: ${withMeta.length} devices');
     if (merged.isClosed) return;
+    int withImage = 0;
     for (final d in withMeta) {
       imageMap[d.id] = d.profileImage;
+      if (d.profileImage != null) withImage++;
     }
-    merged.add(withMeta);
-  }).catchError((_) {});
+    debugPrint('[SmartHome] imageMap populated: ${imageMap.length} entries, $withImage with image, lastSnapshot=${lastSnapshot?.length}');
+    final base = lastSnapshot;
+    if (base != null) {
+      final injected = base
+          .map((d) => imageMap.containsKey(d.id)
+              ? d.copyWith(profileImage: imageMap[d.id])
+              : d)
+          .toList();
+      final injectedCount = injected.where((d) => d.profileImage != null).length;
+      debugPrint('[SmartHome] re-emitting snapshot: ${injected.length} devices, $injectedCount with profileImage');
+      merged.add(injected);
+    } else {
+      debugPrint('[SmartHome] lastSnapshot is null — no re-emit, images will inject via next WS update');
+    }
+  }).catchError((e) {
+    debugPrint('[SmartHome] _resolveProfileMeta error: $e');
+  });
 
   yield* merged.stream;
 }

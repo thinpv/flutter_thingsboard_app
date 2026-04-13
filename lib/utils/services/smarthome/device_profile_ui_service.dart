@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
@@ -151,13 +152,20 @@ class DeviceProfileUiService {
           .getDeviceProfileService()
           .getDeviceProfileInfo(profileId);
       String? image = info?.image;
+      debugPrint('[DeviceProfileUiService] profileId=$profileId raw image=${image == null ? 'null' : image.substring(0, image.length.clamp(0, 60))}');
       // TB stores image as "tb-image;/api/images/..." — extract the URL part.
       if (image != null && image.startsWith('tb-image;')) {
         image = image.substring('tb-image;'.length);
+      } else if (image != null && image.startsWith('data:')) {
+        // Base64 data URI — cannot be used as CachedNetworkImage URL.
+        debugPrint('[DeviceProfileUiService] profileId=$profileId image is base64 data URI, discarding');
+        image = null;
       }
+      debugPrint('[DeviceProfileUiService] profileId=$profileId resolved image=$image');
       _profileImageCache[profileId] = image;
       return image;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[DeviceProfileUiService] profileId=$profileId error: $e');
       _profileImageCache[profileId] = null;
       return null;
     }

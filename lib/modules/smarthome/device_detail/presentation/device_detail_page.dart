@@ -258,6 +258,14 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
   // ─── B-A-6: Route tới DetailComposer nếu profile metadata có states ──────
 
   Widget _buildBody() {
+    // Một số loại thiết bị có UI đặc thù (PTZ, animated lock, reboot...)
+    // cần onRpc/telemetry trực tiếp — DetailComposer không có tham số đó.
+    const legacyOnly = {'camera', 'gateway', 'lock'};
+    final uiType = widget.device.effectiveUiType;
+    if (legacyOnly.contains(uiType)) {
+      return _buildLegacyBody();
+    }
+
     final profileId = widget.device.deviceProfileId ?? '';
     if (profileId.isNotEmpty) {
       final metaAsync = ref.watch(deviceProfileMetadataProvider(profileId));

@@ -97,4 +97,21 @@ class ProfileMetadataCache {
 
   /// Số entry đang cache (kể cả đã hết TTL chưa được dọn).
   int get length => _box?.length ?? 0;
+
+  // ─── Migration ────────────────────────────────────────────────────────────
+
+  /// Version cache hiện tại. Tăng lên khi format/source thay đổi để buộc
+  /// clear một lần duy nhất trên thiết bị cũ.
+  static const _currentVersion = 2;
+  static const _versionKey = '__cache_version__';
+
+  /// Xóa cache nếu version cũ hơn [_currentVersion]. Chỉ chạy 1 lần/version.
+  Future<void> migrateIfNeeded() async {
+    if (!isReady) return;
+    final stored = int.tryParse(_box!.get(_versionKey) ?? '') ?? 0;
+    if (stored < _currentVersion) {
+      await _box!.clear();
+      await _box!.put(_versionKey, '$_currentVersion');
+    }
+  }
 }

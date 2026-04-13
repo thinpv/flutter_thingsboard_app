@@ -4,6 +4,9 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dar
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 
@@ -296,14 +299,12 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
 
   Future<void> _editDeviceState(String deviceId, Map<String, dynamic> state) async {
     final device = _deviceInfo[deviceId];
-    final uiType = device?.effectiveUiType ?? 'unknown';
     final newState = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _StateEditorSheet(
-        deviceName: device?.displayName ?? deviceId.substring(0, 8),
-        uiType: uiType,
+        device: device,
         state: Map.from(state),
       ),
     );
@@ -1064,33 +1065,62 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
 
 // ─── State editor sheet ───────────────────────────────────────────────────────
 
-class _StateEditorSheet extends StatefulWidget {
+class _StateEditorSheet extends ConsumerStatefulWidget {
   const _StateEditorSheet({
-    required this.deviceName,
-    required this.uiType,
+    required this.device,
     required this.state,
   });
 
-  final String deviceName;
-  final String uiType;
+  final SmarthomeDevice? device;
   final Map<String, dynamic> state;
 
   @override
-  State<_StateEditorSheet> createState() => _StateEditorSheetState();
+  ConsumerState<_StateEditorSheet> createState() => _StateEditorSheetState();
 }
 
-class _StateEditorSheetState extends State<_StateEditorSheet> {
+class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
   late Map<String, dynamic> _state;
+  ProfileMetadata? _meta;
+  bool _metaLoading = false;
+
+  String get _uiType => widget.device?.effectiveUiType ?? 'unknown';
+  String get _deviceName => widget.device?.displayName ?? '';
+  bool get _isOn => _state['onoff0'] == 1 || _state['onoff0'] == true;
+  void _setOn(bool v) => setState(() => _state['onoff0'] = v ? 1 : 0);
 
   @override
   void initState() {
     super.initState();
     _state = Map.from(widget.state);
+    _loadMeta();
   }
 
-  bool get _isOn => _state['onoff0'] == 1 || _state['onoff0'] == true;
-
-  void _setOn(bool v) => setState(() => _state['onoff0'] = v ? 1 : 0);
+  Future<void> _loadMeta() async {
+    final profileId = widget.device?.deviceProfileId ?? '';
+    if (profileId.isEmpty) return;
+    setState(() => _metaLoading = true);
+    try {
+      final meta = await ref
+          .read(profileMetadataServiceProvider)
+          .getForProfile(profileId);
+      if (mounted) {
+        setState(() {
+          _meta = meta;
+          _metaLoading = false;
+          // Pre-fill defaults for controllable keys not yet in state
+          if (!meta.isEmpty) {
+            for (final e in meta.states.entries) {
+              if (e.value.controllable && !_state.containsKey(e.key)) {
+                _state[e.key] = e.value.type == 'bool' ? 1 : 0;
+              }
+            }
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _metaLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1099,7 +1129,8 @@ class _StateEditorSheetState extends State<_StateEditorSheet> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 32 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1118,13 +1149,13 @@ class _StateEditorSheetState extends State<_StateEditorSheet> {
           Row(
             children: [
               Icon(
-                _deviceIconFor(widget.uiType),
+                _deviceIconFor(_uiType),
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  widget.deviceName,
+                  _deviceName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1134,7 +1165,15 @@ class _StateEditorSheetState extends State<_StateEditorSheet> {
             ],
           ),
           const SizedBox(height: 20),
-          _buildControls(),
+          if (_metaLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            _buildControls(),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_state),
@@ -1151,7 +1190,26 @@ class _StateEditorSheetState extends State<_StateEditorSheet> {
   }
 
   Widget _buildControls() {
-    return switch (widget.uiType) {
+    // Use metadata if available and has controllable states
+    final meta = _meta;
+    if (meta != null && !meta.isEmpty) {
+      final controllable =
+          meta.states.entries.where((e) => e.value.controllable).toList();
+      if (controllable.isNotEmpty) {
+        return Column(
+          children: controllable
+              .map((e) => _SceneKeyEditor(
+                    stateKey: e.key,
+                    def: e.value,
+                    value: _state[e.key],
+                    onChanged: (v) => setState(() => _state[e.key] = v),
+                  ))
+              .toList(),
+        );
+      }
+    }
+    // Fallback: hardcoded per uiType
+    return switch (_uiType) {
       'light' => _LightControls(
           state: _state,
           isOn: _isOn,
@@ -1168,10 +1226,6 @@ class _StateEditorSheetState extends State<_StateEditorSheet> {
           state: _state,
           onChanged: (s) => setState(() => _state = s),
         ),
-      'smart_plug' ||
-      'switch' ||
-      'electrical_switch' =>
-        _OnOffControl(isOn: _isOn, onToggle: _setOn),
       _ => _OnOffControl(isOn: _isOn, onToggle: _setOn),
     };
   }
@@ -1391,6 +1445,117 @@ class _StepButton extends StatelessWidget {
               ? Theme.of(context).colorScheme.primary
               : Colors.grey.shade400,
         ),
+      ),
+    );
+  }
+}
+
+// ─── Metadata-driven key editor (mirrors _ActionKeyEditor in automation) ──────
+
+class _SceneKeyEditor extends StatefulWidget {
+  const _SceneKeyEditor({
+    required this.stateKey,
+    required this.def,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String stateKey;
+  final StateDef def;
+  final dynamic value;
+  final ValueChanged<dynamic> onChanged;
+
+  @override
+  State<_SceneKeyEditor> createState() => _SceneKeyEditorState();
+}
+
+class _SceneKeyEditorState extends State<_SceneKeyEditor> {
+  late dynamic _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.def.labelDefault ?? widget.stateKey;
+    final unit = widget.def.unit ?? '';
+    final def = widget.def;
+
+    if (def.type == 'bool') {
+      final isOn = _current == 1 || _current == true;
+      return SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: Text(label),
+        value: isOn,
+        onChanged: (v) {
+          setState(() => _current = v ? 1 : 0);
+          widget.onChanged(v ? 1 : 0);
+        },
+      );
+    }
+    if (def.type == 'enum' && def.enumValues != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: DropdownButtonFormField<String>(
+          value: def.enumValues!.contains(_current?.toString())
+              ? _current?.toString()
+              : null,
+          decoration: InputDecoration(
+              labelText: label, border: const OutlineInputBorder()),
+          items: def.enumValues!
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) {
+              setState(() => _current = v);
+              widget.onChanged(v);
+            }
+          },
+        ),
+      );
+    }
+    if (def.type == 'number' && def.range != null) {
+      final range = def.range!;
+      final numCurrent = (_current is num
+              ? (_current as num).toDouble()
+              : double.tryParse('$_current') ?? range.min)
+          .clamp(range.min, range.max);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label: ${numCurrent.round()}$unit',
+              style: const TextStyle(fontSize: 14)),
+          Slider(
+            value: numCurrent,
+            min: range.min,
+            max: range.max,
+            divisions: (range.max - range.min).clamp(1, 100).round(),
+            onChanged: (v) {
+              setState(() => _current = v.round());
+              widget.onChanged(v.round());
+            },
+          ),
+        ],
+      );
+    }
+    // number without range — stepper or text field
+    final ctrl = TextEditingController(text: '$_current');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: ctrl,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+            labelText: label,
+            suffixText: unit,
+            border: const OutlineInputBorder()),
+        onChanged: (v) {
+          _current = num.tryParse(v) ?? v;
+          widget.onChanged(_current);
+        },
       ),
     );
   }
