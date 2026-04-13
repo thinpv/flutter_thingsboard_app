@@ -20,20 +20,25 @@ class ProfileMetadataCache {
   static final instance = ProfileMetadataCache._();
 
   static const _boxName = 'profile_metadata_cache';
+  static const _imageBoxName = 'profile_image_cache';
   static const _ttlMs = 24 * 60 * 60 * 1000; // 24 giờ
 
   Box<String>? _box;
+  Box<String>? _imageBox;
 
   bool get isReady => _box != null && _box!.isOpen;
 
   Future<void> init() async {
     if (isReady) return;
     _box = await Hive.openBox<String>(_boxName);
+    _imageBox = await Hive.openBox<String>(_imageBoxName);
   }
 
   Future<void> close() async {
     await _box?.close();
+    await _imageBox?.close();
     _box = null;
+    _imageBox = null;
   }
 
   // ─── CRUD ────────────────────────────────────────────────────────────────
@@ -79,6 +84,25 @@ class ProfileMetadataCache {
   Future<void> clear() async {
     if (!isReady) return;
     await _box!.clear();
+    await _imageBox?.clear();
+  }
+
+  // ─── Image URL cache ─────────────────────────────────────────────────────
+
+  /// Lấy image URL (đã strip prefix "tb-image;") cho profileId.
+  /// Trả về null nếu chưa cache.
+  Future<String?> getImage(String profileId) async {
+    return _imageBox?.get(profileId);
+  }
+
+  /// Lưu image URL vào cache (không TTL — profile image thay đổi rất ít).
+  Future<void> putImage(String profileId, String imageUrl) async {
+    await _imageBox?.put(profileId, imageUrl);
+  }
+
+  /// Xóa image cache của một profile.
+  Future<void> removeImage(String profileId) async {
+    await _imageBox?.delete(profileId);
   }
 
   /// Trả về map profileId → hash (Dart hashCode của raw JSON string).

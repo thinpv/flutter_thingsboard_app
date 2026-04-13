@@ -22,6 +22,7 @@ import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/typ
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/temp_hum_view.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/detail_composer.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -258,30 +259,40 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
   // ─── B-A-6: Route tới DetailComposer nếu profile metadata có states ──────
 
   Widget _buildBody() {
-    // Một số loại thiết bị có UI đặc thù (PTZ, animated lock, reboot...)
-    // cần onRpc/telemetry trực tiếp — DetailComposer không có tham số đó.
-    const legacyOnly = {'camera', 'gateway', 'lock'};
-    final uiType = widget.device.effectiveUiType;
-    if (legacyOnly.contains(uiType)) {
-      return _buildLegacyBody();
-    }
-
     final profileId = widget.device.deviceProfileId ?? '';
+    // uiType ưu tiên: per-device server attr → profile description → device.type
+    String uiType = widget.device.uiType ?? widget.device.type;
+
     if (profileId.isNotEmpty) {
       final metaAsync = ref.watch(deviceProfileMetadataProvider(profileId));
-      // Nếu metadata đã load và có states → dùng DetailComposer
       final meta = metaAsync.valueOrNull;
-      if (meta != null && !meta.isEmpty) {
+
+      // Lấy uiType từ metadata nếu có (không phải 'auto'), kể cả khi states rỗng.
+      // Điều này fix trường hợp device.uiType chưa resolve khi mở trang.
+      if (meta != null && meta.uiType != 'auto') {
+        uiType = meta.uiType;
+      }
+
+      // DetailComposer chỉ dùng khi uiType='auto' (profile mới, chưa có legacy view).
+      // Các uiType cụ thể (smart_plug, light, door_sensor...) luôn dùng legacy view
+      // đã thiết kế kỹ — SmartPlugControl, LightControl, DoorSensorView, v.v.
+      if (meta != null && meta.states.isNotEmpty && uiType == 'auto') {
         return DetailComposer.build(context, meta, widget.device.id);
       }
-      // Loading / error / metadata empty → fallback xuống legacy switch
+
+      return _buildLegacyBody(uiType, meta: meta);
     }
-    return _buildLegacyBody();
+
+    return _buildLegacyBody(uiType);
   }
 
-  Widget _buildLegacyBody() {
-    return switch (widget.device.effectiveUiType) {
-      'light' => LightControl(telemetry: _telemetry, onRpc: _rpc),
+  Widget _buildLegacyBody(String uiType, {ProfileMetadata? meta}) {
+    return switch (uiType) {
+      'light' => LightControl(
+          telemetry: _telemetry,
+          onRpc: _rpc,
+          meta: meta ?? const ProfileMetadata(),
+        ),
       'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
       'smart_plug' => SmartPlugControl(
           deviceId: widget.device.id,

@@ -61,14 +61,12 @@ class DeviceCard extends ConsumerWidget {
       isOn = CardComposer.resolveIsOn(device, meta);
       showToggle = CardComposer.hasPrimaryToggle(meta);
       fallbackIcon = CardComposer.resolveIcon(device, meta);
-      debugPrint('[DeviceCard] ${device.name}: meta ok, uiType=${meta.uiType}, icon=$fallbackIcon, profileImage=${device.profileImage?.substring(0, (device.profileImage?.length ?? 0).clamp(0, 50))}');
     } else {
       final t = device.telemetry;
       final raw = t['onoff0'] ?? t['bt'];
       isOn = raw == 1 || raw == '1' || raw == true;
       showToggle = _switchableUiTypes.contains(device.effectiveUiType);
       fallbackIcon = _iconFor(device.effectiveUiType);
-      debugPrint('[DeviceCard] ${device.name}: NO meta (metaAsync=${metaAsync?.runtimeType}, isEmpty=${meta?.isEmpty}), effectiveUiType=${device.effectiveUiType}, profileId=$profileId, profileImage=${device.profileImage?.substring(0, (device.profileImage?.length ?? 0).clamp(0, 50))}');
     }
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -277,17 +275,19 @@ class _DeviceIcon extends StatelessWidget {
       final url =
           '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
       final token = getIt<ITbClientService>().client.getJwtToken();
-      debugPrint('[_DeviceIcon] loading image: $url (token=${token != null})');
       inner = CachedNetworkImage(
         imageUrl: url,
         width: 44,
         height: 44,
         fit: BoxFit.contain,
+        fadeInDuration: const Duration(milliseconds: 150),
+        fadeOutDuration: Duration.zero,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
-        placeholder: (_, _) =>
-            Icon(fallbackIcon, size: 40, color: Colors.grey.shade300),
+        // Dùng placeholder trung tính thay vì fallbackIcon để tránh flash
+        // từ icon sai → icon đúng khi image vừa load xong.
+        placeholder: (_, _) => SizedBox(width: 44, height: 44),
         errorWidget: (_, _, _) =>
             Icon(fallbackIcon, size: 40, color: iconColor),
       );
