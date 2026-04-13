@@ -83,6 +83,16 @@ class GatewayView extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
+        const SizedBox(height: 10),
+        _GatewayAction(
+          icon: Icons.sync,
+          label: 'Cập nhật Descriptor thiết bị',
+          color: Colors.teal,
+          onTap: () => _confirmRefreshDescriptor(context),
+          fullWidth: true,
+        ),
+
+        const SizedBox(height: 10),
         _GatewayAction(
           icon: Icons.restart_alt,
           label: 'Khởi động lại Gateway',
@@ -104,6 +114,33 @@ class GatewayView extends StatelessWidget {
     if (v < 60) return Colors.green;
     if (v < 85) return Colors.orange;
     return Colors.red;
+  }
+
+  void _confirmRefreshDescriptor(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cập nhật Descriptor?'),
+        content: const Text(
+          'Gateway sẽ xoá cache descriptor cũ và tải lại từ ThingsBoard. '
+          'Các thiết bị đang online sẽ tự động cập nhật mà không bị ngắt kết nối.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onRpc('refreshDescriptor', {'desc_id': '*'});
+            },
+            child: const Text('Cập nhật', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _confirmReboot(BuildContext context) {

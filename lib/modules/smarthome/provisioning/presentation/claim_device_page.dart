@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
 
@@ -47,26 +48,61 @@ class _ClaimDevicePageState extends ConsumerState<ClaimDevicePage>
     setState(() => _claiming = true);
     try {
       final deviceId = await _svc.claimDevice(name, key);
-
-      // Assign device to current home asset
       final home = ref.read(selectedHomeProvider).valueOrNull;
-      if (home != null) {
-        await _svc.assignToHome(deviceId, home.id);
+      if (home == null) {
+        if (mounted) Navigator.of(context).pop(true);
+        return;
       }
+
+      // For gateways: check if already in another home and offer to transfer.
+      final isGw = await _svc.checkIsGateway(deviceId);
+      if (isGw) {
+        final homes = await ref.read(homesProvider.future);
+        final currentHome = await _svc.findCurrentHome(deviceId, homes);
+
+        if (currentHome != null && currentHome.id != home.id) {
+          if (!mounted) return;
+          final transfer = await _showTransferDialog(currentHome, home);
+          if (!mounted) return;
+          if (transfer == true) {
+            await _svc.transferGatewayToHome(deviceId, home.id);
+            _invalidateDeviceProviders();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Đã chuyển gateway và thiết bị sang "${home.name}".',
+                  ),
+                ),
+              );
+              Navigator.of(context).pop(true);
+            }
+            return;
+          }
+          // User cancelled transfer — still assigned to old home, nothing to do.
+          if (mounted) Navigator.of(context).pop(false);
+          return;
+        }
+      }
+
+      // Normal case: assign to current home.
+      await _svc.assignToHome(deviceId, home.id);
+      _invalidateDeviceProviders();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã thêm "$name" vào nhà${home != null ? ' "${home.name}"' : ''}.')),
+          SnackBar(content: Text('Đã thêm "$name" vào nhà "${home.name}".')),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
-        final msg = e.toString().contains('400')
+        final msg = e.toString().contains('FAILURE') || e.toString().contains('400')
             ? 'Claiming thất bại. Kiểm tra:\n'
               '• Device name đúng chưa (vd: dev_aabbccddeeff)\n'
               '• Thiết bị đã bật chế độ claiming chưa (giữ nút 3-5s)\n'
-              '• Device profile trên TB đã bật "Allow claiming" chưa'
+              '• Device profile trên TB đã bật "Allow claiming" chưa\n'
+              '• Thiết bị có thể đang thuộc nhà của người dùng khác'
             : e.toString();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -79,6 +115,40 @@ class _ClaimDevicePageState extends ConsumerState<ClaimDevicePage>
     } finally {
       if (mounted) setState(() => _claiming = false);
     }
+  }
+
+  /// Shows a dialog asking the user whether to transfer the gateway from
+  /// [fromHome] to [toHome]. Returns true if confirmed, false/null otherwise.
+  Future<bool?> _showTransferDialog(
+    SmarthomeHome fromHome,
+    SmarthomeHome toHome,
+  ) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Gateway đang ở nhà khác'),
+        content: Text(
+          'Gateway này đang thuộc nhà "${fromHome.name}".\n\n'
+          'Chuyển gateway và toàn bộ thiết bị sang nhà "${toHome.name}" không?\n\n'
+          'Các thiết bị sẽ được đặt ở mức nhà, bạn có thể gán phòng sau.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Chuyển'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _invalidateDeviceProviders() {
+    ref.invalidate(homesProvider);
   }
 
   @override
