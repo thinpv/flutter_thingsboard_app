@@ -105,8 +105,30 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     super.dispose();
   }
 
+  final Map<String, DateTime> _lastRpcByKey = {};
+
   Future<void> _rpc(String method, Map<String, dynamic> params) async {
-    await _control.sendOneWayRpc(widget.device.id, method, params);
+    // Debounce per-key: mỗi kênh điều khiển có timer riêng
+    // → bấm onoff0 + onoff1 liên tiếp vẫn được, không bị chặn lẫn nhau
+    final debounceKey = '$method:${(params.keys.toList()..sort()).join(',')}';
+    final now = DateTime.now();
+    final last = _lastRpcByKey[debounceKey];
+    if (last != null && now.difference(last) < const Duration(milliseconds: 300)) {
+      return;
+    }
+    _lastRpcByKey[debounceKey] = now;
+
+    try {
+      await _control.sendOneWayRpc(widget.device.id, method, params);
+    } on Exception catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().contains('409')
+          ? 'Thiết bị không kết nối'
+          : 'Lỗi điều khiển: $e';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+      );
+    }
   }
 
   Future<void> _deleteDevice() async {
