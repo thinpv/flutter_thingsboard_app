@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
@@ -251,9 +250,7 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
-    debugPrint('[SmartHome] devicesInRoomProvider start: roomId=$roomId');
     final raw = await HomeService().fetchDevicesInRoom(roomId);
-    debugPrint('[SmartHome] devicesInRoomProvider fetched ${raw.length} devices for room=$roomId');
     // Yield raw devices immediately so cards appear without waiting for
     // profile image resolution (which can take seconds with many devices).
     // Profile meta resolves concurrently and the WebSocket stream will
@@ -266,9 +263,7 @@ final devicesInRoomProvider =
 final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
-    debugPrint('[SmartHome] devicesInHomeProvider start: homeId=$homeId');
     final raw = await HomeService().fetchDevicesInHome(homeId);
-    debugPrint('[SmartHome] devicesInHomeProvider fetched ${raw.length} devices for home=$homeId');
     yield* _entityDataStreamWithMeta(raw, homeId, ref.onDispose);
   },
 );
@@ -303,11 +298,6 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
       if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
       if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
     }
-    debugPrint(
-      '[SmartHome] Hive preload for $rootAssetId: '
-      '${hiveMetas.where((e) => e.value.uiType != null).length} uiTypes, '
-      '${hiveMetas.where((e) => e.value.profileImage != null).length} images',
-    );
   }
 
   // Tracks the most recent WebSocket snapshot so profile-meta resolution can
@@ -348,6 +338,7 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // and resolve their profile meta on the fly.
   wsStream.listen(
     (devices) {
+      lastSnapshot = devices;
       if (merged.isClosed) return;
       lastSnapshot = devices;
 
@@ -381,7 +372,6 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // When done, re-emit the LATEST WebSocket snapshot (not the stale raw list)
   // so telemetry / online-state / uiType from WebSocket are preserved.
   _resolveProfileMeta(raw).then((entries) {
-    debugPrint('[SmartHome] profile meta resolved for $rootAssetId: ${entries.length} devices');
     if (merged.isClosed) return;
     for (final e in entries) {
       imageMap[e.key] = e.value.profileImage;

@@ -76,7 +76,12 @@ class CardComposer {
     if (iconName != null) {
       return _iconFromName(iconName);
     }
-    return _iconForUiType(device.effectiveUiType);
+    // Prefer meta.uiType (from description JSON — always the correct short key)
+    // over device.effectiveUiType which may be the full TB type string.
+    final type = (meta.uiType != 'auto' && meta.uiType.isNotEmpty)
+        ? meta.uiType
+        : device.effectiveUiType;
+    return _iconForUiType(type);
   }
 
   /// Resolves the primary accent color from metadata hex string.

@@ -28,6 +28,7 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   Hive.registerAdapter(RegionAdapter());
   await ProfileMetadataCache.instance.init();
+  await ProfileMetadataCache.instance.migrateIfNeeded();
   await setUpRootDependencies();
   if (UniversalPlatform.isAndroid) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(

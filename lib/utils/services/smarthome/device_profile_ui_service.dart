@@ -99,7 +99,7 @@ class DeviceProfileUiService {
               rawImg = rawImg.substring('tb-image;'.length);
             }
             img = rawImg;
-            unawaited(hiveCache.putImage(profileId, img!));
+            unawaited(hiveCache.putImage(profileId, img));
           }
 
           // Parse + cache description only if metadata was a Hive miss.
