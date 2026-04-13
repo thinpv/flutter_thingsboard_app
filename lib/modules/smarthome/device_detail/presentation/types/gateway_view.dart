@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: cpu, mem, uptime, dev_cnt
-// RPC: reboot, start_pairing, stop_pairing
+// RPC: reboot, startScan, stopScan
 class GatewayView extends StatelessWidget {
   const GatewayView({required this.telemetry, required this.onRpc, super.key});
   final Map<String, dynamic> telemetry;
@@ -67,7 +67,7 @@ class GatewayView extends StatelessWidget {
                 icon: Icons.bluetooth_searching,
                 label: 'Ghép thiết bị',
                 color: Colors.blue,
-                onTap: () => onRpc('start_pairing', {}),
+                onTap: () => onRpc('startScan', {}),
               ),
             ),
             const SizedBox(width: 10),
@@ -76,7 +76,7 @@ class GatewayView extends StatelessWidget {
                 icon: Icons.bluetooth_disabled,
                 label: 'Dừng ghép',
                 color: Colors.grey,
-                onTap: () => onRpc('stop_pairing', {}),
+                onTap: () => onRpc('stopScan', {}),
               ),
             ),
           ],
