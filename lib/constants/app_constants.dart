@@ -3,12 +3,13 @@ import 'package:thingsboard_app/modules/main/model/navigation_type.dart';
 abstract final class ThingsboardAppConstants {
   static const thingsBoardApiEndpoint = String.fromEnvironment(
     'thingsboardApiEndpoint',
-    defaultValue: 'http://192.168.90.70:8080',
+    defaultValue: 'https://34.142.253.96.nip.io',
   );
-  static const middlewareUrl = String.fromEnvironment(
-    'middlewareUrl',
-    defaultValue: 'http://192.168.90.70:3000',
-  );
+
+  /// Override middleware base URL. Nếu không set (empty), HomeService tự
+  /// derive từ thingsBoardApiEndpoint: same scheme+host + /mpipe.
+  /// Local dev (không qua nginx): dart-define=middlewareUrl=http://localhost:3000
+  static const middlewareUrl = String.fromEnvironment('middlewareUrl');
   static const thingsboardOAuth2CallbackUrlScheme = String.fromEnvironment(
     'thingsboardOAuth2CallbackUrlScheme',
   );

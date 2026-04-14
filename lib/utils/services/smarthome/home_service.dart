@@ -13,14 +13,26 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 class HomeService {
   HomeService()
       : _client = getIt<ITbClientService>().client,
-        _middlewareBase = ThingsboardAppConstants.middlewareUrl;
+        _middlewareBase = _resolveMiddlewareBase();
 
   final ThingsboardClient _client;
   final String _middlewareBase;
 
+  /// Nếu middlewareUrl được set qua dart-define → dùng trực tiếp (local dev).
+  /// Nếu không → derive từ TB endpoint: same scheme+host (strip port) + /smarthome.
+  /// Vì nginx proxy /smarthome/ → middleware và tự strip prefix, paths trong
+  /// _mw() vẫn dùng /assets, /assets/:id, ... không thay đổi.
+  static String _resolveMiddlewareBase() {
+    const explicit = ThingsboardAppConstants.middlewareUrl;
+    if (explicit.isNotEmpty) return explicit;
+    final uri = Uri.parse(ThingsboardAppConstants.thingsBoardApiEndpoint);
+    return '${uri.scheme}://${uri.host}/mpipe';
+  }
+
   static const _homeType = 'smarthome_home';
   static const _roomType = 'smarthome_room';
   static const _containsRelation = 'Contains';
+
 
   // ─── Middleware HTTP helper ──────────────────────────────────────────────────
 
