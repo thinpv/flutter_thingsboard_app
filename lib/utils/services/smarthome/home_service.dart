@@ -19,8 +19,8 @@ class HomeService {
   final String _middlewareBase;
 
   /// Nếu middlewareUrl được set qua dart-define → dùng trực tiếp (local dev).
-  /// Nếu không → derive từ TB endpoint: same scheme+host (strip port) + /smarthome.
-  /// Vì nginx proxy /smarthome/ → middleware và tự strip prefix, paths trong
+  /// Nếu không → derive từ TB endpoint: same scheme+host (strip port) + /mpipe.
+  /// Vì nginx proxy /mpipe/ → middleware và tự strip prefix, paths trong
   /// _mw() vẫn dùng /assets, /assets/:id, ... không thay đổi.
   static String _resolveMiddlewareBase() {
     const explicit = ThingsboardAppConstants.middlewareUrl;
