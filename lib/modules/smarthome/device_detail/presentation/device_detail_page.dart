@@ -14,7 +14,11 @@ import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/typ
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/light_control.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/lock_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/motion_sensor_view.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/ir_ac_control.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/ir_remote_control.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/remote_view.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/rf_fan_control.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/rf_socket_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/smart_plug_control.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/smoke_sensor_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/soil_sensor_view.dart';
@@ -302,7 +306,14 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         return DetailComposer.build(context, meta, widget.device.id);
       }
 
-      return _buildLegacyBody(uiType, meta: meta);
+      // Ưu tiên detailLayout từ profile (là tập hữu hạn widget types) để
+      // routing không phụ thuộc vào uiType cụ thể — cho phép thêm thiết bị
+      // mới mà không cần cập nhật app.
+      final detailLayout = meta?.uiHints?.detailLayout;
+      final routeKey = (detailLayout != null && detailLayout != 'auto')
+          ? detailLayout
+          : uiType;
+      return _buildLegacyBody(routeKey, meta: meta);
     }
 
     return _buildLegacyBody(uiType);
@@ -339,6 +350,40 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       'soil_sensor' => SoilSensorView(telemetry: _telemetry),
       'lock' => LockView(telemetry: _telemetry, onRpc: _rpc),
       'remote' || 'button' || 'scene_switch' => RemoteView(telemetry: _telemetry),
+
+      // IR devices — routing theo detailLayout từ profile (ir_remote | ir_ac).
+      // button_layout lấy từ profile ui_hints, không hardcode trong app.
+      // Profile riêng mỗi loại thiết bị (ir_tv_lg, ir_tv_samsung, ir_fan_generic...)
+      // đều có detail_layout="ir_remote" → route vào đây với button_layout riêng.
+      'ir_remote' => IrRemoteControl(
+          deviceId: widget.device.id,
+          telemetry: _telemetry,
+          onRpc: (method, params) => _rpc(method, params),
+          buttonLayout: meta?.uiHints?.buttonLayout ?? const [],
+        ),
+      'ir_ac' => IrAcControl(
+          deviceName: widget.device.displayName,
+          telemetry: _telemetry,
+          onRpc: (method, params) => _rpc(method, params),
+          minTemp: meta?.uiHints?.irAcConfig?.minTemp ?? 16,
+          maxTemp: meta?.uiHints?.irAcConfig?.maxTemp ?? 30,
+          supportedModes: meta?.uiHints?.irAcConfig?.modes ??
+              const ['cool', 'heat', 'fan', 'dry', 'auto'],
+          supportedFanSpeeds: meta?.uiHints?.irAcConfig?.fanSpeeds ??
+              const ['auto', 'low', 'mid', 'high'],
+        ),
+
+      // RF devices — routing theo detailLayout từ profile
+      'rf_fan' => RfFanControl(
+          telemetry: _telemetry,
+          onRpc: (method, params) => _rpc(method, params),
+        ),
+      'rf_socket' => RfSocketView(
+          telemetry: _telemetry,
+          onRpc: (method, params) => _rpc(method, params),
+        ),
+      'rf_doorbell' => RfDoorbellView(telemetry: _telemetry),
+
       'camera' => CameraView(telemetry: _telemetry, onRpc: _rpc),
       'gateway' => GatewayView(telemetry: _telemetry, onRpc: _rpc),
       _ => _GenericView(telemetry: _telemetry),

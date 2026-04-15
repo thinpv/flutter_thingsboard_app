@@ -1,3 +1,38 @@
+/// Config riêng cho điều hòa IR — đọc từ profile.ui_hints.ir_ac_config.
+class IrAcConfig {
+  const IrAcConfig({
+    this.minTemp = 16,
+    this.maxTemp = 30,
+    this.defaultTemp = 25,
+    this.modes = const ['cool', 'heat', 'fan', 'dry', 'auto'],
+    this.fanSpeeds = const ['auto', 'low', 'mid', 'high'],
+  });
+
+  factory IrAcConfig.fromJson(Map<String, dynamic> json) => IrAcConfig(
+        minTemp: (json['min_temp'] as num?)?.toInt() ?? 16,
+        maxTemp: (json['max_temp'] as num?)?.toInt() ?? 30,
+        defaultTemp: (json['default_temp'] as num?)?.toInt() ?? 25,
+        modes: (json['modes'] as List<dynamic>?)?.map((e) => e as String).toList()
+            ?? const ['cool', 'heat', 'fan', 'dry', 'auto'],
+        fanSpeeds: (json['fan_speeds'] as List<dynamic>?)?.map((e) => e as String).toList()
+            ?? const ['auto', 'low', 'mid', 'high'],
+      );
+
+  final int minTemp;
+  final int maxTemp;
+  final int defaultTemp;
+  final List<String> modes;
+  final List<String> fanSpeeds;
+
+  Map<String, dynamic> toJson() => {
+        'min_temp': minTemp,
+        'max_temp': maxTemp,
+        'default_temp': defaultTemp,
+        'modes': modes,
+        'fan_speeds': fanSpeeds,
+      };
+}
+
 /// Gợi ý bố cục UI cho device card và detail page.
 class UiHints {
   const UiHints({
@@ -8,9 +43,12 @@ class UiHints {
     this.maxPower,
     this.chartKeys = const [],
     this.quickActions = const [],
+    this.buttonLayout = const [],
+    this.irAcConfig,
   });
 
   factory UiHints.fromJson(Map<String, dynamic> json) {
+    final acRaw = json['ir_ac_config'];
     return UiHints(
       primaryState: json['primary_state'] as String?,
       summaryStates: (json['summary_states'] as List<dynamic>?)
@@ -28,6 +66,10 @@ class UiHints {
               ?.map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      buttonLayout: (json['button_layout'] as List<dynamic>?) ?? const [],
+      irAcConfig: acRaw != null
+          ? IrAcConfig.fromJson(acRaw as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -40,7 +82,8 @@ class UiHints {
   /// Layout preset cho device card: 'auto' | 'toggle_with_metrics' | 'sensor'...
   final String cardLayout;
 
-  /// Layout preset cho detail page: 'auto' | 'tabbed'...
+  /// Layout preset cho detail page:
+  ///   'auto' | 'ir_remote' | 'ir_ac' | 'rf_socket' | 'rf_fan' | 'rf_doorbell'
   final String detailLayout;
 
   /// Công suất tối đa (W) — dùng scale progress bar smart plug.
@@ -52,6 +95,14 @@ class UiHints {
   /// Quick action buttons trên card / detail.
   final List<QuickAction> quickActions;
 
+  /// Button layout cho IR/RF remote — đọc từ profile.ui_hints.button_layout
+  /// HOẶC từ sub_binding_{devId} gateway client attr (ưu tiên sau).
+  /// Shape: [{"action":"power","label":"Power","icon":"power_settings_new","row":0,"col":0}]
+  final List<dynamic> buttonLayout;
+
+  /// Config điều hòa — chỉ có khi detailLayout == 'ir_ac'.
+  final IrAcConfig? irAcConfig;
+
   Map<String, dynamic> toJson() => {
         if (primaryState != null) 'primary_state': primaryState,
         'summary_states': summaryStates,
@@ -60,6 +111,8 @@ class UiHints {
         if (maxPower != null) 'max_power': maxPower,
         'chart_keys': chartKeys,
         'quick_actions': quickActions.map((a) => a.toJson()).toList(),
+        if (buttonLayout.isNotEmpty) 'button_layout': buttonLayout,
+        if (irAcConfig != null) 'ir_ac_config': irAcConfig!.toJson(),
       };
 }
 
