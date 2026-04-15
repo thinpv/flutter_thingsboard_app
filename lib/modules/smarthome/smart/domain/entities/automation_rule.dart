@@ -15,6 +15,8 @@ class AutomationRule {
     this.actions = const [],
   });
 
+  /// Deserialise a **server rule** — all fields (name, icon, color, enabled,
+  /// ts) are stored in the rule body itself.
   factory AutomationRule.fromJson(Map<String, dynamic> json) {
     return AutomationRule(
       id: json['id'] as String,
@@ -39,6 +41,37 @@ class AutomationRule {
     );
   }
 
+  /// Deserialise a **gateway rule** by merging:
+  /// - [body]  (`rule_{uuid}` shared attr) — execution data only
+  /// - [index] (`rule_index` entry)        — metadata: name, icon, color, enabled, ts
+  factory AutomationRule.fromGatewayJson(
+    Map<String, dynamic> body,
+    RuleIndexEntry index,
+  ) {
+    return AutomationRule(
+      id: index.id,
+      name: index.name,
+      icon: index.icon,
+      color: index.color,
+      enabled: index.enabled,
+      ts: index.ts,
+      executionTarget: body['execution_target'] as String? ??
+          'gw:${index.id}',
+      schedule: body['schedule'] != null
+          ? RuleSchedule.fromJson(body['schedule'] as Map<String, dynamic>)
+          : null,
+      conditionMatch: body['condition_match'] == 'any'
+          ? ConditionMatch.any
+          : ConditionMatch.all,
+      conditions: (body['conditions'] as List<dynamic>? ?? [])
+          .map((c) => RuleCondition.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      actions: (body['actions'] as List<dynamic>? ?? [])
+          .map((a) => RuleAction.fromJson(a as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
   final String id;
   final String name;
   final String icon;
@@ -58,17 +91,26 @@ class AutomationRule {
   String? get gatewayId =>
       isGatewayRule ? executionTarget.substring(3) : null;
 
-  /// `enabled` is intentionally omitted from the gateway rule body.
-  /// For gateway rules it lives exclusively in `rule_index` (single source of
-  /// truth).  For server rules it is included because the `automations` array
-  /// on the Home Asset has no separate index.
-  Map<String, dynamic> toJson({bool includeEnabled = false}) => {
+  /// Full JSON for **server rules** — includes all metadata fields.
+  Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'icon': icon,
         'color': color,
-        if (includeEnabled) 'enabled': enabled,
+        'enabled': enabled,
         'ts': ts ?? DateTime.now().millisecondsSinceEpoch,
+        'execution_target': executionTarget,
+        if (schedule != null) 'schedule': schedule!.toJson(),
+        'condition_match': conditionMatch == ConditionMatch.any ? 'any' : 'all',
+        'conditions': conditions.map((c) => c.toJson()).toList(),
+        'actions': actions.map((a) => a.toJson()).toList(),
+      };
+
+  /// Minimal JSON for the **gateway rule body** (`rule_{uuid}` shared attr).
+  /// Metadata (name, icon, color, enabled, ts) lives in `rule_index` only —
+  /// no duplication, no sync risk.
+  Map<String, dynamic> toGatewayBodyJson() => {
+        'id': id,
         'execution_target': executionTarget,
         if (schedule != null) 'schedule': schedule!.toJson(),
         'condition_match': conditionMatch == ConditionMatch.any ? 'any' : 'all',

@@ -350,8 +350,9 @@ class AutomationCard extends ConsumerWidget {
               rule.conditions.isEmpty &&
               rule.actions.isEmpty) {
             final gwId = et.substring(3);
-            final detail =
-                await AutomationService().fetchGatewayRule(gwId, rule.id);
+            final indexEntry = RuleIndexEntry.fromRule(rule);
+            final detail = await AutomationService()
+                .fetchGatewayRule(gwId, indexEntry);
             if (detail != null) fullRule = detail;
           }
           if (!context.mounted) return;

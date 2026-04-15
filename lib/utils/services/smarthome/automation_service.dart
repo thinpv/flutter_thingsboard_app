@@ -42,7 +42,7 @@ class AutomationService {
     await _client.getAttributeService().saveEntityAttributesV2(
           AssetId(homeId),
           'SERVER_SCOPE',
-          {_serverAttrKey: rules.map((r) => r.toJson(includeEnabled: true)).toList()},
+          {_serverAttrKey: rules.map((r) => r.toJson()).toList()},
         );
   }
 
@@ -65,11 +65,14 @@ class AutomationService {
         .toList();
   }
 
+  /// Fetch the gateway rule body and merge it with [indexEntry] to produce
+  /// a complete [AutomationRule].  Metadata (name, icon, color, enabled, ts)
+  /// comes from [indexEntry]; execution data comes from the body.
   Future<AutomationRule?> fetchGatewayRule(
     String gatewayDeviceId,
-    String ruleId,
+    RuleIndexEntry indexEntry,
   ) async {
-    final key = 'rule_$ruleId';
+    final key = 'rule_${indexEntry.id}';
     final attrs = await _client.getAttributeService().getAttributesByScope(
           DeviceId(gatewayDeviceId),
           'SHARED_SCOPE',
@@ -78,10 +81,10 @@ class AutomationService {
     if (attrs.isEmpty) return null;
     final raw = attrs.first.getValue();
     if (raw == null) return null;
-    final map = raw is String
+    final body = raw is String
         ? jsonDecode(raw) as Map<String, dynamic>
         : raw as Map<String, dynamic>;
-    return AutomationRule.fromJson(map);
+    return AutomationRule.fromGatewayJson(body, indexEntry);
   }
 
   /// Write rule detail FIRST, then update the index.
@@ -96,8 +99,8 @@ class AutomationService {
     List<RuleIndexEntry> currentIndex,
   ) async {
     final key = 'rule_${rule.id}';
-    // Step 1: translate device_id → device name for gateway consumption
-    final gwJson = await _toGatewayJson(rule);
+    // Step 1: build minimal gateway body (execution data only)
+    final gwJson = await _toGatewayBodyJson(rule);
     // Step 2: write full rule detail
     await _client.getAttributeService().saveEntityAttributesV2(
           DeviceId(gatewayDeviceId),
@@ -182,12 +185,11 @@ class AutomationService {
     return name;
   }
 
-  /// Produces a gateway-friendly copy of the rule JSON.
-  /// Adds `device_name` (the name registered via v1/gateway/connect) next to
-  /// each `device_id` (TB UUID) so the gateway can look up devices locally.
-  /// Keeps `device_id` intact so the app can still read rules back for editing.
-  Future<Map<String, dynamic>> _toGatewayJson(AutomationRule rule) async {
-    final json = rule.toJson();
+  /// Produces the gateway rule body (execution data only — no name/icon/color/
+  /// enabled/ts).  Adds `device_name` next to each `device_id` so the gateway
+  /// can look up devices by the name it registered via v1/gateway/connect.
+  Future<Map<String, dynamic>> _toGatewayBodyJson(AutomationRule rule) async {
+    final json = rule.toGatewayBodyJson();
 
     final conditions = json['conditions'] as List<dynamic>? ?? [];
     for (final c in conditions) {
