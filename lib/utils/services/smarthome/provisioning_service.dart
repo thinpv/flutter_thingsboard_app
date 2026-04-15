@@ -209,6 +209,44 @@ class ProvisioningService {
     return ids;
   }
 
+  // ─── IR / RF device provisioning ──────────────────────────────────────────
+
+  /// Calls addIrRfDevice RPC on the gateway to create a new virtual IR/RF
+  /// sub-device. [template] may be null for a fully-custom device (learn all
+  /// commands manually). Throws on RPC error.
+  Future<String> addIrRfDevice({
+    required String gatewayId,
+    required String protocol,
+    required String deviceType,
+    required String name,
+    String? template,
+  }) async {
+    final params = <String, dynamic>{
+      'protocol': protocol,
+      'device_type': deviceType,
+      'name': name,
+      if (template != null) 'template': template,
+      if (template == null) 'custom': true,
+    };
+
+    final result = await _control.sendTwoWayRpc(
+      gatewayId,
+      'addIrRfDevice',
+      params,
+    );
+
+    final code = result?['code'] ?? result?['params']?['code'];
+    if (code != null && code != 0) {
+      final msg =
+          result?['message'] ?? result?['params']?['message'] ?? 'Unknown error';
+      throw Exception('addIrRfDevice failed ($code): $msg');
+    }
+
+    final subId =
+        result?['sub_device_id'] ?? result?['params']?['sub_device_id'];
+    return subId?.toString() ?? '';
+  }
+
   // ─── Device display name ──────────────────────────────────────────────────
 
   /// Reads the `name` client attribute pushed by the gateway on first connect.
