@@ -42,7 +42,7 @@ class AutomationService {
     await _client.getAttributeService().saveEntityAttributesV2(
           AssetId(homeId),
           'SERVER_SCOPE',
-          {_serverAttrKey: rules.map((r) => r.toJson()).toList()},
+          {_serverAttrKey: rules.map((r) => r.toJson(includeEnabled: true)).toList()},
         );
   }
 
@@ -113,6 +113,34 @@ class AutomationService {
     } else {
       newIndex.add(entry);
     }
+    await saveGatewayRuleIndex(gatewayDeviceId, newIndex);
+  }
+
+  /// Toggle [enabled] on a gateway rule.
+  ///
+  /// Only updates `rule_index` — `enabled` is intentionally NOT stored in the
+  /// rule body (`rule_{uuid}`).  The gateway reads `enabled` exclusively from
+  /// `rule_index`; keeping it out of the body eliminates the two-write
+  /// atomicity problem and `rule_index` becomes the single source of truth.
+  Future<void> toggleGatewayRule(
+    String gatewayDeviceId,
+    String ruleId,
+    bool enabled,
+    List<RuleIndexEntry> currentIndex,
+  ) async {
+    final newIndex = currentIndex
+        .map((e) => e.id == ruleId
+            ? RuleIndexEntry(
+                id: e.id,
+                name: e.name,
+                icon: e.icon,
+                color: e.color,
+                enabled: enabled,
+                ts: e.ts,
+                status: e.status,
+              )
+            : e)
+        .toList();
     await saveGatewayRuleIndex(gatewayDeviceId, newIndex);
   }
 

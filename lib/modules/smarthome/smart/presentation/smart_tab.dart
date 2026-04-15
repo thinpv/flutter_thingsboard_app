@@ -422,20 +422,7 @@ class AutomationCard extends ConsumerWidget {
     if (rule.isGatewayRule) {
       final gwId = rule.gatewayId!;
       final index = await svc.fetchGatewayRuleIndex(gwId);
-      final newIndex = index
-          .map((e) => e.id == rule.id
-              ? RuleIndexEntry(
-                  id: e.id,
-                  name: e.name,
-                  icon: e.icon,
-                  color: e.color,
-                  enabled: enabled,
-                  ts: DateTime.now().millisecondsSinceEpoch,
-                  status: e.status,
-                )
-              : e)
-          .toList();
-      await svc.saveGatewayRuleIndex(gwId, newIndex);
+      await svc.toggleGatewayRule(gwId, rule.id, enabled, index);
     } else {
       final rules = await svc.fetchServerRules(home.id);
       final updated = rules

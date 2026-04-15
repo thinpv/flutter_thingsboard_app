@@ -58,12 +58,16 @@ class AutomationRule {
   String? get gatewayId =>
       isGatewayRule ? executionTarget.substring(3) : null;
 
-  Map<String, dynamic> toJson() => {
+  /// `enabled` is intentionally omitted from the gateway rule body.
+  /// For gateway rules it lives exclusively in `rule_index` (single source of
+  /// truth).  For server rules it is included because the `automations` array
+  /// on the Home Asset has no separate index.
+  Map<String, dynamic> toJson({bool includeEnabled = false}) => {
         'id': id,
         'name': name,
         'icon': icon,
         'color': color,
-        'enabled': enabled,
+        if (includeEnabled) 'enabled': enabled,
         'ts': ts ?? DateTime.now().millisecondsSinceEpoch,
         'execution_target': executionTarget,
         if (schedule != null) 'schedule': schedule!.toJson(),
@@ -72,14 +76,17 @@ class AutomationRule {
         'actions': actions.map((a) => a.toJson()).toList(),
       };
 
-  AutomationRule copyWith({bool? enabled}) {
+  /// [ts] defaults to now (bumps version). Pass [ts] explicitly to preserve the
+  /// current timestamp — useful when only toggling [enabled] so the gateway
+  /// does not treat the body as stale and re-fetch it unnecessarily.
+  AutomationRule copyWith({bool? enabled, int? ts}) {
     return AutomationRule(
       id: id,
       name: name,
       icon: icon,
       color: color,
       enabled: enabled ?? this.enabled,
-      ts: DateTime.now().millisecondsSinceEpoch,
+      ts: ts ?? DateTime.now().millisecondsSinceEpoch,
       executionTarget: executionTarget,
       schedule: schedule,
       conditionMatch: conditionMatch,
