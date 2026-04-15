@@ -1837,17 +1837,7 @@ class _DeviceActionSheetState
         .read(profileMetadataServiceProvider)
         .getForProfile(profileId);
     if (mounted) {
-      setState(() {
-        _meta = meta;
-        // Only populate defaults if data is empty (new action or switched device).
-        if (_data.isEmpty && !meta.isEmpty) {
-          for (final e in meta.states.entries) {
-            if (e.value.controllable) {
-              _data[e.key] = e.value.type == 'bool' ? 1 : 0;
-            }
-          }
-        }
-      });
+      setState(() => _meta = meta);
     }
   }
 
@@ -1891,13 +1881,84 @@ class _DeviceActionSheetState
               if (hasMetaKeys)
                 ..._meta!.states.entries
                     .where((e) => e.value.controllable)
-                    .map((e) => _ActionKeyEditor(
-                          stateKey: e.key,
-                          def: e.value,
-                          value: _data[e.key],
-                          onChanged: (v) =>
-                              setState(() => _data[e.key] = v),
-                        ))
+                    .map((e) {
+                      final key = e.key;
+                      final def = e.value;
+                      final included = _data.containsKey(key);
+                      final label = def.labelDefault ?? _keyLabel(key);
+                      final disabledColor =
+                          Theme.of(context).disabledColor;
+
+                      if (def.type == 'bool') {
+                        final isOn = included &&
+                            (_data[key] == 1 || _data[key] == true);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Checkbox(
+                            value: included,
+                            onChanged: (v) => setState(() {
+                              if (v == true) {
+                                _data[key] = 1;
+                              } else {
+                                _data.remove(key);
+                              }
+                            }),
+                          ),
+                          title: Text(label,
+                              style: TextStyle(
+                                  color:
+                                      included ? null : disabledColor)),
+                          trailing: Switch.adaptive(
+                            value: isOn,
+                            onChanged: included
+                                ? (v) => setState(
+                                    () => _data[key] = v ? 1 : 0)
+                                : null,
+                          ),
+                        );
+                      }
+
+                      // Non-bool types: checkbox to include, value editor below
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity:
+                                ListTileControlAffinity.leading,
+                            dense: true,
+                            title: Text(label,
+                                style: TextStyle(
+                                    color: included
+                                        ? null
+                                        : disabledColor)),
+                            value: included,
+                            onChanged: (v) => setState(() {
+                              if (v == true) {
+                                _data[key] = def.type == 'number'
+                                    ? (def.range?.min.round() ?? 0)
+                                    : '';
+                              } else {
+                                _data.remove(key);
+                              }
+                            }),
+                          ),
+                          if (included)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 16, bottom: 4),
+                              child: _ActionKeyEditor(
+                                stateKey: key,
+                                def: def,
+                                value: _data[key],
+                                onChanged: (v) =>
+                                    setState(() => _data[key] = v),
+                              ),
+                            ),
+                        ],
+                      );
+                    })
               else ...[
                 ..._data.entries.map((e) => ListTile(
                       dense: true,
