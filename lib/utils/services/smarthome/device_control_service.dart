@@ -33,14 +33,21 @@ class DeviceControlService {
   }
 
   /// Two-way RPC — awaits the device response.
+  /// [timeout] in milliseconds (TB server-side timeout, default 10000).
   Future<dynamic> sendTwoWayRpc(
     String deviceId,
     String method,
-    Map<String, dynamic> params,
-  ) {
+    Map<String, dynamic> params, {
+    int? timeout,
+  }) {
+    final body = <String, dynamic>{
+      'method': method,
+      'params': params,
+      if (timeout != null) 'timeout': timeout,
+    };
     return _client.getDeviceService().handleTwoWayDeviceRPCRequest(
           deviceId,
-          {'method': method, 'params': params},
+          body,
         );
   }
 

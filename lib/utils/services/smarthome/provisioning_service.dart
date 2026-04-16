@@ -153,7 +153,11 @@ class ProvisioningService {
   }
 
   /// Searches the current customer's device list for a device with exactly
-  /// [deviceName]. Returns its ID or null if not found.
+  /// [deviceName]. Returns its TB entity ID or null if not found.
+  Future<String?> findDeviceByName(String deviceName) async {
+    return _findCustomerDeviceByName(deviceName);
+  }
+
   Future<String?> _findCustomerDeviceByName(String deviceName) async {
     try {
       final user = await _client.getUserService().getUser();
@@ -213,7 +217,11 @@ class ProvisioningService {
 
   /// Calls addIrRfDevice RPC on the gateway to create a new virtual IR/RF
   /// sub-device. [template] may be null for a fully-custom device (learn all
-  /// commands manually). Throws on RPC error.
+  /// commands manually).
+  ///
+  /// Gateway luôn trả code=0 + sub_device_id. Với predefined device (có template),
+  /// nếu descriptor chưa có trong cache, gateway sẽ tự fetch từ TB và tạo device
+  /// trong background (~1-5s). Device sẽ xuất hiện trên TB khi sẵn sàng.
   Future<String> addIrRfDevice({
     required String gatewayId,
     required String protocol,
@@ -233,6 +241,7 @@ class ProvisioningService {
       gatewayId,
       'addIrRfDevice',
       params,
+      timeout: 15000,
     );
 
     final code = result?['code'] ?? result?['params']?['code'];

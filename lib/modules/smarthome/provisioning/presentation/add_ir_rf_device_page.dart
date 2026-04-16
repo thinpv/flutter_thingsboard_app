@@ -187,7 +187,8 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
     });
 
     try {
-      await _svc.addIrRfDevice(
+      // 1. RPC tạo device trên GW (chờ GW tạo xong mới trả response)
+      final subId = await _svc.addIrRfDevice(
         gatewayId: _selectedGw!.id,
         protocol: _protocol,
         deviceType: _category!.id,
@@ -195,8 +196,16 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
         template: _template!.id,
       );
 
+      // 2. Tìm TB entity ID bằng device name (= subId trên TB)
+      //    và gán vào Home để hiển thị trong danh sách
       final home = ref.read(selectedHomeProvider).valueOrNull;
-      if (home != null) ref.invalidate(devicesInHomeProvider(home.id));
+      if (home != null && subId.isNotEmpty) {
+        final tbEntityId = await _svc.findDeviceByName(subId);
+        if (tbEntityId != null) {
+          await _svc.assignToHome(tbEntityId, home.id);
+        }
+        ref.invalidate(devicesInHomeProvider(home.id));
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
