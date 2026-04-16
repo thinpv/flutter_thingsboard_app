@@ -3,7 +3,7 @@ import 'package:thingsboard_app/modules/main/model/navigation_type.dart';
 abstract final class ThingsboardAppConstants {
   static const thingsBoardApiEndpoint = String.fromEnvironment(
     'thingsboardApiEndpoint',
-    defaultValue: 'https://34.142.253.96.nip.io',
+    defaultValue: 'https://iot.mpipe.org',
   );
 
   /// Override middleware base URL. Nếu không set (empty), HomeService tự
