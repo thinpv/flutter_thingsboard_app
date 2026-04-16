@@ -310,9 +310,17 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       // routing không phụ thuộc vào uiType cụ thể — cho phép thêm thiết bị
       // mới mà không cần cập nhật app.
       final detailLayout = meta?.uiHints?.detailLayout;
-      final routeKey = (detailLayout != null && detailLayout != 'auto')
+      String routeKey = (detailLayout != null && detailLayout != 'auto')
           ? detailLayout
           : uiType;
+      // Fallback: profile cụ thể của IR (ir_tv_lg, ir_tv_samsung, ir_fan_generic…)
+      // đều dùng layout ir_remote. Xử lý trường hợp profile trên ThingsBoard
+      // chưa có ui_hints.detail_layout (nhập trước khi field này được thêm).
+      if (routeKey.startsWith('ir_') &&
+          routeKey != 'ir_remote' &&
+          routeKey != 'ir_ac') {
+        routeKey = 'ir_remote';
+      }
       return _buildLegacyBody(routeKey, meta: meta);
     }
 
