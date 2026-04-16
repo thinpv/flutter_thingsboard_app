@@ -3,15 +3,20 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_brand_page.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_category_page.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_model_page.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_test_page.dart';
+import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
 
-/// Wizard to add a new IR or RF sub-device to a specific gateway.
+/// Wizard thêm thiết bị IR/RF mới.
 ///
-/// Flow:
-///   Step 1 — Choose gateway (required — IR/RF device must be tied to a GW)
-///   Step 2 — Choose protocol (IR / RF) and device category
-///   Step 3 — Choose template or "Custom (học lệnh)"
-///   Step 4 — Enter device name → confirm
+/// Luồng:
+///   Step 1 — Chọn Gateway
+///   Step 2 — Browse catalog (protocol → category → brand → model → thử phím)
+///            hoặc "Tự học" (custom binding)
+///   Step 3 — Đặt tên thiết bị → xác nhận
 class AddIrRfDevicePage extends ConsumerStatefulWidget {
   const AddIrRfDevicePage({super.key});
 
@@ -21,86 +26,29 @@ class AddIrRfDevicePage extends ConsumerStatefulWidget {
 
 class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   final _svc = ProvisioningService();
+  final _codesetSvc = CodesetService();
   final _pageCtrl = PageController();
-  int _step = 0; // 0..3
+  int _step = 0; // 0, 1, 2
 
-  // ── Step 1 state ──
+  // ── Step 1 ──
   List<SmarthomeDevice> _gateways = [];
   bool _loadingGateways = true;
   SmarthomeDevice? _selectedGw;
 
-  // ── Step 2 state ──
-  String _protocol = 'ir'; // 'ir' | 'rf'
-  _DeviceCategory? _category;
+  // ── Step 2 — Catalog state ──
+  // null = chưa chọn, "custom" = tự học
+  CodesetProfile? _selectedProfile;
+  bool _isCustom = false;
+  String _selectedProtocol = 'ir';
+  String? _selectedCategory;
+  CodesetCatalog? _catalog;
+  bool _loadingCatalog = false;
+  String? _catalogError;
 
-  // ── Step 3 state ──
-  _TemplateOption? _template; // null = custom
-
-  // ── Step 4 state ──
+  // ── Step 3 ──
   final _nameCtrl = TextEditingController();
   bool _adding = false;
   String? _addError;
-
-  // ── Template catalogue (matches TB descriptor fixtures) ──
-  static const _irCategories = <_DeviceCategory>[
-    _DeviceCategory('tv',     'TV',          Icons.tv_outlined),
-    _DeviceCategory('ac',     'Điều hòa',    Icons.ac_unit),
-    _DeviceCategory('fan',    'Quạt IR',     Icons.air),
-    _DeviceCategory('custom', 'Khác / Tự học', Icons.more_horiz),
-  ];
-
-  static const _rfCategories = <_DeviceCategory>[
-    _DeviceCategory('fan',      'Quạt RF',    Icons.air),
-    _DeviceCategory('socket',   'Ổ cắm RF',   Icons.electrical_services),
-    _DeviceCategory('doorbell', 'Chuông RF',  Icons.notifications_outlined),
-    _DeviceCategory('custom',   'Khác / Tự học', Icons.more_horiz),
-  ];
-
-  static const _templates = <String, List<_TemplateOption>>{
-    'ir_tv': [
-      _TemplateOption('ir.tv.lg_generic',      'LG (generic)',      'LG TV học mã NEC'),
-      _TemplateOption('ir.tv.samsung_generic',  'Samsung (generic)', 'Samsung TV học mã'),
-      _TemplateOption(null,                     'Tự học (custom)',   'Học toàn bộ lệnh từ remote thật'),
-    ],
-    'ir_ac': [
-      _TemplateOption('ir.ac.lg_generic',      'LG AC',     'Điều hòa LG fixed code'),
-      _TemplateOption('ir.ac.daikin_generic',   'Daikin AC', 'Điều hòa Daikin'),
-      _TemplateOption(null,                     'Tự học (custom)', 'Học từng lệnh'),
-    ],
-    'ir_fan': [
-      _TemplateOption('ir.fan.generic',         'Quạt (generic)', 'Quạt IR học mã NEC'),
-      _TemplateOption(null,                     'Tự học (custom)', 'Học từng lệnh'),
-    ],
-    'ir_custom': [
-      _TemplateOption(null, 'Tự học (custom)', 'Học toàn bộ lệnh từ remote thật'),
-    ],
-    'rf_fan': [
-      _TemplateOption('rf.fan.ev1527_generic',  'EV1527 (generic)', 'Quạt RF 433MHz EV1527 học mã'),
-      _TemplateOption(null,                     'Tự học (custom)',  'Học từng lệnh'),
-    ],
-    'rf_socket': [
-      _TemplateOption('rf.socket.ev1527_generic', 'EV1527 socket', 'Ổ cắm RF EV1527'),
-      _TemplateOption(null,                       'Tự học (custom)', 'Học từng lệnh'),
-    ],
-    'rf_doorbell': [
-      _TemplateOption('rf.doorbell.ev1527_generic', 'EV1527 chuông', 'Chuông RF EV1527'),
-      _TemplateOption(null,                         'Tự học (custom)', 'Học từng lệnh'),
-    ],
-    'rf_custom': [
-      _TemplateOption(null, 'Tự học (custom)', 'Học toàn bộ lệnh từ remote thật'),
-    ],
-  };
-
-  List<_DeviceCategory> get _categories =>
-      _protocol == 'ir' ? _irCategories : _rfCategories;
-
-  List<_TemplateOption> get _currentTemplates {
-    if (_category == null) return [];
-    final key = '${_protocol}_${_category!.id}';
-    return _templates[key] ?? [
-      const _TemplateOption(null, 'Tự học (custom)', 'Học từng lệnh'),
-    ];
-  }
 
   // ─── Init ──────────────────────────────────────────────────────────────────
 
@@ -128,26 +76,49 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
       setState(() {
         _gateways = gws;
         _loadingGateways = false;
-        // Auto-select if only 1 gateway
-        if (gws.length == 1) {
-          _selectedGw = gws.first;
-        }
+        if (gws.length == 1) _selectedGw = gws.first;
       });
     } catch (_) {
       setState(() => _loadingGateways = false);
     }
   }
 
-  // ─── Navigation ────────────────────────────────────────────────────────────
+  Future<void> _loadCatalog(String protocol) async {
+    if (_catalog != null && !_loadingCatalog) {
+      // Đã có catalog, kiểm tra xem có protocol mới không
+      final hasProtocol = _catalog!.profiles.any((p) => p.protocol == protocol);
+      if (hasProtocol) return;
+    }
+
+    setState(() {
+      _loadingCatalog = true;
+      _catalogError = null;
+    });
+
+    try {
+      // Fetch cả 2 protocol cùng lúc để có full catalog
+      final irCatalog = await _codesetSvc.fetchCatalog('ir');
+      final rfCatalog = await _codesetSvc.fetchCatalog('rf');
+      final allProfiles = [...irCatalog.profiles, ...rfCatalog.profiles];
+      setState(() {
+        _catalog = CodesetCatalog(profiles: allProfiles);
+        _loadingCatalog = false;
+      });
+    } catch (e) {
+      setState(() {
+        _catalogError = e.toString();
+        _loadingCatalog = false;
+      });
+    }
+  }
+
+  // ─── Navigation ─────────────────────────────────────────────────────────────
 
   void _next() {
-    if (_step < 3) {
+    if (_step < 2) {
       setState(() => _step++);
-      _pageCtrl.animateToPage(
-        _step,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _pageCtrl.animateToPage(_step,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
       _submit();
     }
@@ -156,11 +127,8 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   void _back() {
     if (_step > 0) {
       setState(() => _step--);
-      _pageCtrl.animateToPage(
-        _step,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _pageCtrl.animateToPage(_step,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
       Navigator.pop(context);
     }
@@ -168,16 +136,113 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
 
   bool get _canProceed => switch (_step) {
         0 => _selectedGw != null,
-        1 => _category != null,
-        2 => _template != null,
-        3 => _nameCtrl.text.trim().isNotEmpty,
+        1 => _selectedProfile != null || _isCustom,
+        2 => _nameCtrl.text.trim().isNotEmpty,
         _ => false,
       };
 
-  // ─── Submit ────────────────────────────────────────────────────────────────
+  // ─── Catalog browsing ────────────────────────────────────────────────────────
+
+  Future<void> _browseCatalog() async {
+    if (_catalog == null) {
+      await _loadCatalog('ir');
+    }
+    if (_catalog == null || !mounted) return;
+
+    // Bước 0+1: chọn protocol + category
+    final catSel = await Navigator.push<CodesetCategorySelection>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CodesetCategoryPage(catalog: _catalog!),
+      ),
+    );
+    if (catSel == null || !mounted) return;
+
+    setState(() {
+      _selectedProtocol = catSel.protocol;
+      _selectedCategory = catSel.category;
+    });
+
+    // Bước 2: chọn brand
+    final brand = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CodesetBrandPage(
+          catalog: _catalog!,
+          protocol: catSel.protocol,
+          category: catSel.category,
+        ),
+      ),
+    );
+    if (brand == null || !mounted) return;
+
+    // Bước 3: chọn model
+    final models =
+        _catalog!.modelsFor(catSel.protocol, catSel.category, brand);
+    final selectedModel = await Navigator.push<CodesetProfile>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CodesetModelPage(
+          models: models,
+          brand: brand,
+          category: catSel.category,
+        ),
+      ),
+    );
+    if (selectedModel == null || !mounted) return;
+
+    // Bước 4: thử phím (nếu profile có button_layout với proto)
+    if (selectedModel.testButtons.isNotEmpty) {
+      final confirmed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CodesetTestPage(
+            profile: selectedModel,
+            gatewayId: _selectedGw!.id,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (confirmed != true) {
+        // User không chọn → quay lại danh sách model
+        return _browseCatalog();
+      }
+    }
+
+    // User đã xác nhận → đặt profile đã chọn
+    setState(() {
+      _selectedProfile = selectedModel;
+      _isCustom = false;
+    });
+
+    // Tự động suggest tên thiết bị
+    if (_nameCtrl.text.isEmpty) {
+      final defaultName = _buildDefaultName(selectedModel);
+      _nameCtrl.text = defaultName;
+    }
+
+    // Tiến sang step đặt tên nếu đang ở step catalog
+    if (_step == 1) _next();
+  }
+
+  String _buildDefaultName(CodesetProfile profile) {
+    final cat = categoryDisplayName(profile.category);
+    final brand = brandDisplayName(profile.brand);
+    return '$brand $cat';
+  }
+
+  void _selectCustom() {
+    setState(() {
+      _isCustom = true;
+      _selectedProfile = null;
+    });
+    if (_step == 1) _next();
+  }
+
+  // ─── Submit ──────────────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
-    if (_selectedGw == null || _category == null || _template == null) return;
+    if (_selectedGw == null) return;
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
 
@@ -187,17 +252,18 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
     });
 
     try {
-      // 1. RPC tạo device trên GW (chờ GW tạo xong mới trả response)
+      final template = _isCustom ? null : _selectedProfile?.profileName;
+      final protocol = _isCustom ? _selectedProtocol : (_selectedProfile?.protocol ?? 'ir');
+      final deviceType = _isCustom ? (_selectedCategory ?? 'custom') : (_selectedProfile?.category ?? 'custom');
+
       final subId = await _svc.addIrRfDevice(
         gatewayId: _selectedGw!.id,
-        protocol: _protocol,
-        deviceType: _category!.id,
+        protocol: protocol,
+        deviceType: deviceType,
         name: name,
-        template: _template!.id,
+        template: template,
       );
 
-      // 2. Tìm TB entity ID bằng device name (= subId trên TB)
-      //    và gán vào Home để hiển thị trong danh sách
       final home = ref.read(selectedHomeProvider).valueOrNull;
       if (home != null && subId.isNotEmpty) {
         final tbEntityId = await _svc.findDeviceByName(subId);
@@ -224,7 +290,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
     }
   }
 
-  // ─── Build ──────────────────────────────────────────────────────────────────
+  // ─── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -238,10 +304,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
       ),
       body: Column(
         children: [
-          // Step indicator
-          _StepIndicator(currentStep: _step, totalSteps: 4),
-
-          // Pages
+          _StepIndicator(currentStep: _step, totalSteps: 3),
           Expanded(
             child: PageView(
               controller: _pageCtrl,
@@ -253,30 +316,24 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
                   selected: _selectedGw,
                   onSelect: (gw) => setState(() => _selectedGw = gw),
                 ),
-                _StepProtocol(
-                  protocol: _protocol,
-                  category: _category,
-                  categories: _categories,
-                  onProtocol: (p) => setState(() {
-                    _protocol = p;
-                    _category = null;
-                    _template = null;
+                _StepCatalog(
+                  selectedProfile: _selectedProfile,
+                  isCustom: _isCustom,
+                  isLoadingCatalog: _loadingCatalog,
+                  catalogError: _catalogError,
+                  onBrowse: _browseCatalog,
+                  onCustom: _selectCustom,
+                  onClear: () => setState(() {
+                    _selectedProfile = null;
+                    _isCustom = false;
                   }),
-                  onCategory: (c) => setState(() {
-                    _category = c;
-                    _template = null;
-                  }),
-                ),
-                _StepTemplate(
-                  templates: _currentTemplates,
-                  selected: _template,
-                  onSelect: (t) => setState(() => _template = t),
                 ),
                 _StepName(
                   controller: _nameCtrl,
-                  protocol: _protocol,
-                  category: _category,
-                  template: _template,
+                  selectedProfile: _selectedProfile,
+                  isCustom: _isCustom,
+                  protocol: _selectedProtocol,
+                  category: _selectedCategory,
                   adding: _adding,
                   error: _addError,
                   onChanged: () => setState(() {}),
@@ -284,26 +341,20 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
               ],
             ),
           ),
-
-          // Bottom navigation
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: FilledButton(
                 onPressed: _canProceed && !_adding ? _next : null,
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
+                    minimumSize: const Size.fromHeight(48)),
                 child: _adding
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(_step == 3 ? 'Thêm thiết bị' : 'Tiếp tục'),
+                            strokeWidth: 2, color: Colors.white))
+                    : Text(_step == 2 ? 'Thêm thiết bị' : 'Tiếp tục'),
               ),
             ),
           ),
@@ -313,7 +364,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   }
 }
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
+// ── Step indicator ───────────────────────────────────────────────────────────
 
 class _StepIndicator extends StatelessWidget {
   const _StepIndicator({required this.currentStep, required this.totalSteps});
@@ -345,7 +396,7 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
-// ─── Step 1: Gateway selection ───────────────────────────────────────────────
+// ── Step 1: Gateway ──────────────────────────────────────────────────────────
 
 class _StepGateway extends StatelessWidget {
   const _StepGateway({
@@ -366,19 +417,18 @@ class _StepGateway extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Chọn Gateway',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
+          Text('Chọn Gateway',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(
-            'Thiết bị IR/RF sẽ được quản lý bởi gateway này.\n'
-            'Đảm bảo gateway đang kết nối và trong tầm phủ sóng.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            'Thiết bị IR/RF sẽ được quản lý bởi gateway này.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 16),
           if (loading)
@@ -393,8 +443,7 @@ class _StepGateway extends StatelessWidget {
                         size: 48, color: Colors.grey.shade400),
                     const SizedBox(height: 12),
                     const Text(
-                      'Không tìm thấy gateway trong nhà.\n'
-                      'Thêm gateway trước khi thêm thiết bị IR/RF.',
+                      'Không tìm thấy gateway trong nhà.',
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -407,7 +456,8 @@ class _StepGateway extends StatelessWidget {
                 value: gw,
                 groupValue: selected,
                 title: Text(gw.displayName),
-                subtitle: Text(gw.id, style: const TextStyle(fontSize: 11)),
+                subtitle:
+                    Text(gw.id, style: const TextStyle(fontSize: 11)),
                 secondary: const Icon(Icons.router_outlined),
                 onChanged: (v) {
                   if (v != null) onSelect(v);
@@ -420,21 +470,25 @@ class _StepGateway extends StatelessWidget {
   }
 }
 
-// ─── Step 2: Protocol + Device category ─────────────────────────────────────
+// ── Step 2: Catalog browsing ─────────────────────────────────────────────────
 
-class _StepProtocol extends StatelessWidget {
-  const _StepProtocol({
-    required this.protocol,
-    required this.category,
-    required this.categories,
-    required this.onProtocol,
-    required this.onCategory,
+class _StepCatalog extends StatelessWidget {
+  const _StepCatalog({
+    required this.selectedProfile,
+    required this.isCustom,
+    required this.isLoadingCatalog,
+    required this.catalogError,
+    required this.onBrowse,
+    required this.onCustom,
+    required this.onClear,
   });
-  final String protocol;
-  final _DeviceCategory? category;
-  final List<_DeviceCategory> categories;
-  final ValueChanged<String> onProtocol;
-  final ValueChanged<_DeviceCategory> onCategory;
+  final CodesetProfile? selectedProfile;
+  final bool isCustom;
+  final bool isLoadingCatalog;
+  final String? catalogError;
+  final VoidCallback onBrowse;
+  final VoidCallback onCustom;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -443,104 +497,144 @@ class _StepProtocol extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text('Chọn loại điều khiển',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
           Text(
-            'Giao thức & Loại thiết bị',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 16),
-
-          // Protocol toggle
-          Row(
-            children: [
-              Expanded(
-                child: _ProtoButton(
-                  label: 'IR (hồng ngoại)',
-                  icon: Icons.sensors,
-                  selected: protocol == 'ir',
-                  onTap: () => onProtocol('ir'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ProtoButton(
-                  label: 'RF (433 MHz)',
-                  icon: Icons.wifi_tethering,
-                  selected: protocol == 'rf',
-                  onTap: () => onProtocol('rf'),
-                ),
-              ),
-            ],
+            'Chọn từ catalog có sẵn hoặc tự học lệnh từ remote thật.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 20),
 
-          Text(
-            'Loại thiết bị',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+          // Đã chọn profile
+          if (selectedProfile != null) ...[
+            _SelectedProfileCard(
+                profile: selectedProfile!, onClear: onClear),
+            const SizedBox(height: 16),
+          ],
+
+          // Nút duyệt catalog
+          if (selectedProfile == null && !isCustom) ...[
+            // Error
+            if (catalogError != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.orange.shade200),
                 ),
+                child: Text(
+                  'Không tải được catalog: $catalogError\n'
+                  'Vẫn có thể dùng chế độ tự học.',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.orange.shade800),
+                ),
+              ),
+
+            // Browse button
+            OutlinedButton.icon(
+              onPressed: isLoadingCatalog ? null : onBrowse,
+              icon: isLoadingCatalog
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child:
+                          CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.search),
+              label: Text(isLoadingCatalog
+                  ? 'Đang tải catalog...'
+                  : 'Tìm remote từ catalog'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            const Row(children: [
+              Expanded(child: Divider()),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Text('hoặc', style: TextStyle(fontSize: 12)),
+              ),
+              Expanded(child: Divider()),
+            ]),
+            const SizedBox(height: 12),
+          ],
+
+          // Custom (tự học)
+          if (!isCustom) ...[
+            _CustomCard(
+              selected: isCustom,
+              onTap: onCustom,
+            ),
+          ] else ...[
+            _CustomCard(selected: true, onTap: onClear),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedProfileCard extends StatelessWidget {
+  const _SelectedProfileCard(
+      {required this.profile, required this.onClear});
+  final CodesetProfile profile;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final brandName = brandDisplayName(profile.brand);
+    final catName = categoryDisplayName(profile.category);
+    final protoName =
+        kProtocolNames[profile.protocol]?['vi'] ?? profile.protocol.toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.settings_remote_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.displayName ?? '$brandName $catName',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '$protoName · $brandName · ${profile.modelId}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                if (profile.buttonLayout.isNotEmpty)
+                  Text(
+                    '${profile.buttonLayout.length} nút đã có sẵn',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade600),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 2.5,
-            children: categories.map((cat) {
-              final selected = category?.id == cat.id;
-              return InkWell(
-                onTap: () => onCategory(cat),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade300,
-                      width: selected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    color: selected
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withValues(alpha: 0.3)
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        cat.icon,
-                        size: 20,
-                        color: selected
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          cat.label,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.close, size: 18),
+            tooltip: 'Chọn lại',
           ),
         ],
       ),
@@ -548,49 +642,60 @@ class _StepProtocol extends StatelessWidget {
   }
 }
 
-class _ProtoButton extends StatelessWidget {
-  const _ProtoButton({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final IconData icon;
+class _CustomCard extends StatelessWidget {
+  const _CustomCard({required this.selected, required this.onTap});
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           border: Border.all(
-            color: selected ? color : Colors.grey.shade300,
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey.shade300,
             width: selected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
           color: selected
-              ? color.withValues(alpha: 0.08)
+              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
               : null,
         ),
-        child: Column(
+        child: Row(
           children: [
-            Icon(icon, color: selected ? color : Colors.grey.shade600),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                color: selected ? color : null,
-              ),
-              textAlign: TextAlign.center,
+            Icon(
+              Icons.school_outlined,
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.orange,
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tự học (Custom)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                  const Text(
+                    'Dạy từng phím từ remote thật sau khi thêm',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            if (selected) const Icon(Icons.check_circle, color: Colors.green),
           ],
         ),
       ),
@@ -598,82 +703,24 @@ class _ProtoButton extends StatelessWidget {
   }
 }
 
-// ─── Step 3: Template selection ───────────────────────────────────────────────
-
-class _StepTemplate extends StatelessWidget {
-  const _StepTemplate({
-    required this.templates,
-    required this.selected,
-    required this.onSelect,
-  });
-  final List<_TemplateOption> templates;
-  final _TemplateOption? selected;
-  final ValueChanged<_TemplateOption> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Chọn template',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Template predefined có sẵn lệnh — chỉ cần ghép và dùng.\n'
-            'Tự học: remote giữ lại từng lệnh sau khi thêm.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-          ),
-          const SizedBox(height: 16),
-          ...templates.map(
-            (t) => RadioListTile<_TemplateOption>(
-              value: t,
-              groupValue: selected,
-              title: Text(t.label),
-              subtitle: Text(t.description,
-                  style: const TextStyle(fontSize: 12)),
-              secondary: Icon(
-                t.id == null
-                    ? Icons.school_outlined
-                    : Icons.verified_outlined,
-                color: t.id == null
-                    ? Colors.orange
-                    : Colors.green,
-              ),
-              onChanged: (v) {
-                if (v != null) onSelect(v);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Step 4: Name entry + confirmation ───────────────────────────────────────
+// ── Step 3: Name ─────────────────────────────────────────────────────────────
 
 class _StepName extends StatelessWidget {
   const _StepName({
     required this.controller,
+    required this.selectedProfile,
+    required this.isCustom,
     required this.protocol,
     required this.category,
-    required this.template,
     required this.adding,
     required this.error,
     required this.onChanged,
   });
   final TextEditingController controller;
+  final CodesetProfile? selectedProfile;
+  final bool isCustom;
   final String protocol;
-  final _DeviceCategory? category;
-  final _TemplateOption? template;
+  final String? category;
   final bool adding;
   final String? error;
   final VoidCallback onChanged;
@@ -685,19 +732,21 @@ class _StepName extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Đặt tên thiết bị',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
+          Text('Đặt tên thiết bị',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
-          // Summary card
+          // Summary
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -705,15 +754,23 @@ class _StepName extends StatelessWidget {
               children: [
                 _SummaryRow(
                   label: 'Giao thức',
-                  value: protocol.toUpperCase(),
+                  value: (kProtocolNames[selectedProfile?.protocol ?? protocol]
+                              ?['vi'] ??
+                          protocol.toUpperCase()),
                 ),
-                if (category != null)
-                  _SummaryRow(label: 'Loại', value: category!.label),
-                if (template != null)
+                if (selectedProfile != null) ...[
                   _SummaryRow(
-                    label: 'Template',
-                    value: template!.id ?? 'Tự học',
+                    label: 'Loại',
+                    value: categoryDisplayName(selectedProfile!.category),
                   ),
+                  _SummaryRow(
+                    label: 'Remote',
+                    value: selectedProfile!.displayName ??
+                        '${brandDisplayName(selectedProfile!.brand)} (${selectedProfile!.modelId})',
+                  ),
+                ] else if (isCustom)
+                  const _SummaryRow(
+                      label: 'Chế độ', value: 'Tự học'),
               ],
             ),
           ),
@@ -743,12 +800,14 @@ class _StepName extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red.shade700, size: 18),
+                  Icon(Icons.error_outline,
+                      color: Colors.red.shade700, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       error!,
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                      style: TextStyle(
+                          color: Colors.red.shade700, fontSize: 13),
                     ),
                   ),
                 ],
@@ -756,7 +815,7 @@ class _StepName extends StatelessWidget {
             ),
           ],
 
-          if (template?.id == null) ...[
+          if (isCustom) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(10),
@@ -765,15 +824,15 @@ class _StepName extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: Colors.orange.shade200),
               ),
-              child: Row(
+              child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      'Chế độ tự học: sau khi thêm thiết bị, vào trang '
-                      'điều khiển và nhấn nút học lệnh để dạy từng phím từ remote thật.',
+                      'Chế độ tự học: sau khi thêm, vào trang điều khiển '
+                      'và ấn nút học lệnh để dạy từng phím từ remote thật.',
                       style: TextStyle(fontSize: 13),
                     ),
                   ),
@@ -787,12 +846,13 @@ class _StepName extends StatelessWidget {
   }
 
   String get _hint {
-    if (category == null) return 'VD: TV phòng khách';
-    return switch (category!.id) {
+    final cat = selectedProfile?.category ?? category;
+    if (cat == null) return 'VD: Remote phòng khách';
+    return switch (cat) {
       'tv'       => 'VD: TV phòng khách',
       'ac'       => 'VD: Điều hòa phòng ngủ',
       'fan'      => 'VD: Quạt phòng khách',
-      'socket'   => 'VD: Ổ cắm đèn ngủ',
+      'switch'   => 'VD: Công tắc đèn',
       'doorbell' => 'VD: Chuông cửa chính',
       _          => 'VD: Remote ${protocol.toUpperCase()}',
     };
@@ -812,40 +872,16 @@ class _SummaryRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 70,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-            ),
+            child: Text(label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ],
       ),
     );
   }
-}
-
-// ─── Data classes ─────────────────────────────────────────────────────────────
-
-class _DeviceCategory {
-  const _DeviceCategory(this.id, this.label, this.icon);
-  final String id;
-  final String label;
-  final IconData icon;
-}
-
-class _TemplateOption {
-  const _TemplateOption(this.id, this.label, this.description);
-  // id == null means "custom" (no predefined template)
-  final String? id;
-  final String label;
-  final String description;
 }
