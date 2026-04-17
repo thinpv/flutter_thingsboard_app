@@ -1,6 +1,6 @@
 // C-A-12: Regression test — automation rule với 5 device type khác nhau.
-// Verify: build → toJson → fromJson round-trip, execution_target, schedule,
-// condition_match, enabled flag, và tap-to-run (0 conditions).
+// Verify: build → toJson → fromJson round-trip, executionTarget, schedule,
+// conditionMatch, enabled flag, và tap-to-run (0 conditions).
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -41,7 +41,7 @@ AutomationRule _lightRule() => AutomationRule(
       conditions: [
         RuleCondition(raw: {
           'type': 'device',
-          'device_id': 'motion-sensor-001',
+          'deviceId': 'motion-sensor-001',
           'key': 'pir',
           'op': '==',
           'value': 1,
@@ -50,7 +50,7 @@ AutomationRule _lightRule() => AutomationRule(
       actions: [
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'light-001',
+          'deviceId': 'light-001',
           'data': {'onoff0': 1, 'dim': 80},
         }),
       ],
@@ -68,7 +68,7 @@ AutomationRule _smartPlugRule() => AutomationRule(
       conditions: [
         RuleCondition(raw: {
           'type': 'device',
-          'device_id': 'smart-plug-001',
+          'deviceId': 'smart-plug-001',
           'key': 'power',
           'op': '>',
           'value': 2500,
@@ -77,7 +77,7 @@ AutomationRule _smartPlugRule() => AutomationRule(
       actions: [
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'smart-plug-001',
+          'deviceId': 'smart-plug-001',
           'data': {'onoff0': 0},
         }),
         RuleAction(raw: {
@@ -105,14 +105,14 @@ AutomationRule _tempHumRule() => AutomationRule(
       conditions: [
         RuleCondition(raw: {
           'type': 'device',
-          'device_id': 'sensor-temphum-001',
+          'deviceId': 'sensor-temphum-001',
           'key': 'temp',
           'op': '>',
           'value': 29,
         }),
         RuleCondition(raw: {
           'type': 'device',
-          'device_id': 'sensor-temphum-001',
+          'deviceId': 'sensor-temphum-001',
           'key': 'hum',
           'op': '>',
           'value': 70,
@@ -121,7 +121,7 @@ AutomationRule _tempHumRule() => AutomationRule(
       actions: [
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'ac-001',
+          'deviceId': 'ac-001',
           'data': {'onoff0': 1, 'cool_sp': 25},
         }),
       ],
@@ -147,7 +147,7 @@ AutomationRule _acRule() => AutomationRule(
       actions: [
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'ac-001',
+          'deviceId': 'ac-001',
           'data': {'onoff0': 0},
         }),
       ],
@@ -167,7 +167,7 @@ AutomationRule _curtainRule() => AutomationRule(
       actions: [
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'curtain-001',
+          'deviceId': 'curtain-001',
           'data': {'pos': 80},
         }),
         RuleAction(raw: {
@@ -176,7 +176,7 @@ AutomationRule _curtainRule() => AutomationRule(
         }),
         RuleAction(raw: {
           'type': 'device',
-          'device_id': 'light-001',
+          'deviceId': 'light-001',
           'data': {'onoff0': 1, 'dim': 30, 'ct': 300},
         }),
       ],
@@ -259,7 +259,7 @@ void main() {
     });
   });
 
-  group('AutomationRule — execution_target', () {
+  group('AutomationRule — executionTarget', () {
     test('isGatewayRule true for gw: prefix', () {
       expect(_lightRule().isGatewayRule, isTrue);
       expect(_lightRule().gatewayId, 'gw-home-001');
@@ -270,21 +270,21 @@ void main() {
       expect(_smartPlugRule().gatewayId, isNull);
     });
 
-    test('execution_target preserved exactly in toJson', () {
+    test('executionTarget preserved exactly in toJson', () {
       final json = _lightRule().toJson();
-      expect(json['execution_target'], 'gw:gw-home-001');
+      expect(json['executionTarget'], 'gw:gw-home-001');
     });
   });
 
-  group('AutomationRule — condition_match serialization', () {
+  group('AutomationRule — conditionMatch serialization', () {
     test('ConditionMatch.all → "all" in JSON', () {
       final json = _smartPlugRule().toJson();
-      expect(json['condition_match'], 'all');
+      expect(json['conditionMatch'], 'all');
     });
 
     test('ConditionMatch.any → "any" in JSON', () {
       final json = _lightRule().toJson();
-      expect(json['condition_match'], 'any');
+      expect(json['conditionMatch'], 'any');
     });
 
     test('"any" string → ConditionMatch.any on fromJson', () {
@@ -297,7 +297,7 @@ void main() {
     test('all top-level keys present for light rule', () {
       final json = _lightRule().toJson();
       for (final key in ['id', 'name', 'icon', 'color', 'enabled',
-          'ts', 'execution_target', 'condition_match',
+          'ts', 'executionTarget', 'conditionMatch',
           'conditions', 'actions']) {
         expect(json.containsKey(key), isTrue, reason: 'missing key: $key');
       }
@@ -306,7 +306,7 @@ void main() {
     test('device condition has required keys', () {
       final cond = _lightRule().conditions.first.toJson();
       expect(cond['type'], 'device');
-      expect(cond.containsKey('device_id'), isTrue);
+      expect(cond.containsKey('deviceId'), isTrue);
       expect(cond.containsKey('key'), isTrue);
       expect(cond.containsKey('op'), isTrue);
       expect(cond.containsKey('value'), isTrue);
@@ -324,12 +324,12 @@ void main() {
       expect(action['seconds'], isA<int>());
     });
 
-    test('schedule uses time_from/time_to keys (not timeFrom/timeTo)', () {
+    test('schedule uses timeFrom/timeTo keys (not time_from/time_to)', () {
       final json = _tempHumRule().toJson();
       final schedule = json['schedule'] as Map;
-      expect(schedule.containsKey('time_from'), isTrue);
-      expect(schedule.containsKey('time_to'), isTrue);
-      expect(schedule.containsKey('timeFrom'), isFalse);
+      expect(schedule.containsKey('timeFrom'), isTrue);
+      expect(schedule.containsKey('timeTo'), isTrue);
+      expect(schedule.containsKey('time_from'), isFalse);
     });
   });
 

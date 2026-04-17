@@ -195,9 +195,9 @@ class AutomationService {
     for (final c in conditions) {
       if (c is Map<String, dynamic> &&
           c['type'] == 'device' &&
-          c['device_id'] != null) {
+          c['deviceId'] != null) {
         c['device_name'] =
-            await _resolveDeviceName(c['device_id'] as String);
+            await _resolveDeviceName(c['deviceId'] as String);
       }
     }
 
@@ -205,9 +205,9 @@ class AutomationService {
     for (final a in actions) {
       if (a is Map<String, dynamic> &&
           a['type'] == 'device' &&
-          a['device_id'] != null) {
+          a['deviceId'] != null) {
         a['device_name'] =
-            await _resolveDeviceName(a['device_id'] as String);
+            await _resolveDeviceName(a['deviceId'] as String);
       }
     }
 

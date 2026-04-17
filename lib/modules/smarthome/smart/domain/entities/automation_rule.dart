@@ -21,7 +21,7 @@ class AutomationRule {
     return AutomationRule(
       id: json['id'] as String,
       name: json['name'] as String,
-      executionTarget: json['execution_target'] as String,
+      executionTarget: json['executionTarget'] as String,
       icon: json['icon'] as String? ?? 'auto_awesome',
       color: json['color'] as String? ?? '#2196F3',
       enabled: json['enabled'] as bool? ?? true,
@@ -29,7 +29,7 @@ class AutomationRule {
       schedule: json['schedule'] != null
           ? RuleSchedule.fromJson(json['schedule'] as Map<String, dynamic>)
           : null,
-      conditionMatch: json['condition_match'] == 'any'
+      conditionMatch: json['conditionMatch'] == 'any'
           ? ConditionMatch.any
           : ConditionMatch.all,
       conditions: (json['conditions'] as List<dynamic>? ?? [])
@@ -55,12 +55,12 @@ class AutomationRule {
       color: index.color,
       enabled: index.enabled,
       ts: index.ts,
-      executionTarget: body['execution_target'] as String? ??
+      executionTarget: body['executionTarget'] as String? ??
           'gw:${index.id}',
       schedule: body['schedule'] != null
           ? RuleSchedule.fromJson(body['schedule'] as Map<String, dynamic>)
           : null,
-      conditionMatch: body['condition_match'] == 'any'
+      conditionMatch: body['conditionMatch'] == 'any'
           ? ConditionMatch.any
           : ConditionMatch.all,
       conditions: (body['conditions'] as List<dynamic>? ?? [])
@@ -99,9 +99,9 @@ class AutomationRule {
         'color': color,
         'enabled': enabled,
         'ts': ts ?? DateTime.now().millisecondsSinceEpoch,
-        'execution_target': executionTarget,
+        'executionTarget': executionTarget,
         if (schedule != null) 'schedule': schedule!.toJson(),
-        'condition_match': conditionMatch == ConditionMatch.any ? 'any' : 'all',
+        'conditionMatch': conditionMatch == ConditionMatch.any ? 'any' : 'all',
         'conditions': conditions.map((c) => c.toJson()).toList(),
         'actions': actions.map((a) => a.toJson()).toList(),
       };
@@ -111,9 +111,9 @@ class AutomationRule {
   /// no duplication, no sync risk.
   Map<String, dynamic> toGatewayBodyJson() => {
         'id': id,
-        'execution_target': executionTarget,
+        'executionTarget': executionTarget,
         if (schedule != null) 'schedule': schedule!.toJson(),
-        'condition_match': conditionMatch == ConditionMatch.any ? 'any' : 'all',
+        'conditionMatch': conditionMatch == ConditionMatch.any ? 'any' : 'all',
         'conditions': conditions.map((c) => c.toJson()).toList(),
         'actions': actions.map((a) => a.toJson()).toList(),
       };
@@ -152,8 +152,8 @@ class RuleSchedule {
   factory RuleSchedule.fromJson(Map<String, dynamic> json) {
     return RuleSchedule(
       days: json['days'] as int? ?? 127,
-      timeFrom: json['time_from'] as String?,
-      timeTo: json['time_to'] as String?,
+      timeFrom: json['timeFrom'] as String?,
+      timeTo: json['timeTo'] as String?,
     );
   }
 
@@ -164,8 +164,8 @@ class RuleSchedule {
 
   Map<String, dynamic> toJson() => {
         'days': days,
-        if (timeFrom != null) 'time_from': timeFrom,
-        if (timeTo != null) 'time_to': timeTo,
+        if (timeFrom != null) 'timeFrom': timeFrom,
+        if (timeTo != null) 'timeTo': timeTo,
       };
 }
 

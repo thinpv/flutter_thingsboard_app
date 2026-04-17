@@ -192,11 +192,11 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     if (home == null) return;
     final ids = {
       ..._conditions
-          .where((c) => c.type == 'device' && c.raw['device_id'] != null)
-          .map((c) => c.raw['device_id'] as String),
+          .where((c) => c.type == 'device' && c.raw['deviceId'] != null)
+          .map((c) => c.raw['deviceId'] as String),
       ..._actions
-          .where((a) => a.type == 'device' && a.raw['device_id'] != null)
-          .map((a) => a.raw['device_id'] as String),
+          .where((a) => a.type == 'device' && a.raw['deviceId'] != null)
+          .map((a) => a.raw['deviceId'] as String),
     };
     if (ids.isEmpty) return;
     try {
@@ -256,11 +256,11 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
       final deviceIds = [
         ..._conditions
-            .where((c) => c.type == 'device' && c.raw['device_id'] != null)
-            .map((c) => c.raw['device_id'] as String),
+            .where((c) => c.type == 'device' && c.raw['deviceId'] != null)
+            .map((c) => c.raw['deviceId'] as String),
         ..._actions
-            .where((a) => a.type == 'device' && a.raw['device_id'] != null)
-            .map((a) => a.raw['device_id'] as String),
+            .where((a) => a.type == 'device' && a.raw['deviceId'] != null)
+            .map((a) => a.raw['deviceId'] as String),
       ];
       final target = await ExecutionTargetResolver()
           .resolve(deviceIds, homeId: home.id);
@@ -388,7 +388,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
                 _ConditionCard(
                   condition: _conditions[i],
                   deviceName: _conditions[i].type == 'device'
-                      ? _deviceName(_conditions[i].raw['device_id'] as String? ?? '')
+                      ? _deviceName(_conditions[i].raw['deviceId'] as String? ?? '')
                       : null,
                   onTap: () => _editCondition(i),
                   onDelete: () =>
@@ -416,7 +416,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
                 _ActionCard(
                   action: _actions[i],
                   deviceName: _actions[i].type == 'device'
-                      ? _deviceName(_actions[i].raw['device_id'] as String? ?? '')
+                      ? _deviceName(_actions[i].raw['deviceId'] as String? ?? '')
                       : null,
                   onTap: () => _editAction(i),
                   onDelete: () =>
@@ -488,7 +488,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       setState(() => _conditions.add(result!));
       // Track device name if device condition
       if (result.type == 'device') {
-        final devId = result.raw['device_id'] as String?;
+        final devId = result.raw['deviceId'] as String?;
         final devName = result.raw.remove('_device_name') as String?;
         if (devId != null && devName != null) {
           _deviceNames[devId] = devName;
@@ -531,7 +531,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     if (result != null) {
       setState(() => _actions.add(result!));
       if (result.type == 'device') {
-        final devId = result.raw['device_id'] as String?;
+        final devId = result.raw['deviceId'] as String?;
         final devName = result.raw.remove('_device_name') as String?;
         if (devId != null && devName != null) {
           _deviceNames[devId] = devName;
@@ -564,7 +564,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     if (result != null && mounted) {
       setState(() => _conditions[index] = result!);
       if (result.type == 'device') {
-        final devId = result.raw['device_id'] as String?;
+        final devId = result.raw['deviceId'] as String?;
         final devName = result.raw.remove('_device_name') as String?;
         if (devId != null && devName != null) {
           _deviceNames[devId] = devName;
@@ -596,7 +596,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     if (result != null && mounted) {
       setState(() => _actions[index] = result!);
       if (result.type == 'device') {
-        final devId = result.raw['device_id'] as String?;
+        final devId = result.raw['deviceId'] as String?;
         final devName = result.raw.remove('_device_name') as String?;
         if (devId != null && devName != null) {
           _deviceNames[devId] = devName;
@@ -1312,11 +1312,11 @@ class _ExecutionTargetCardState extends State<_ExecutionTargetCard> {
   Future<void> _resolve() async {
     final deviceIds = [
       ...widget.conditions
-          .where((c) => c.type == 'device' && c.raw['device_id'] != null)
-          .map((c) => c.raw['device_id'] as String),
+          .where((c) => c.type == 'device' && c.raw['deviceId'] != null)
+          .map((c) => c.raw['deviceId'] as String),
       ...widget.actions
-          .where((a) => a.type == 'device' && a.raw['device_id'] != null)
-          .map((a) => a.raw['device_id'] as String),
+          .where((a) => a.type == 'device' && a.raw['deviceId'] != null)
+          .map((a) => a.raw['deviceId'] as String),
     ];
     if (deviceIds.isEmpty) {
       if (mounted) setState(() => _target = 'server');
@@ -1552,13 +1552,13 @@ class _DeviceConditionSheetState
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
-              initialDeviceId: widget.initial?.raw['device_id'] as String?,
+              initialDeviceId: widget.initial?.raw['deviceId'] as String?,
               onSelected: (d) {
                 setState(() {
                   _device = d;
                   _meta = null;
                   if (widget.initial == null ||
-                      d.id != widget.initial?.raw['device_id']) {
+                      d.id != widget.initial?.raw['deviceId']) {
                     _key = null;
                   }
                 });
@@ -1618,7 +1618,7 @@ class _DeviceConditionSheetState
                         : () {
                             final cond = RuleCondition(raw: {
                               'type': 'device',
-                              'device_id': _device!.id,
+                              'deviceId': _device!.id,
                               '_device_name': _device!.displayName,
                               'key': _key!,
                               'op': _op,
@@ -1860,13 +1860,13 @@ class _DeviceActionSheetState
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
-              initialDeviceId: widget.initial?.raw['device_id'] as String?,
+              initialDeviceId: widget.initial?.raw['deviceId'] as String?,
               onSelected: (d) {
                 setState(() {
                   _device = d;
                   _meta = null;
                   if (widget.initial == null ||
-                      d.id != widget.initial?.raw['device_id']) {
+                      d.id != widget.initial?.raw['deviceId']) {
                     _data.clear();
                   }
                 });
@@ -2028,7 +2028,7 @@ class _DeviceActionSheetState
                         : () {
                             final action = RuleAction(raw: {
                               'type': 'device',
-                              'device_id': _device!.id,
+                              'deviceId': _device!.id,
                               '_device_name': _device!.displayName,
                               'data': Map<String, dynamic>.from(_data),
                             });
