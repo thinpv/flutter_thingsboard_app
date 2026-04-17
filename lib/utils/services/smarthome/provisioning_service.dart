@@ -1,6 +1,8 @@
-import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:thingsboard_app/constants/app_constants.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
@@ -11,12 +13,47 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 class ProvisioningService {
   ProvisioningService()
       : _client = getIt<ITbClientService>().client,
-        _control = DeviceControlService();
+        _control = DeviceControlService(),
+        _middlewareBase = _resolveMiddlewareBase();
 
   final ThingsboardClient _client;
   final DeviceControlService _control;
+  final String _middlewareBase;
 
   static const _containsRelation = 'Contains';
+
+  static String _resolveMiddlewareBase() {
+    const explicit = ThingsboardAppConstants.middlewareUrl;
+    if (explicit.isNotEmpty) return explicit;
+    final uri = Uri.parse(ThingsboardAppConstants.thingsBoardApiEndpoint);
+    return '${uri.scheme}://${uri.host}/mpipe';
+  }
+
+  String get _bearerToken => _client.getJwtToken() ?? '';
+
+  Future<Map<String, dynamic>> _mwPost(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = Uri.parse('$_middlewareBase$path');
+    final resp = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_bearerToken',
+      },
+      body: jsonEncode(body),
+    );
+    if (resp.statusCode >= 400) {
+      String msg = resp.body;
+      try {
+        msg = (jsonDecode(resp.body) as Map)['error']?.toString() ?? msg;
+      } catch (_) {}
+      throw Exception('Middleware POST $path → ${resp.statusCode}: $msg');
+    }
+    if (resp.body.isEmpty) return {};
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
 
   // ─── Gateway discovery ────────────────────────────────────────────────────
 
@@ -216,63 +253,38 @@ class ProvisioningService {
 
   // ─── IR / RF device provisioning ──────────────────────────────────────────
 
-  /// Thêm thiết bị IR/RF mới — luôn chạy theo đường REST, không cần gateway online.
+  /// Thêm thiết bị do app provision (IR/RF, ...) qua middleware.
   ///
   /// Luồng:
-  ///   1. Sinh subId = "dev_{proto}_{rand8hex}"
-  ///   2. Tạo TB Device entity (name=subId, label=displayName)
-  ///   3. Tạo relation: gateway → device (Created)
-  ///   4. Tạo relation: home → device (Contains)
-  ///   5. Ghi vào shared attr "app_provisioned_devices" của gateway
-  ///
-  /// Gateway đọc "app_provisioned_devices" khi nhận shared attr notification → tự khởi
-  /// tạo device local (ProcessIrRfDevices). Idempotent — đã tồn tại thì bỏ qua.
+  ///   1. Gọi POST /devices/provisioned trên middleware (tenant token, có quyền tạo device)
+  ///      → Middleware sinh subDeviceId, tạo TB entity, tạo relations GW→device và home→device
+  ///   2. Ghi app_provisioned_devices shared attr lên gateway dùng subDeviceId trả về
+  ///   3. Gateway nhận shared attr → khởi tạo local → publish v1/gateway/connect
   ///
   /// Trả về TB entity ID của device vừa tạo.
   Future<String> addIrRfDevice({
     required String gatewayId,
     required String homeId,
-    required String protocol,
-    required String deviceType,
     required String displayName,
-    String? template,
+    required String deviceProfile,
   }) async {
-    final ts = DateTime.now().millisecondsSinceEpoch;
-    final rand = _randHex(8);
-    final subId = 'dev_${protocol}_$rand';
+    final result = await _mwPost('/devices/provisioned', {
+      'gatewayId':     gatewayId,
+      'homeId':        homeId,
+      'displayName':   displayName,
+      'deviceProfile': deviceProfile,
+    });
 
-    // 1. Tạo TB Device entity
-    final device = Device(subId, 'default')..label = displayName;
-    final saved = await _client.getDeviceService().saveDevice(device);
-    final tbId = saved.id!.id!;
+    final tbId  = result['id']?.toString() ?? '';
+    final subId = result['name']?.toString() ?? '';
 
-    // 2. Relation: gateway → device (Created — TB gateway protocol dùng "Created")
-    await _client.getEntityRelationService().saveRelation(
-          EntityRelation(
-            from: DeviceId(gatewayId),
-            to: DeviceId(tbId),
-            type: 'Created',
-          ),
-        );
-
-    // 3. Relation: home → device (Contains)
-    await _client.getEntityRelationService().saveRelation(
-          EntityRelation(
-            from: AssetId(homeId),
-            to: DeviceId(tbId),
-          ),
-        );
-
-    // 4. Ghi vào app_provisioned_devices shared attr của gateway
+    // Ghi app_provisioned_devices lên shared attr của gateway
+    // (app có quyền ghi SHARED_SCOPE trực tiếp, không cần qua middleware)
     final existing = await _readAppProvisionedDevices(gatewayId);
     existing.add({
-      'sub_device_id': subId,
-      'protocol': protocol,
-      'name': displayName,
-      'device_type': deviceType,
-      if (template != null) 'template': template,
-      'custom': template == null,
-      'ts': ts,
+      'sub_device_id':  subId,
+      'name':           displayName,
+      'device_profile': deviceProfile,
     });
     await _client.getAttributeService().saveEntityAttributesV2(
       DeviceId(gatewayId),
@@ -280,7 +292,7 @@ class ProvisioningService {
       {'app_provisioned_devices': existing},
     );
 
-    debugPrint('[IR/RF] created subId=$subId tbId=$tbId name="$displayName" proto=$protocol');
+    debugPrint('[Provision] created subId=$subId tbId=$tbId profile=$deviceProfile');
     return tbId;
   }
 
@@ -304,11 +316,7 @@ class ProvisioningService {
     return [];
   }
 
-  static String _randHex(int length) {
-    const chars = '0123456789abcdef';
-    final rng = Random();
-    return List.generate(length, (_) => chars[rng.nextInt(16)]).join();
-  }
+
 
   // ─── Device display name ──────────────────────────────────────────────────
 

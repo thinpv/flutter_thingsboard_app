@@ -285,19 +285,16 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
     });
 
     try {
-      final template   = _isCustom ? null : _selectedProfile?.profileName;
-      final protocol   = _isCustom ? _selectedProtocol : (_selectedProfile?.protocol ?? 'ir');
-      final deviceType = _isCustom
-          ? (_selectedCategory ?? 'custom')
-          : (_selectedProfile?.category ?? 'custom');
+      // Custom device: dùng "{protocol}.custom" để vẫn bị tính vào limit
+      final deviceProfile = _isCustom
+          ? '$_selectedProtocol.custom'
+          : (_selectedProfile?.profileName ?? '$_selectedProtocol.custom');
 
       await _svc.addIrRfDevice(
-        gatewayId: _selectedGw!.id,
-        homeId: home.id,
-        protocol: protocol,
-        deviceType: deviceType,
-        displayName: name,
-        template: template,
+        gatewayId:     _selectedGw!.id,
+        homeId:        home.id,
+        displayName:   name,
+        deviceProfile: deviceProfile,
       );
 
       ref.invalidate(devicesInHomeProvider(home.id));
