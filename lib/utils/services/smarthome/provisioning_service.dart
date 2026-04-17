@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
@@ -154,9 +156,8 @@ class ProvisioningService {
 
   /// Searches the current customer's device list for a device with exactly
   /// [deviceName]. Returns its TB entity ID or null if not found.
-  Future<String?> findDeviceByName(String deviceName) async {
-    return _findCustomerDeviceByName(deviceName);
-  }
+  Future<String?> findDeviceByName(String deviceName) =>
+      _findCustomerDeviceByName(deviceName);
 
   Future<String?> _findCustomerDeviceByName(String deviceName) async {
     try {
@@ -215,45 +216,98 @@ class ProvisioningService {
 
   // ─── IR / RF device provisioning ──────────────────────────────────────────
 
-  /// Calls addIrRfDevice RPC on the gateway to create a new virtual IR/RF
-  /// sub-device. [template] may be null for a fully-custom device (learn all
-  /// commands manually).
+  /// Thêm thiết bị IR/RF mới — luôn chạy theo đường REST, không cần gateway online.
   ///
-  /// Gateway luôn trả code=0 + sub_device_id. Với predefined device (có template),
-  /// nếu descriptor chưa có trong cache, gateway sẽ tự fetch từ TB và tạo device
-  /// trong background (~1-5s). Device sẽ xuất hiện trên TB khi sẵn sàng.
+  /// Luồng:
+  ///   1. Sinh subId = "dev_{proto}_{rand8hex}"
+  ///   2. Tạo TB Device entity (name=subId, label=displayName)
+  ///   3. Tạo relation: gateway → device (Created)
+  ///   4. Tạo relation: home → device (Contains)
+  ///   5. Ghi vào shared attr "app_provisioned_devices" của gateway
+  ///
+  /// Gateway đọc "app_provisioned_devices" khi nhận shared attr notification → tự khởi
+  /// tạo device local (ProcessIrRfDevices). Idempotent — đã tồn tại thì bỏ qua.
+  ///
+  /// Trả về TB entity ID của device vừa tạo.
   Future<String> addIrRfDevice({
     required String gatewayId,
+    required String homeId,
     required String protocol,
     required String deviceType,
-    required String name,
+    required String displayName,
     String? template,
   }) async {
-    final params = <String, dynamic>{
-      'protocol': protocol,
-      'device_type': deviceType,
-      'name': name,
-      if (template != null) 'template': template,
-      if (template == null) 'custom': true,
-    };
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final rand = _randHex(8);
+    final subId = 'dev_${protocol}_$rand';
 
-    final result = await _control.sendTwoWayRpc(
-      gatewayId,
-      'addIrRfDevice',
-      params,
-      timeout: 15000,
+    // 1. Tạo TB Device entity
+    final device = Device(subId, 'default')..label = displayName;
+    final saved = await _client.getDeviceService().saveDevice(device);
+    final tbId = saved.id!.id!;
+
+    // 2. Relation: gateway → device (Created — TB gateway protocol dùng "Created")
+    await _client.getEntityRelationService().saveRelation(
+          EntityRelation(
+            from: DeviceId(gatewayId),
+            to: DeviceId(tbId),
+            type: 'Created',
+          ),
+        );
+
+    // 3. Relation: home → device (Contains)
+    await _client.getEntityRelationService().saveRelation(
+          EntityRelation(
+            from: AssetId(homeId),
+            to: DeviceId(tbId),
+          ),
+        );
+
+    // 4. Ghi vào app_provisioned_devices shared attr của gateway
+    final existing = await _readAppProvisionedDevices(gatewayId);
+    existing.add({
+      'sub_device_id': subId,
+      'protocol': protocol,
+      'name': displayName,
+      'device_type': deviceType,
+      if (template != null) 'template': template,
+      'custom': template == null,
+      'ts': ts,
+    });
+    await _client.getAttributeService().saveEntityAttributesV2(
+      DeviceId(gatewayId),
+      'SHARED_SCOPE',
+      {'app_provisioned_devices': existing},
     );
 
-    final code = result?['code'] ?? result?['params']?['code'];
-    if (code != null && code != 0) {
-      final msg =
-          result?['message'] ?? result?['params']?['message'] ?? 'Unknown error';
-      throw Exception('addIrRfDevice failed ($code): $msg');
-    }
+    debugPrint('[IR/RF] created subId=$subId tbId=$tbId name="$displayName" proto=$protocol');
+    return tbId;
+  }
 
-    final subId =
-        result?['sub_device_id'] ?? result?['params']?['sub_device_id'];
-    return subId?.toString() ?? '';
+  Future<List<Map<String, dynamic>>> _readAppProvisionedDevices(
+      String gatewayId) async {
+    try {
+      final attrs = await _client.getAttributeService().getAttributesByScope(
+        DeviceId(gatewayId),
+        'SHARED_SCOPE',
+        ['app_provisioned_devices'],
+      );
+      for (final attr in attrs) {
+        if (attr.getKey() == 'app_provisioned_devices') {
+          final val = attr.getValue();
+          if (val is List) {
+            return val.whereType<Map<String, dynamic>>().toList();
+          }
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static String _randHex(int length) {
+    const chars = '0123456789abcdef';
+    final rng = Random();
+    return List.generate(length, (_) => chars[rng.nextInt(16)]).join();
   }
 
   // ─── Device display name ──────────────────────────────────────────────────
@@ -282,7 +336,6 @@ class ProvisioningService {
           EntityRelation(
             from: AssetId(homeId),
             to: DeviceId(deviceId),
-            type: _containsRelation,
           ),
         );
   }
@@ -293,7 +346,6 @@ class ProvisioningService {
           EntityRelation(
             from: AssetId(roomId),
             to: DeviceId(deviceId),
-            type: _containsRelation,
           ),
         );
   }

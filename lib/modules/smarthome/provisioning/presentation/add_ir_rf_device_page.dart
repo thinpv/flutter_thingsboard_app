@@ -276,35 +276,31 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
 
+    final home = ref.read(selectedHomeProvider).valueOrNull;
+    if (home == null) return;
+
     setState(() {
       _adding = true;
       _addError = null;
     });
 
     try {
-      final template = _isCustom ? null : _selectedProfile?.profileName;
-      final protocol =
-          _isCustom ? _selectedProtocol : (_selectedProfile?.protocol ?? 'ir');
+      final template   = _isCustom ? null : _selectedProfile?.profileName;
+      final protocol   = _isCustom ? _selectedProtocol : (_selectedProfile?.protocol ?? 'ir');
       final deviceType = _isCustom
           ? (_selectedCategory ?? 'custom')
           : (_selectedProfile?.category ?? 'custom');
 
-      final subId = await _svc.addIrRfDevice(
+      await _svc.addIrRfDevice(
         gatewayId: _selectedGw!.id,
+        homeId: home.id,
         protocol: protocol,
         deviceType: deviceType,
-        name: name,
+        displayName: name,
         template: template,
       );
 
-      final home = ref.read(selectedHomeProvider).valueOrNull;
-      if (home != null && subId.isNotEmpty) {
-        final tbEntityId = await _svc.findDeviceByName(subId);
-        if (tbEntityId != null) {
-          await _svc.assignToHome(tbEntityId, home.id);
-        }
-        ref.invalidate(devicesInHomeProvider(home.id));
-      }
+      ref.invalidate(devicesInHomeProvider(home.id));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
