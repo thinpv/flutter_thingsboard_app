@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 
 /// Bước 3: Danh sách model remotes — user chọn remote giống với remote thật.
-class CodesetModelPage extends StatelessWidget {
+class CodesetModelPage extends StatefulWidget {
   const CodesetModelPage({
     super.key,
     required this.models,
@@ -19,14 +19,70 @@ class CodesetModelPage extends StatelessWidget {
   final String categoryName;
 
   @override
+  State<CodesetModelPage> createState() => _CodesetModelPageState();
+}
+
+class _CodesetModelPageState extends State<CodesetModelPage> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<CodesetProfile> get _filtered {
+    if (_query.isEmpty) return widget.models;
+    final q = _query.toLowerCase();
+    return widget.models.where((m) {
+      final name = (m.displayName ?? '').toLowerCase();
+      final modelId = m.modelId.toLowerCase();
+      final meta = m.codesetMeta;
+      final hint = (meta?['models_hint'] as String? ?? '').toLowerCase();
+      return name.contains(q) || modelId.contains(q) || hint.contains(q);
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
+
     return Scaffold(
-      appBar: AppBar(title: Text('$brandName $categoryName')),
+      appBar: AppBar(
+          title: Text('${widget.brandName} ${widget.categoryName}')),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Tìm model, tên remote...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+
           // Hướng dẫn
           Container(
-            margin: const EdgeInsets.all(16),
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Theme.of(context)
@@ -51,20 +107,31 @@ class CodesetModelPage extends StatelessWidget {
               ],
             ),
           ),
+
           Expanded(
-            child: ListView.separated(
-              itemCount: models.length,
-              separatorBuilder: (_, _) =>
-                  const Divider(height: 1, indent: 72),
-              itemBuilder: (context, i) {
-                final model = models[i];
-                return _ModelTile(
-                  model: model,
-                  brandName: brandName,
-                  onTap: () => Navigator.pop(context, model),
-                );
-              },
-            ),
+            child: filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      _query.isEmpty
+                          ? 'Không có remote nào.'
+                          : 'Không tìm thấy remote "$_query".',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, indent: 72),
+                    itemBuilder: (context, i) {
+                      final model = filtered[i];
+                      return _ModelTile(
+                        model: model,
+                        brandName: widget.brandName,
+                        query: _query,
+                        onTap: () => Navigator.pop(context, model),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -76,10 +143,12 @@ class _ModelTile extends StatelessWidget {
   const _ModelTile({
     required this.model,
     required this.brandName,
+    required this.query,
     required this.onTap,
   });
   final CodesetProfile model;
   final String brandName;
+  final String query;
   final VoidCallback onTap;
 
   @override
@@ -92,8 +161,7 @@ class _ModelTile extends StatelessWidget {
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _ModelImage(image: model.image, modelId: model.modelId),
-      title: Text(displayName,
-          style: const TextStyle(fontWeight: FontWeight.w500)),
+      title: _highlight(displayName, query, context),
       subtitle: subtitle != null
           ? Text(subtitle, style: const TextStyle(fontSize: 12))
           : null,
@@ -122,6 +190,37 @@ class _ModelTile extends StatelessWidget {
     if (meta['year_range'] != null) parts.add(meta['year_range'] as String);
     if (meta['models_hint'] != null) parts.add(meta['models_hint'] as String);
     return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  Widget _highlight(String text, String query, BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text,
+          style: const TextStyle(fontWeight: FontWeight.w500));
+    }
+    final lower = text.toLowerCase();
+    final q = query.toLowerCase();
+    final idx = lower.indexOf(q);
+    if (idx < 0) {
+      return Text(text,
+          style: const TextStyle(fontWeight: FontWeight.w500));
+    }
+    final color = Theme.of(context).colorScheme.primary;
+    return Text.rich(TextSpan(
+      style: const TextStyle(fontWeight: FontWeight.w500),
+      children: [
+        if (idx > 0) TextSpan(text: text.substring(0, idx)),
+        TextSpan(
+          text: text.substring(idx, idx + query.length),
+          style: TextStyle(
+            backgroundColor: color.withValues(alpha: 0.18),
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (idx + query.length < text.length)
+          TextSpan(text: text.substring(idx + query.length)),
+      ],
+    ));
   }
 }
 

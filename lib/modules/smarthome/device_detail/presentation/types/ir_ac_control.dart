@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // IrAcControl — giao diện điều khiển điều hòa IR (LG, Samsung, Daikin...).
 //
@@ -85,14 +86,14 @@ class _IrAcControlState extends State<IrAcControl> {
 
   void _syncFromTelemetry() {
     final t = widget.telemetry;
-    _isOn     = (t['onoff0'] as num?)?.toInt() == 1;
-    _temp     = (t['ac_temp'] as num?)?.toInt() ??
-                (t['cool_sp'] as num?)?.toInt() ??
+    _isOn     = isOn(t['onoff0']);
+    _temp     = intVal(t['acTemp']) ??
+                intVal(t['coolSp']) ??
                 25;
     _temp     = _temp.clamp(widget.minTemp, widget.maxTemp);
-    _mode     = (t['ac_mode'] as String?) ?? 'cool';
-    _fanSpeed = (t['ac_fan']  as String?) ?? 'auto';
-    _swing    = (t['swing']   as num?)?.toInt() == 1;
+    _mode     = t['acMode']?.toString() ?? 'cool';
+    _fanSpeed = t['acFan']?.toString() ?? 'auto';
+    _swing    = isOn(t['swing']);
 
     if (!widget.supportedModes.contains(_mode)) _mode = widget.supportedModes.first;
     if (!widget.supportedFanSpeeds.contains(_fanSpeed)) _fanSpeed = widget.supportedFanSpeeds.first;
