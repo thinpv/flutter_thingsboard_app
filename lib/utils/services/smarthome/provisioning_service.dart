@@ -278,42 +278,11 @@ class ProvisioningService {
     final tbId  = result['id']?.toString() ?? '';
     final subId = result['name']?.toString() ?? '';
 
-    // Ghi app_provisioned_devices lên shared attr của gateway
-    // (app có quyền ghi SHARED_SCOPE trực tiếp, không cần qua middleware)
-    final existing = await _readAppProvisionedDevices(gatewayId);
-    existing.add({
-      'sub_device_id':  subId,
-      'name':           displayName,
-      'device_profile': deviceProfile,
-    });
-    await _client.getAttributeService().saveEntityAttributesV2(
-      DeviceId(gatewayId),
-      'SHARED_SCOPE',
-      {'app_provisioned_devices': existing},
-    );
+    // app_provisioned_devices được middleware ghi atomically (tránh race condition
+    // khi thêm nhiều thiết bị cùng lúc). App không cần ghi thêm.
 
     debugPrint('[Provision] created subId=$subId tbId=$tbId profile=$deviceProfile');
     return tbId;
-  }
-
-  Future<List<Map<String, dynamic>>> _readAppProvisionedDevices(
-      String gatewayId) async {
-    try {
-      final attrs = await _client.getAttributeService().getAttributesByScope(
-        DeviceId(gatewayId),
-        'SHARED_SCOPE',
-        ['app_provisioned_devices'],
-      );
-      for (final attr in attrs) {
-        if (attr.getKey() == 'app_provisioned_devices') {
-          final val = attr.getValue();
-          if (val is List) {
-            return val.whereType<Map<String, dynamic>>().toList();
-          }
-        }
-      }
-    } catch (_) {}
-    return [];
   }
 
 
