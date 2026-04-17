@@ -129,7 +129,7 @@ class _DoorSensorViewState extends State<DoorSensorView> {
           prefillConditions: [
             RuleCondition(raw: {
               'type': 'device',
-              'device_id': widget.deviceId,
+              'deviceId': widget.deviceId,
               'key': 'door',
               'op': '==',
               'value': 0,
@@ -148,7 +148,7 @@ class _DoorSensorViewState extends State<DoorSensorView> {
           prefillConditions: [
             RuleCondition(raw: {
               'type': 'device',
-              'device_id': widget.deviceId,
+              'deviceId': widget.deviceId,
               'key': 'door',
               'op': '==',
               'value': 0,

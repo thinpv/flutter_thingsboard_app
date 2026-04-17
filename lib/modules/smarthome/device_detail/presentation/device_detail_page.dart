@@ -301,18 +301,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     String uiType = (rawUiType != null && rawUiType.isNotEmpty)
         ? rawUiType
         : widget.device.type;
-    debugPrint('[DeviceDetail] device.id=${widget.device.id} '
-        'device.type=${widget.device.type} '
-        'device.uiType=${widget.device.uiType} '
-        'profileId=$profileId → initial uiType=$uiType');
 
     if (profileId.isNotEmpty) {
       final metaAsync = ref.watch(deviceProfileMetadataProvider(profileId));
       final meta = metaAsync.valueOrNull;
-      debugPrint('[DeviceDetail] meta loaded=${meta != null} '
-          'meta.uiType=${meta?.uiType} '
-          'meta.states.length=${meta?.states.length} '
-          'detailLayout=${meta?.uiHints?.detailLayout}');
 
       // Lấy uiType từ metadata nếu có (không phải 'auto'), kể cả khi states rỗng.
       // Điều này fix trường hợp device.uiType chưa resolve khi mở trang.
@@ -334,7 +326,6 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       final routeKey = (detailLayout != null && detailLayout != 'auto')
           ? detailLayout
           : uiType;
-      debugPrint('[DeviceDetail] → routeKey=$routeKey (uiType=$uiType, detailLayout=$detailLayout)');
       return _buildLegacyBody(routeKey, meta: meta);
     }
 

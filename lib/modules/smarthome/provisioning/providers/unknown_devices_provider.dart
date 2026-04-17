@@ -116,12 +116,12 @@ final unknownDevicesProvider =
   for (final gwId in gatewayIds) {
     final sub = control.subscribeToLatestTelemetry(
       gwId,
-      keys: ['unknown_device'],
+      keys: ['unknownDevice'],
     );
     subscriptions.add(sub);
     sub.attributeDataStream.listen((attrs) {
       for (final a in attrs) {
-        if (a.key != 'unknown_device') continue;
+        if (a.key != 'unknownDevice') continue;
         final raw = a.value;
         if (raw == null) {
           latest[gwId] = [];

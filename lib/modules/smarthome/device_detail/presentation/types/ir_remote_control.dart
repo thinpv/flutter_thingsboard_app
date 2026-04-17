@@ -357,7 +357,7 @@ class _StateInfoPanel extends StatelessWidget {
     'onoff0': 'Trạng thái',
     'mode': 'Chế độ',
     'temp': 'Nhiệt độ',
-    'fan_speed': 'Tốc quạt',
+    'fanSpeed': 'Tốc quạt',
     'volume': 'Âm lượng',
     'speed': 'Tốc độ',
     'timer': 'Hẹn giờ (ph)',

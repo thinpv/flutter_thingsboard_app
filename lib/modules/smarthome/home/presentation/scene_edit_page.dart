@@ -67,7 +67,7 @@ IconData _deviceIconFor(String uiType) => switch (uiType) {
       'switch' => Icons.toggle_on_outlined,
       'lock' => Icons.lock_outline,
       'smokeSensor' => Icons.local_fire_department_outlined,
-      'electrical_switch' => Icons.power_settings_new,
+      'electricalSwitch' => Icons.power_settings_new,
       _ => Icons.devices_other,
     };
 
@@ -81,7 +81,7 @@ String _stateLabel(Map<String, dynamic> state, String uiType) {
     return base;
   }
   if (uiType == 'airConditioner') {
-    final sp = state['cool_sp'];
+    final sp = state['coolSp'];
     final mode = state['mode'];
     final parts = <String>[base];
     if (mode != null) parts.add('$mode');
@@ -318,7 +318,7 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
 
   Map<String, dynamic> _defaultState(String uiType) {
     return switch (uiType) {
-      'airConditioner' => {'onoff0': 1, 'mode': 'cool', 'cool_sp': 26},
+      'airConditioner' => {'onoff0': 1, 'mode': 'cool', 'coolSp': 26},
       'curtain' => {'onoff0': 0, 'pos': 100},
       'light' => {'onoff0': 1, 'dim': 100},
       _ => {'onoff0': 1},
@@ -1308,7 +1308,7 @@ class _AcControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sp = ((state['cool_sp'] as num?)?.toInt() ?? 26).clamp(16, 32);
+    final sp = ((state['coolSp'] as num?)?.toInt() ?? 26).clamp(16, 32);
     final mode = (state['mode'] as String?) ?? 'cool';
 
     return Column(
@@ -1325,7 +1325,7 @@ class _AcControls extends StatelessWidget {
               _StepButton(
                 icon: Icons.remove,
                 onTap: sp > 16
-                    ? () => onChanged({...state, 'cool_sp': sp - 1})
+                    ? () => onChanged({...state, 'coolSp': sp - 1})
                     : null,
               ),
               SizedBox(
@@ -1340,7 +1340,7 @@ class _AcControls extends StatelessWidget {
               _StepButton(
                 icon: Icons.add,
                 onTap: sp < 32
-                    ? () => onChanged({...state, 'cool_sp': sp + 1})
+                    ? () => onChanged({...state, 'coolSp': sp + 1})
                     : null,
               ),
             ],

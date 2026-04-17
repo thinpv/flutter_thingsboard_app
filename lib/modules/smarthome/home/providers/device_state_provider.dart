@@ -15,7 +15,7 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 const _cardTelemetryKeys = <String>[
   'onoff0', 'onoff1', 'onoff2', 'onoff3',
   'bt', 'bt0', 'bt1', 'bt2',
-  'dim', 'h', 's', 'l', 'ct', 'color_mode',
+  'dim', 'h', 's', 'l', 'ct', 'colorMode',
   'temp', 'hum', 'pressure',
   'pir', 'lux', 'distance',
   'door', 'leak', 'smoke', 'gas', 'vibration',
@@ -25,11 +25,11 @@ const _cardTelemetryKeys = <String>[
   'power', 'volt', 'curr', 'energy',
   'pm1_0', 'pm2_5', 'pm10', 'co2',
   'stt',
-  'cpu', 'mem', 'uptime', 'dev_cnt',
+  'cpu', 'mem', 'uptime', 'devCnt',
 ];
 
 /// Server attributes pulled in the same subscription.
-const _cardServerAttrs = <String>['active', 'ui_type', 'default_label'];
+const _cardServerAttrs = <String>['active', 'uiType', 'defaultLabel'];
 
 /// Client attributes pulled in the same subscription.
 /// `name` is published by the gateway via v1/gateway/attributes when a
@@ -213,9 +213,9 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
       String? defaultLabel;
       if (serverAttrs != null) {
         active = serverAttrs['active']?.value;
-        final rawUiType = serverAttrs['ui_type']?.value;
+        final rawUiType = serverAttrs['uiType']?.value;
         uiType = (rawUiType != null && rawUiType.isNotEmpty) ? rawUiType : null;
-        defaultLabel = serverAttrs['default_label']?.value;
+        defaultLabel = serverAttrs['defaultLabel']?.value;
       }
 
       // Client attrs — `name` is the friendly name published by the gateway

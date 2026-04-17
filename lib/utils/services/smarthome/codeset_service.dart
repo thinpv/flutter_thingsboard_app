@@ -305,9 +305,9 @@ class CodesetService {
 
     if (desc != null) {
       displayName = ((desc['i18n'] as Map?)?['vi'] as Map?)?['name'] as String?;
-      final uiHints = desc['ui_hints'] as Map?;
+      final uiHints = desc['uiHints'] as Map?;
       if (uiHints != null) {
-        final raw = uiHints['button_layout'];
+        final raw = uiHints['buttonLayout'];
         if (raw is List) {
           buttonLayout = raw
               .whereType<Map<String, dynamic>>()

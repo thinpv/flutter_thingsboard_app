@@ -38,14 +38,14 @@ const _kKeyLabel = <String, String>{
   'pir': 'Chuyển động', 'lux': 'Ánh sáng', 'door': 'Cửa',
   'leak': 'Rò nước', 'smoke': 'Khói', 'gas': 'Gas',
   'dim': 'Độ sáng', 'pos': 'Vị trí rèm', 'power': 'Công suất',
-  'energy': 'Điện năng', 'cool_sp': 'Nhiệt đặt lạnh',
+  'energy': 'Điện năng', 'coolSp': 'Nhiệt đặt lạnh',
   'mode': 'Chế độ', 'lock': 'Khóa', 'bat': 'Pin',
 };
 
 const _kKeyUnit = <String, String>{
   'temp': '°C', 'hum': '%', 'co2': ' ppm',
   'lux': ' lux', 'dim': '%', 'pos': '%',
-  'power': ' W', 'energy': ' kWh', 'cool_sp': '°C',
+  'power': ' W', 'energy': ' kWh', 'coolSp': '°C',
 };
 
 const _kDayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -953,7 +953,7 @@ class _ConditionCard extends StatelessWidget {
     }
     final key = c.raw['key'] as String? ?? '';
     return switch (key) {
-      'temp' || 'cool_sp' => (Icons.thermostat_outlined, Colors.red.shade400),
+      'temp' || 'coolSp' => (Icons.thermostat_outlined, Colors.red.shade400),
       'hum' => (Icons.water_drop_outlined, Colors.blue.shade400),
       'pir' => (Icons.motion_photos_on_outlined, Colors.purple),
       'door' => (Icons.sensor_door_outlined, Colors.teal),

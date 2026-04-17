@@ -142,13 +142,13 @@ class CardComposer {
         'camera' => Icons.videocam_outlined,
         'gateway' => Icons.router_outlined,
         'switch' => Icons.toggle_on_outlined,
-        'remote' || 'button' || 'scene_switch' => Icons.settings_remote_outlined,
+        'remote' || 'button' || 'sceneSwitch' => Icons.settings_remote_outlined,
         'lock' => Icons.lock_outline,
         'smokeSensor' => Icons.local_fire_department_outlined,
         'leakSensor' => Icons.water_drop_outlined,
         'airQuality' => Icons.air,
-        'soil_sensor' => Icons.grass,
-        'electrical_switch' => Icons.power_settings_new,
+        'soilSensor' => Icons.grass,
+        'electricalSwitch' => Icons.power_settings_new,
         _ => Icons.devices_other,
       };
 }

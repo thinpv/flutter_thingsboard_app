@@ -218,7 +218,7 @@ class RfDoorbellView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pressed = telemetry['button_pressed'];
+    final pressed = telemetry['buttonPressed'];
 
     return ListView(
       padding: const EdgeInsets.all(24),

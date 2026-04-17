@@ -28,7 +28,7 @@ class GatewayView extends StatelessWidget {
     final cpu = doubleVal(telemetry['cpu']);
     final mem = doubleVal(telemetry['mem']);
     final uptime = intVal(telemetry['uptime']);
-    final devCnt = intVal(telemetry['dev_cnt']);
+    final devCnt = intVal(telemetry['devCnt']);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -187,7 +187,7 @@ class GatewayView extends StatelessWidget {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
             onPressed: () {
               Navigator.pop(ctx);
-              onRpc('refreshDescriptor', {'desc_id': '*'});
+              onRpc('refreshDescriptor', {'descId': '*'});
             },
             child: const Text('Cập nhật', style: TextStyle(color: Colors.white)),
           ),

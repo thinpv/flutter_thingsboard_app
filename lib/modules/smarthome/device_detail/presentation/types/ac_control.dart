@@ -42,7 +42,7 @@ class _AcControlState extends State<AcControl> {
 
   bool get _isOn => isOn(widget.telemetry['power']);
   String get _mode => widget.telemetry['mode'] as String? ?? 'cool';
-  String? get _runState => widget.telemetry['run_state'] as String?;
+  String? get _runState => widget.telemetry['runState'] as String?;
 
   Color _modeColor(String mode) {
     final found = _modes.where((m) => m.$1 == mode).firstOrNull;

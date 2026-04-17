@@ -49,7 +49,7 @@ class _LightControlState extends State<LightControl> {
     final cctMax = cctRange?.max ?? 100;
     final cctRaw = widget.telemetry['cct'] ?? cctMin;
     _cct = (doubleVal(cctRaw) ?? cctMin).clamp(cctMin, cctMax);
-    _colorMode = widget.telemetry['color_mode'] as String? ?? 'hs';
+    _colorMode = widget.telemetry['colorMode'] as String? ?? 'hs';
   }
 
   double _num(String k, double fallback) =>

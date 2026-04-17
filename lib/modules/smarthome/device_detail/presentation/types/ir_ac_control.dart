@@ -114,13 +114,13 @@ class _IrAcControlState extends State<IrAcControl> {
   Future<void> _togglePower() async {
     HapticFeedback.mediumImpact();
     await widget.onRpc('power', {});
-    setState(() => _isOn = !_isOn);
+    if (mounted) setState(() => _isOn = !_isOn);
   }
 
   Future<void> _toggleSwing() async {
     HapticFeedback.selectionClick();
     await widget.onRpc('swing', {});
-    setState(() => _swing = !_swing);
+    if (mounted) setState(() => _swing = !_swing);
   }
 
   Future<void> _sendTurbo() async {

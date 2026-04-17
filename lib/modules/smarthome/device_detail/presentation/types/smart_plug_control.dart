@@ -105,7 +105,7 @@ class _SmartPlugControlState extends State<SmartPlugControl> {
           prefillActions: [
             RuleAction(raw: {
               'type': 'device',
-              'device_id': widget.deviceId,
+              'deviceId': widget.deviceId,
               'data': {'onoff0': _isOn ? 0 : 1},
             }),
           ],
@@ -132,7 +132,7 @@ class _SmartPlugControlState extends State<SmartPlugControl> {
           prefillActions: [
             RuleAction(raw: {
               'type': 'device',
-              'device_id': widget.deviceId,
+              'deviceId': widget.deviceId,
               'data': {'onoff0': 1},
             }),
           ],

@@ -9,12 +9,12 @@ class IrAcConfig {
   });
 
   factory IrAcConfig.fromJson(Map<String, dynamic> json) => IrAcConfig(
-        minTemp: ((json['minTemp'] ?? json['min_temp']) as num?)?.toInt() ?? 16,
-        maxTemp: ((json['maxTemp'] ?? json['max_temp']) as num?)?.toInt() ?? 30,
-        defaultTemp: ((json['defaultTemp'] ?? json['default_temp']) as num?)?.toInt() ?? 25,
+        minTemp: (json['minTemp'] as num?)?.toInt() ?? 16,
+        maxTemp: (json['maxTemp'] as num?)?.toInt() ?? 30,
+        defaultTemp: (json['defaultTemp'] as num?)?.toInt() ?? 25,
         modes: (json['modes'] as List<dynamic>?)?.map((e) => e as String).toList()
             ?? const ['cool', 'heat', 'fan', 'dry', 'auto'],
-        fanSpeeds: ((json['fanSpeeds'] ?? json['fan_speeds']) as List<dynamic>?)?.map((e) => e as String).toList()
+        fanSpeeds: (json['fanSpeeds'] as List<dynamic>?)?.map((e) => e as String).toList()
             ?? const ['auto', 'low', 'mid', 'high'],
       );
 
@@ -49,25 +49,25 @@ class UiHints {
   });
 
   factory UiHints.fromJson(Map<String, dynamic> json) {
-    final acRaw = json['irAcConfig'] ?? json['ir_ac_config'];
+    final acRaw = json['irAcConfig'];
     return UiHints(
-      primaryState: json['primaryState'] as String? ?? json['primary_state'] as String?,
-      summaryStates: ((json['summaryStates'] ?? json['summary_states']) as List<dynamic>?)
+      primaryState: json['primaryState'] as String?,
+      summaryStates: (json['summaryStates'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      cardLayout: json['cardLayout'] as String? ?? json['card_layout'] as String? ?? 'auto',
-      detailLayout: json['detailLayout'] as String? ?? json['detail_layout'] as String? ?? 'auto',
-      maxPower: ((json['maxPower'] ?? json['max_power']) as num?)?.toDouble(),
-      chartKeys: ((json['chartKeys'] ?? json['chart_keys']) as List<dynamic>?)
+      cardLayout: json['cardLayout'] as String? ?? 'auto',
+      detailLayout: json['detailLayout'] as String? ?? 'auto',
+      maxPower: (json['maxPower'] as num?)?.toDouble(),
+      chartKeys: (json['chartKeys'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      quickActions: ((json['quickActions'] ?? json['quick_actions']) as List<dynamic>?)
+      quickActions: (json['quickActions'] as List<dynamic>?)
               ?.map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      buttonLayout: ((json['buttonLayout'] ?? json['button_layout']) as List<dynamic>?) ?? const [],
+      buttonLayout: (json['buttonLayout'] as List<dynamic>?) ?? const [],
       irAcConfig: acRaw != null
           ? IrAcConfig.fromJson(acRaw as Map<String, dynamic>)
           : null,

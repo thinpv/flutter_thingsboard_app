@@ -16,7 +16,7 @@ const _binaryKeys = {
 /// Continuous numeric keys — shown as mini chart + min/avg/max stats.
 const _continuousKeys = {
   'temp', 'hum', 'co2', 'power', 'lux', 'dim', 'pos',
-  'cool_sp', 'heat_sp', 'curr', 'volt', 'pressure', 'bat', 'pin',
+  'coolSp', 'heatSp', 'curr', 'volt', 'pressure', 'bat', 'pin',
 };
 
 /// Cumulative energy — shown separately as total consumed.
@@ -32,14 +32,14 @@ const _keyLabels = <String, String>{
   'co2': 'CO₂', 'pos': 'Vị trí rèm', 'lock': 'Khóa',
   'power': 'Công suất', 'energy': 'Điện năng tiêu thụ',
   'volt': 'Điện áp', 'curr': 'Dòng điện',
-  'cool_sp': 'Nhiệt độ đặt lạnh', 'heat_sp': 'Nhiệt độ đặt sưởi',
+  'coolSp': 'Nhiệt độ đặt lạnh', 'heatSp': 'Nhiệt độ đặt sưởi',
   'pin': 'Pin', 'bat': 'Pin', 'vibration': 'Rung', 'pressure': 'Áp suất',
 };
 
 const _keyUnits = <String, String>{
   'dim': '%', 'temp': '°C', 'hum': '%', 'lux': ' lux',
   'co2': ' ppm', 'pos': '%', 'power': ' W', 'energy': ' kWh',
-  'volt': ' V', 'curr': ' A', 'cool_sp': '°C', 'heat_sp': '°C',
+  'volt': ' V', 'curr': ' A', 'coolSp': '°C', 'heatSp': '°C',
   'pin': '%', 'bat': '%', 'pressure': ' hPa',
 };
 
@@ -483,7 +483,7 @@ class _SensorCard extends StatelessWidget {
         'lux' => Icons.wb_sunny_outlined,
         'dim' => Icons.brightness_medium_outlined,
         'pos' => Icons.blinds_outlined,
-        'cool_sp' || 'heat_sp' => Icons.thermostat_auto_outlined,
+        'coolSp' || 'heatSp' => Icons.thermostat_auto_outlined,
         'curr' => Icons.electrical_services_outlined,
         'volt' => Icons.electric_bolt_outlined,
         'pressure' => Icons.compress_outlined,

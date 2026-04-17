@@ -39,7 +39,7 @@ class _CodesetModelPageState extends State<CodesetModelPage> {
       final name = (m.displayName ?? '').toLowerCase();
       final modelId = m.modelId.toLowerCase();
       final meta = m.codesetMeta;
-      final hint = (meta?['models_hint'] as String? ?? '').toLowerCase();
+      final hint = (meta?['modelsHint'] as String? ?? '').toLowerCase();
       return name.contains(q) || modelId.contains(q) || hint.contains(q);
     }).toList();
   }
@@ -187,8 +187,8 @@ class _ModelTile extends StatelessWidget {
     final meta = model.codesetMeta;
     if (meta == null) return null;
     final parts = <String>[];
-    if (meta['year_range'] != null) parts.add(meta['year_range'] as String);
-    if (meta['models_hint'] != null) parts.add(meta['models_hint'] as String);
+    if (meta['yearRange'] != null) parts.add(meta['yearRange'] as String);
+    if (meta['modelsHint'] != null) parts.add(meta['modelsHint'] as String);
     return parts.isEmpty ? null : parts.join(' · ');
   }
 

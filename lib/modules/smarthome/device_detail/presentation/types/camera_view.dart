@@ -19,10 +19,10 @@ class _CameraViewState extends State<CameraView> {
   bool get _motionDetected => isOn(widget.telemetry['pir']);
 
   Future<void> _ptz(int pan, int tilt) =>
-      widget.onRpc('ptz_control', {'pan': pan, 'tilt': tilt, 'zoom': 0});
+      widget.onRpc('ptzControl', {'pan': pan, 'tilt': tilt, 'zoom': 0});
 
   Future<void> _zoom(int z) =>
-      widget.onRpc('ptz_control', {'pan': 0, 'tilt': 0, 'zoom': z});
+      widget.onRpc('ptzControl', {'pan': 0, 'tilt': 0, 'zoom': z});
 
   Future<void> _snapshot() async {
     setState(() => _snapshotLoading = true);

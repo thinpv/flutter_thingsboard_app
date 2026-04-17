@@ -29,7 +29,7 @@ class RfFanControl extends StatelessWidget {
     return 1;
   }
 
-  int? get _timer => telemetry['timer_minutes'] as int?;
+  int? get _timer => telemetry['timerMinutes'] as int?;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,7 @@ class RfFanControl extends StatelessWidget {
           const SizedBox(height: 12),
           _TimerRow(
             currentMinutes: _timer,
-            onSelect: (min) => onRpc('setValue', {'timer_minutes': min}),
+            onSelect: (min) => onRpc('setValue', {'timerMinutes': min}),
           ),
         ] else ...[
           Center(

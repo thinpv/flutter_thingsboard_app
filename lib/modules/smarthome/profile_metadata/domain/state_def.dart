@@ -19,8 +19,8 @@ class StateDef {
     return StateDef(
       type: json['type'] as String? ?? 'string',
       unit: json['unit'] as String?,
-      labelDefault: json['labelDefault'] as String? ?? json['label_default'] as String?,
-      labelKey: json['labelKey'] as String? ?? json['label_key'] as String?,
+      labelDefault: json['labelDefault'] as String?,
+      labelKey: json['labelKey'] as String?,
       icon: json['icon'] as String?,
       controllable: json['controllable'] as bool? ?? false,
       cumulative: json['cumulative'] as bool? ?? false,
@@ -29,7 +29,7 @@ class StateDef {
           ? StateRange.fromJson(json['range'] as Map<String, dynamic>)
           : null,
       precision: json['precision'] as int?,
-      enumValues: ((json['enumValues'] ?? json['enum_values']) as List<dynamic>?)
+      enumValues: (json['enumValues'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
     );

@@ -98,8 +98,8 @@ class ProvisioningService {
       gatewayId,
       'startScan',
       {
-        if (deviceType != null) 'device_type': deviceType,
-        'timeout_seconds': timeoutSeconds,
+        if (deviceType != null) 'deviceType': deviceType,
+        'timeoutSeconds': timeoutSeconds,
       },
     );
   }

@@ -11,7 +11,7 @@ class AutomationService {
   final ThingsboardClient _client;
 
   static const _serverAttrKey = 'automations';
-  static const _ruleIndexKey = 'rule_index';
+  static const _ruleIndexKey = 'ruleIndex';
 
   /// Cache of TB device UUID → device name (the name used in
   /// v1/gateway/connect, e.g. MAC or Zigbee IEEE address).
@@ -196,7 +196,7 @@ class AutomationService {
       if (c is Map<String, dynamic> &&
           c['type'] == 'device' &&
           c['deviceId'] != null) {
-        c['device_name'] =
+        c['deviceName'] =
             await _resolveDeviceName(c['deviceId'] as String);
       }
     }
@@ -206,7 +206,7 @@ class AutomationService {
       if (a is Map<String, dynamic> &&
           a['type'] == 'device' &&
           a['deviceId'] != null) {
-        a['device_name'] =
+        a['deviceName'] =
             await _resolveDeviceName(a['deviceId'] as String);
       }
     }

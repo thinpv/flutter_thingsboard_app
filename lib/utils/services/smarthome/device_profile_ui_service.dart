@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
@@ -125,11 +123,7 @@ class DeviceProfileUiService {
     }
 
     // Fall back to image-filename convention if description.ui_type not set.
-    final imgUiType = _uiFromImage(img);
-    uiType ??= imgUiType;
-    debugPrint('[ProfileUiSvc] profileId=$profileId → '
-        'uiType=$uiType (imgFallback=$imgUiType) '
-        'profileName=$profileName img=$img');
+    uiType ??= _uiFromImage(img);
 
     final result = DeviceUiMeta(
       uiType: uiType,
@@ -161,11 +155,11 @@ class DeviceProfileUiService {
           .getAttributesByScope(
             DeviceId(deviceId),
             'SERVER_SCOPE',
-            ['ui_type', 'default_label'],
+            ['uiType', 'defaultLabel'],
           );
       for (final attr in serverAttrs) {
-        if (attr.getKey() == 'ui_type') uiType = attr.getValue()?.toString();
-        if (attr.getKey() == 'default_label') {
+        if (attr.getKey() == 'uiType') uiType = attr.getValue()?.toString();
+        if (attr.getKey() == 'defaultLabel') {
           defaultLabel = attr.getValue()?.toString();
         }
       }
