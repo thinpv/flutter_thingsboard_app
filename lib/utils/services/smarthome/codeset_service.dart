@@ -4,6 +4,121 @@ import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
+// ── Catalog Index models ─────────────────────────────────────────────────────
+
+/// Một brand entry trong catalog index.
+class CatalogBrandEntry {
+  const CatalogBrandEntry({
+    required this.brand,
+    required this.name,
+    required this.count,
+  });
+
+  factory CatalogBrandEntry._fromJson(Map<String, dynamic> j) =>
+      CatalogBrandEntry(
+        brand: j['brand'] as String,
+        name: j['name'] as String? ?? (j['brand'] as String),
+        count: (j['count'] as num?)?.toInt() ?? 0,
+      );
+
+  /// Key ngắn, vd: "samsung"
+  final String brand;
+
+  /// Tên hiển thị, vd: "Samsung"
+  final String name;
+
+  /// Số models có sẵn
+  final int count;
+}
+
+/// Một category entry trong catalog index.
+class CatalogCategoryEntry {
+  const CatalogCategoryEntry({
+    required this.category,
+    required this.name,
+    required this.brands,
+  });
+
+  factory CatalogCategoryEntry._fromJson(Map<String, dynamic> j) =>
+      CatalogCategoryEntry(
+        category: j['category'] as String,
+        name: j['name'] as String? ?? (j['category'] as String),
+        brands: (j['brands'] as List? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(CatalogBrandEntry._fromJson)
+            .toList(),
+      );
+
+  /// Key ngắn, vd: "tv"
+  final String category;
+
+  /// Tên hiển thị, vd: "Tivi"
+  final String name;
+
+  final List<CatalogBrandEntry> brands;
+}
+
+/// Catalog index đọc từ Device Profile "catalog" trên TB.
+///
+/// Schema:
+/// ```json
+/// { "v": 1, "type": "catalog",
+///   "protocols": {
+///     "ir": [{ "category": "tv", "name": "Tivi",
+///              "brands": [{"brand":"samsung","name":"Samsung","count":58}] }],
+///     "rf": [...] }}
+/// ```
+class CatalogIndex {
+  const CatalogIndex({required this.protocols});
+
+  factory CatalogIndex._parse(Map<String, dynamic> json) {
+    final protoMap = json['protocols'] as Map<String, dynamic>? ?? {};
+    final Map<String, List<CatalogCategoryEntry>> result = {};
+    for (final entry in protoMap.entries) {
+      result[entry.key] = (entry.value as List? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(CatalogCategoryEntry._fromJson)
+          .toList();
+    }
+    return CatalogIndex(protocols: result);
+  }
+
+  /// Map: protocol → danh sách categories
+  final Map<String, List<CatalogCategoryEntry>> protocols;
+
+  List<CatalogCategoryEntry> categoriesFor(String protocol) =>
+      protocols[protocol] ?? [];
+
+  List<CatalogBrandEntry> brandsFor(String protocol, String category) {
+    for (final cat in categoriesFor(protocol)) {
+      if (cat.category == category) {
+        final sorted = [...cat.brands.where((b) => b.brand != 'generic'),
+                        ...cat.brands.where((b) => b.brand == 'generic')];
+        return sorted;
+      }
+    }
+    return [];
+  }
+
+  /// Tên hiển thị của category (từ server), fallback về key nếu không có.
+  String categoryName(String protocol, String category) {
+    for (final cat in categoriesFor(protocol)) {
+      if (cat.category == category) return cat.name;
+    }
+    return category;
+  }
+
+  /// Tên hiển thị của brand (từ server), fallback về key nếu không có.
+  String brandName(String protocol, String category, String brand) {
+    for (final b in brandsFor(protocol, category)) {
+      if (b.brand == brand) return b.name;
+    }
+    return brand;
+  }
+}
+
+// ── Codeset Profile model ────────────────────────────────────────────────────
+
 /// Một model trong catalog IR/RF codeset.
 /// Parse từ DeviceProfile với naming convention: {proto}.{cat}.{brand}.{model_id}
 class CodesetProfile {
@@ -64,60 +179,15 @@ class CodesetProfile {
   bool get isGeneric => modelId == 'generic';
 }
 
-/// Kết quả phân tích catalog theo từng tầng
-class CodesetCatalog {
-  const CodesetCatalog({required this.profiles});
+// ── Codeset Service ──────────────────────────────────────────────────────────
 
-  /// Tất cả profiles đã fetch
-  final List<CodesetProfile> profiles;
-
-  /// Danh sách category (tầng 2) theo protocol
-  List<String> categoriesFor(String protocol) {
-    final cats = <String>{};
-    for (final p in profiles) {
-      if (p.protocol == protocol) cats.add(p.category);
-    }
-    final sorted = cats.toList()..sort();
-    return sorted;
-  }
-
-  /// Danh sách brand (tầng 3) theo protocol + category
-  List<String> brandsFor(String protocol, String category) {
-    final brands = <String>{};
-    for (final p in profiles) {
-      if (p.protocol == protocol && p.category == category) {
-        brands.add(p.brand);
-      }
-    }
-    final sorted = brands.toList()..sort();
-    // Đẩy "generic" xuống cuối
-    if (sorted.remove('generic')) sorted.add('generic');
-    return sorted;
-  }
-
-  /// Danh sách models (tầng 4) theo protocol + category + brand
-  List<CodesetProfile> modelsFor(String protocol, String category, String brand) {
-    final models = profiles
-        .where((p) =>
-            p.protocol == protocol &&
-            p.category == category &&
-            p.brand == brand)
-        .toList();
-    // "generic" model xuống cuối
-    models.sort((a, b) {
-      if (a.isGeneric && !b.isGeneric) return 1;
-      if (!a.isGeneric && b.isGeneric) return -1;
-      return a.modelId.compareTo(b.modelId);
-    });
-    return models;
-  }
-}
-
-/// Service fetch và parse IR/RF Codeset Profiles từ ThingsBoard.
+/// Service fetch IR/RF Codeset dữ liệu từ ThingsBoard.
 ///
-/// Dùng API: GET /api/deviceProfileInfos?textSearch={prefix}&pageSize=1000
-/// Tất cả codeset profiles theo naming convention {proto}.{cat}.{brand}.{model}
-/// → Customer user có quyền đọc DeviceProfileInfo (name, image, description).
+/// Luồng mới (2 bước):
+///   1. [fetchCatalogIndex] → fetch profile "catalog" → trả về [CatalogIndex]
+///      (index ~3KB: protocol→category→brand+count)
+///   2. [fetchModels] → filter profiles theo {protocol}.{category}.{brand}.
+///      (chỉ gọi khi user đã chọn brand)
 class CodesetService {
   CodesetService()
       : _client = getIt<ITbClientService>().client;
@@ -126,17 +196,48 @@ class CodesetService {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  /// Fetch tất cả profiles cho 1 protocol prefix ("ir." hoặc "rf.").
-  /// Parse naming convention → trả về [CodesetCatalog].
-  Future<CodesetCatalog> fetchCatalog(String protocol) async {
-    assert(protocol == 'ir' || protocol == 'rf');
-    final prefix = '$protocol.';
-    final profiles = await _fetchProfiles(prefix);
-    return CodesetCatalog(profiles: profiles);
+  /// Fetch catalog index từ Device Profile "catalog" trên TB.
+  /// Trả về [CatalogIndex] với hierarchy protocol→category→brand.
+  Future<CatalogIndex> fetchCatalogIndex() async {
+    // Tìm profile tên "catalog"
+    final pageLink = PageLink(10, 0, 'catalog');
+    final pageData =
+        await _client.getDeviceProfileService().getDeviceProfileInfos(pageLink);
+    final info =
+        pageData.data.where((p) => p.name == 'catalog').firstOrNull;
+    if (info == null) throw Exception('Catalog profile "catalog" không tìm thấy trên server');
+
+    // Fetch full profile để lấy description
+    final response = await _client
+        .get<Map<String, dynamic>>('/api/deviceProfileInfo/${info.id.id}');
+    final json = response.data;
+    if (json == null) throw Exception('Không đọc được catalog profile');
+
+    final descRaw = json['description'];
+    Map<String, dynamic>? desc;
+    if (descRaw is String && descRaw.isNotEmpty) {
+      try {
+        desc = jsonDecode(descRaw) as Map<String, dynamic>;
+      } catch (e) {
+        throw Exception('Catalog description không đúng định dạng JSON: $e');
+      }
+    } else if (descRaw is Map<String, dynamic>) {
+      desc = descRaw;
+    }
+    if (desc == null) throw Exception('Catalog description rỗng');
+
+    return CatalogIndex._parse(desc);
+  }
+
+  /// Fetch danh sách models cho protocol + category + brand cụ thể.
+  /// Gọi API: GET /api/deviceProfileInfos?textSearch={p}.{c}.{b}.&pageSize=100
+  Future<List<CodesetProfile>> fetchModels(
+      String protocol, String category, String brand) {
+    final prefix = '$protocol.$category.$brand.';
+    return _fetchProfiles(prefix);
   }
 
   /// Fetch 1 profile cụ thể theo profile ID (TB entity ID).
-  /// Đọc full description để lấy button_layout + proto.
   Future<CodesetProfile?> fetchProfile(String profileId) async {
     try {
       final response = await _client
@@ -152,33 +253,28 @@ class CodesetService {
   // ── Private helpers ───────────────────────────────────────────────────────
 
   Future<List<CodesetProfile>> _fetchProfiles(String textSearch) async {
-    final pageLink = PageLink(1000, 0, textSearch);
+    final pageLink = PageLink(100, 0, textSearch);
     final pageData = await _client
         .getDeviceProfileService()
         .getDeviceProfileInfos(pageLink);
 
     final result = <CodesetProfile>[];
     for (final info in pageData.data) {
-      // Lọc đúng naming convention (textSearch có thể khớp cả tên khác)
       if (!info.name.startsWith(textSearch)) continue;
       final parts = info.name.split('.');
       if (parts.length != 4) continue;
 
-      // Đọc description từ raw API để lấy button_layout
       CodesetProfile? profile;
       try {
         final response = await _client
             .get<Map<String, dynamic>>('/api/deviceProfileInfo/${info.id.id}');
         final rawJson = response.data;
-        if (rawJson != null) {
-          profile = _parseProfileInfo(rawJson);
-        }
+        if (rawJson != null) profile = _parseProfileInfo(rawJson);
       } catch (_) {}
 
       profile ??= _parseProfileInfoFromSdk(info);
       if (profile != null) result.add(profile);
     }
-
     return result;
   }
 
@@ -193,7 +289,6 @@ class CodesetService {
 
     final image = json['image'] as String?;
 
-    // description: có thể là String (JSON-encoded) hoặc Map
     final descRaw = json['description'];
     Map<String, dynamic>? desc;
     if (descRaw is String && descRaw.isNotEmpty) {
@@ -209,11 +304,7 @@ class CodesetService {
     Map<String, dynamic>? codesetMeta;
 
     if (desc != null) {
-      // Display name: i18n.vi.name
-      displayName = (desc['i18n'] as Map?)
-          ?['vi']?['name'] as String?;
-
-      // button_layout
+      displayName = ((desc['i18n'] as Map?)?['vi'] as Map?)?['name'] as String?;
       final uiHints = desc['ui_hints'] as Map?;
       if (uiHints != null) {
         final raw = uiHints['button_layout'];
@@ -257,43 +348,9 @@ class CodesetService {
   }
 }
 
-// ── Display name lookup tables ──────────────────────────────────────────────
+// ── UI constants (UI-only, không phải data source) ───────────────────────────
 
-const kCodesetCategoryNames = <String, Map<String, String>>{
-  // IR categories
-  'tv':        {'vi': 'Tivi',           'en': 'TV'},
-  'ac':        {'vi': 'Điều hòa',       'en': 'Air Conditioner'},
-  'fan':       {'vi': 'Quạt',           'en': 'Fan'},
-  'stb':       {'vi': 'Đầu thu',        'en': 'Set-top Box'},
-  'projector': {'vi': 'Máy chiếu',      'en': 'Projector'},
-  // RF categories
-  'switch':    {'vi': 'Công tắc',       'en': 'Switch'},
-  'curtain':   {'vi': 'Rèm',            'en': 'Curtain'},
-  'doorbell':  {'vi': 'Chuông cửa',     'en': 'Doorbell'},
-  'gate':      {'vi': 'Cổng/Cửa cuốn', 'en': 'Gate/Roller'},
-  // Dùng chung
-  'socket':    {'vi': 'Ổ cắm',         'en': 'Socket'},
-};
-
-const kCodesetBrandNames = <String, String>{
-  'samsung':    'Samsung',
-  'lg':         'LG',
-  'daikin':     'Daikin',
-  'panasonic':  'Panasonic',
-  'toshiba':    'Toshiba',
-  'sony':       'Sony',
-  'sharp':      'Sharp',
-  'mitsubishi': 'Mitsubishi',
-  'carrier':    'Carrier',
-  'midea':      'Midea',
-  'gree':       'Gree',
-  'ev1527':     'EV1527',
-  'pt2262':     'PT2262',
-  'dooya':      'Dooya',
-  'somfy':      'Somfy',
-  'generic':    'Khác',
-};
-
+/// Icon map cho category key — UI concern, không phụ thuộc catalog server.
 const kCodesetCategoryIcons = <String, String>{
   'tv':        'tv',
   'ac':        'ac_unit',
@@ -311,11 +368,3 @@ const kProtocolNames = <String, Map<String, String>>{
   'ir': {'vi': 'Hồng ngoại (IR)', 'en': 'Infrared (IR)'},
   'rf': {'vi': 'Sóng RF',         'en': 'RF Remote'},
 };
-
-String categoryDisplayName(String cat, {String lang = 'vi'}) {
-  return kCodesetCategoryNames[cat]?[lang] ?? cat;
-}
-
-String brandDisplayName(String brand) {
-  return kCodesetBrandNames[brand] ?? brand;
-}

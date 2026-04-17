@@ -6,21 +6,22 @@ class CodesetModelPage extends StatelessWidget {
   const CodesetModelPage({
     super.key,
     required this.models,
-    required this.brand,
-    required this.category,
+    required this.brandName,
+    required this.categoryName,
   });
 
   final List<CodesetProfile> models;
-  final String brand;
-  final String category;
+
+  /// Tên hiển thị của brand, vd: "Samsung"
+  final String brandName;
+
+  /// Tên hiển thị của category, vd: "Tivi"
+  final String categoryName;
 
   @override
   Widget build(BuildContext context) {
-    final brandName = brandDisplayName(brand);
-    final catName = categoryDisplayName(category);
-
     return Scaffold(
-      appBar: AppBar(title: Text('$brandName $catName')),
+      appBar: AppBar(title: Text('$brandName $categoryName')),
       body: Column(
         children: [
           // Hướng dẫn
@@ -28,7 +29,10 @@ class CodesetModelPage extends StatelessWidget {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -50,12 +54,13 @@ class CodesetModelPage extends StatelessWidget {
           Expanded(
             child: ListView.separated(
               itemCount: models.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   const Divider(height: 1, indent: 72),
               itemBuilder: (context, i) {
                 final model = models[i];
                 return _ModelTile(
                   model: model,
+                  brandName: brandName,
                   onTap: () => Navigator.pop(context, model),
                 );
               },
@@ -68,18 +73,24 @@ class CodesetModelPage extends StatelessWidget {
 }
 
 class _ModelTile extends StatelessWidget {
-  const _ModelTile({required this.model, required this.onTap});
+  const _ModelTile({
+    required this.model,
+    required this.brandName,
+    required this.onTap,
+  });
   final CodesetProfile model;
+  final String brandName;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final displayName = model.displayName ??
-        '${brandDisplayName(model.brand)} (${model.modelId})';
+    final displayName =
+        model.displayName ?? '$brandName (${model.modelId})';
     final subtitle = _buildSubtitle();
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: _ModelImage(image: model.image, modelId: model.modelId),
       title: Text(displayName,
           style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -123,21 +134,19 @@ class _ModelImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (image != null && image!.isNotEmpty) {
       if (image!.startsWith('data:') || image!.length > 200) {
-        // Base64 image
         try {
           final bytes = Uri.parse(image!).data?.contentAsBytes();
           if (bytes != null) {
             return ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Image.memory(bytes, width: 56, height: 56,
-                  fit: BoxFit.contain),
+              child: Image.memory(bytes,
+                  width: 56, height: 56, fit: BoxFit.contain),
             );
           }
         } catch (_) {}
       }
     }
 
-    // Fallback icon
     return Container(
       width: 56,
       height: 56,

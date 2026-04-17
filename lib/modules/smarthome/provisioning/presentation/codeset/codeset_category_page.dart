@@ -7,10 +7,10 @@ import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 class CodesetCategoryPage extends StatefulWidget {
   const CodesetCategoryPage({
     super.key,
-    required this.catalog,
+    required this.catalogIndex,
   });
 
-  final CodesetCatalog catalog;
+  final CatalogIndex catalogIndex;
 
   @override
   State<CodesetCategoryPage> createState() => _CodesetCategoryPageState();
@@ -20,7 +20,8 @@ class _CodesetCategoryPageState extends State<CodesetCategoryPage> {
   String _protocol = 'ir';
   String? _category;
 
-  List<String> get _categories => widget.catalog.categoriesFor(_protocol);
+  List<CatalogCategoryEntry> get _categories =>
+      widget.catalogIndex.categoriesFor(_protocol);
 
   void _selectProtocol(String p) {
     setState(() {
@@ -103,11 +104,12 @@ class _CodesetCategoryPageState extends State<CodesetCategoryPage> {
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
                 childAspectRatio: 2.2,
-                children: _categories.map((cat) {
+                children: _categories.map((entry) {
                   return _CategoryCard(
-                    category: cat,
-                    selected: _category == cat,
-                    onTap: () => _selectCategory(cat),
+                    category: entry.category,
+                    name: entry.name,
+                    selected: _category == entry.category,
+                    onTap: () => _selectCategory(entry.category),
                   );
                 }).toList(),
               ),
@@ -183,10 +185,12 @@ class _ProtoButton extends StatelessWidget {
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
     required this.category,
+    required this.name,
     required this.selected,
     required this.onTap,
   });
   final String category;
+  final String name;
   final bool selected;
   final VoidCallback onTap;
 
@@ -209,7 +213,7 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.primary;
-    final label = categoryDisplayName(category);
+    final label = name;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
