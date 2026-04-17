@@ -10,7 +10,6 @@ import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
-import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_ir_rf_device_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
 import 'package:thingsboard_app/utils/services/provisioning/eps_ble/wifi_provisioning_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_profile_ui_service.dart';
@@ -472,19 +471,6 @@ class _AddDevicePageState extends ConsumerState<AddDevicePage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AddIrRfDevicePage()),
-                    ),
-                    icon: const Icon(Icons.sensors),
-                    label: const Text('Thêm thiết bị IR / RF'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.push(
                       context,

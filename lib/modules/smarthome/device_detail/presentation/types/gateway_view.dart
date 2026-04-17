@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
+import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_ir_rf_device_page.dart';
 
 // Keys: cpu, mem, uptime, dev_cnt
 // RPC: reboot, startScan, stopScan
 class GatewayView extends StatelessWidget {
-  const GatewayView({required this.telemetry, required this.onRpc, super.key});
+  const GatewayView({
+    required this.telemetry,
+    required this.onRpc,
+    this.gatewayId,
+    this.meta,
+    super.key,
+  });
   final Map<String, dynamic> telemetry;
   final Future<void> Function(String method, Map<String, dynamic> params) onRpc;
+  final String? gatewayId;
+  final ProfileMetadata? meta;
+
+  List<String> get _capabilities => meta?.uiHints?.capabilities ?? const [];
+  bool get _supportsIr => _capabilities.contains('ir');
+  bool get _supportsRf => _capabilities.contains('rf');
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +95,34 @@ class GatewayView extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+
+        // ── IR / RF buttons (chỉ hiện khi gateway profile khai báo capabilities) ──
+        if (_supportsIr || _supportsRf) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (_supportsIr)
+                Expanded(
+                  child: _GatewayAction(
+                    icon: Icons.settings_remote,
+                    label: 'Thêm thiết bị IR',
+                    color: Colors.deepPurple,
+                    onTap: () => _openAddIrRf(context, 'ir'),
+                  ),
+                ),
+              if (_supportsIr && _supportsRf) const SizedBox(width: 10),
+              if (_supportsRf)
+                Expanded(
+                  child: _GatewayAction(
+                    icon: Icons.sensors,
+                    label: 'Thêm thiết bị RF',
+                    color: Colors.indigo,
+                    onTap: () => _openAddIrRf(context, 'rf'),
+                  ),
+                ),
+            ],
+          ),
+        ],
 
         const SizedBox(height: 10),
         _GatewayAction(
@@ -101,6 +142,18 @@ class GatewayView extends StatelessWidget {
           fullWidth: true,
         ),
       ],
+    );
+  }
+
+  void _openAddIrRf(BuildContext context, String protocol) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddIrRfDevicePage(
+          initialGatewayId: gatewayId,
+          initialProtocol: protocol,
+        ),
+      ),
     );
   }
 

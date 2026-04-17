@@ -18,7 +18,17 @@ import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.da
 ///            hoặc "Tự học" (custom binding)
 ///   Step 3 — Đặt tên thiết bị → xác nhận
 class AddIrRfDevicePage extends ConsumerStatefulWidget {
-  const AddIrRfDevicePage({super.key});
+  const AddIrRfDevicePage({
+    this.initialGatewayId,
+    this.initialProtocol,
+    super.key,
+  });
+
+  /// Khi mở từ GatewayView, truyền ID gateway để bỏ qua bước chọn gateway.
+  final String? initialGatewayId;
+
+  /// 'ir' hoặc 'rf' — pre-select protocol khi mở từ nút cụ thể.
+  final String? initialProtocol;
 
   @override
   ConsumerState<AddIrRfDevicePage> createState() => _AddIrRfDevicePageState();
@@ -39,7 +49,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   // null = chưa chọn, "custom" = tự học
   CodesetProfile? _selectedProfile;
   bool _isCustom = false;
-  String _selectedProtocol = 'ir';
+  late String _selectedProtocol;
   String? _selectedCategory;
   CodesetCatalog? _catalog;
   bool _loadingCatalog = false;
@@ -55,6 +65,14 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   @override
   void initState() {
     super.initState();
+    _selectedProtocol = widget.initialProtocol ?? 'ir';
+    // Nếu đã có gateway (mở từ GatewayView), bắt đầu ở step 1
+    if (widget.initialGatewayId != null) {
+      _step = 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pageCtrl.jumpToPage(1);
+      });
+    }
     _loadGateways();
   }
 
@@ -76,7 +94,14 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
       setState(() {
         _gateways = gws;
         _loadingGateways = false;
-        if (gws.length == 1) _selectedGw = gws.first;
+        if (widget.initialGatewayId != null) {
+          _selectedGw = gws.firstWhere(
+            (g) => g.id == widget.initialGatewayId,
+            orElse: () => gws.isNotEmpty ? gws.first : gws.first,
+          );
+        } else if (gws.length == 1) {
+          _selectedGw = gws.first;
+        }
       });
     } catch (_) {
       setState(() => _loadingGateways = false);
@@ -125,7 +150,8 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   }
 
   void _back() {
-    if (_step > 0) {
+    final minStep = widget.initialGatewayId != null ? 1 : 0;
+    if (_step > minStep) {
       setState(() => _step--);
       _pageCtrl.animateToPage(_step,
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);

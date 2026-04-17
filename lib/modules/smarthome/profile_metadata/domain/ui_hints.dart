@@ -45,6 +45,7 @@ class UiHints {
     this.quickActions = const [],
     this.buttonLayout = const [],
     this.irAcConfig,
+    this.capabilities = const [],
   });
 
   factory UiHints.fromJson(Map<String, dynamic> json) {
@@ -70,6 +71,10 @@ class UiHints {
       irAcConfig: acRaw != null
           ? IrAcConfig.fromJson(acRaw as Map<String, dynamic>)
           : null,
+      capabilities: (json['capabilities'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
   }
 
@@ -103,6 +108,10 @@ class UiHints {
   /// Config điều hòa — chỉ có khi detailLayout == 'ir_ac'.
   final IrAcConfig? irAcConfig;
 
+  /// Danh sách tính năng gateway hỗ trợ: 'ir', 'rf', 'zigbee', 'ble', 'zwave'...
+  /// Dùng để ẩn/hiện các nút thêm thiết bị trên GatewayView.
+  final List<String> capabilities;
+
   Map<String, dynamic> toJson() => {
         if (primaryState != null) 'primary_state': primaryState,
         'summary_states': summaryStates,
@@ -113,6 +122,7 @@ class UiHints {
         'quick_actions': quickActions.map((a) => a.toJson()).toList(),
         if (buttonLayout.isNotEmpty) 'button_layout': buttonLayout,
         if (irAcConfig != null) 'ir_ac_config': irAcConfig!.toJson(),
+        if (capabilities.isNotEmpty) 'capabilities': capabilities,
       };
 }
 

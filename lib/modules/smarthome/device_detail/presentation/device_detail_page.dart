@@ -393,7 +393,12 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       'rf_doorbell' => RfDoorbellView(telemetry: _telemetry),
 
       'camera' => CameraView(telemetry: _telemetry, onRpc: _rpc),
-      'gateway' => GatewayView(telemetry: _telemetry, onRpc: _rpc),
+      'gateway' => GatewayView(
+          telemetry: _telemetry,
+          onRpc: _rpc,
+          gatewayId: widget.device.id,
+          meta: meta,
+        ),
       _ => _GenericView(telemetry: _telemetry),
     };
   }
