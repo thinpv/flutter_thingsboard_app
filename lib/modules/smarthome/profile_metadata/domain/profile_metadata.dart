@@ -26,7 +26,7 @@ class ProfileMetadata {
   final int v;
 
   /// Widget type dùng để render detail page.
-  /// Ví dụ: 'smart_plug' | 'light' | 'air_conditioner' | 'auto'
+  /// Ví dụ: 'smartPlug' | 'light' | 'airConditioner' | 'auto'
   final String uiType;
 
   /// Material icon name cho thiết bị.

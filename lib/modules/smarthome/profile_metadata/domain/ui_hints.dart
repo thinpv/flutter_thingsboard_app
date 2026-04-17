@@ -88,7 +88,7 @@ class UiHints {
   final String cardLayout;
 
   /// Layout preset cho detail page:
-  ///   'auto' | 'ir_remote' | 'ir_ac' | 'rf_socket' | 'rf_fan' | 'rf_doorbell'
+  ///   'auto' | 'irRemote' | 'irAc' | 'rfSocket' | 'rfFan' | 'rfDoorbell'
   final String detailLayout;
 
   /// Công suất tối đa (W) — dùng scale progress bar smart plug.
@@ -105,7 +105,7 @@ class UiHints {
   /// Shape: [{"action":"power","label":"Power","icon":"power_settings_new","row":0,"col":0}]
   final List<dynamic> buttonLayout;
 
-  /// Config điều hòa — chỉ có khi detailLayout == 'ir_ac'.
+  /// Config điều hòa — chỉ có khi detailLayout == 'irAc'.
   final IrAcConfig? irAcConfig;
 
   /// Danh sách tính năng gateway hỗ trợ: 'ir', 'rf', 'zigbee', 'ble', 'zwave'...

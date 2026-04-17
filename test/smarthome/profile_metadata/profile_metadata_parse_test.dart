@@ -12,7 +12,7 @@ void main() {
       const description = '''
 {
   "v": 1,
-  "ui_type": "smart_plug",
+  "ui_type": "smartPlug",
   "icon": "power",
   "color_primary": "#4CAF50",
   "states": {
@@ -55,7 +55,7 @@ void main() {
       final meta = ProfileMetadata.tryParse(description);
 
       expect(meta.v, 1);
-      expect(meta.uiType, 'smart_plug');
+      expect(meta.uiType, 'smartPlug');
       expect(meta.icon, 'power');
       expect(meta.colorPrimary, '#4CAF50');
       expect(meta.isEmpty, isFalse);
@@ -154,7 +154,7 @@ void main() {
     test('tolerates unknown fields from future schema version', () {
       final json = jsonEncode({
         'v': 99,
-        'ui_type': 'smart_plug',
+        'ui_type': 'smartPlug',
         'future_field': 'some_value',
         'states': {
           'onoff0': {
@@ -167,7 +167,7 @@ void main() {
       final meta = ProfileMetadata.tryParse(json);
       // Phải parse được — không throw
       expect(meta.v, 99);
-      expect(meta.uiType, 'smart_plug');
+      expect(meta.uiType, 'smartPlug');
       expect(meta.states['onoff0']?.type, 'bool');
       expect(meta.states['onoff0']?.controllable, isTrue);
     });

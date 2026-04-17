@@ -317,9 +317,9 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       // đều dùng layout ir_remote. Xử lý trường hợp profile trên ThingsBoard
       // chưa có ui_hints.detail_layout (nhập trước khi field này được thêm).
       if (routeKey.startsWith('ir_') &&
-          routeKey != 'ir_remote' &&
-          routeKey != 'ir_ac') {
-        routeKey = 'ir_remote';
+          routeKey != 'irRemote' &&
+          routeKey != 'irAc') {
+        routeKey = 'irRemote';
       }
       return _buildLegacyBody(routeKey, meta: meta);
     }
@@ -334,8 +334,8 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
           onRpc: _rpc,
           meta: meta ?? const ProfileMetadata(),
         ),
-      'air_conditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
-      'smart_plug' => SmartPlugControl(
+      'airConditioner' => AcControl(telemetry: _telemetry, onRpc: _rpc),
+      'smartPlug' => SmartPlugControl(
           deviceId: widget.device.id,
           deviceName: widget.device.displayName,
           telemetry: _telemetry,
@@ -345,16 +345,16 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       'switch' => SwitchControl(telemetry: _telemetry, onRpc: _rpc, meta: meta),
       'electrical_switch' =>
         ElectricalSwitchView(telemetry: _telemetry, onRpc: _rpc, meta: meta),
-      'door_sensor' => DoorSensorView(
+      'doorSensor' => DoorSensorView(
           deviceId: widget.device.id,
           deviceName: widget.device.displayName,
           telemetry: _telemetry,
         ),
-      'motion_sensor' => MotionSensorView(telemetry: _telemetry),
-      'temp_humidity' => TempHumView(telemetry: _telemetry),
-      'smoke_sensor' => SmokeSensorView(telemetry: _telemetry),
-      'leak_sensor' => LeakSensorView(telemetry: _telemetry),
-      'air_quality' => AirQualityView(telemetry: _telemetry),
+      'motionSensor' => MotionSensorView(telemetry: _telemetry),
+      'tempHumidity' => TempHumView(telemetry: _telemetry),
+      'smokeSensor' => SmokeSensorView(telemetry: _telemetry),
+      'leakSensor' => LeakSensorView(telemetry: _telemetry),
+      'airQuality' => AirQualityView(telemetry: _telemetry),
       'soil_sensor' => SoilSensorView(telemetry: _telemetry),
       'lock' => LockView(telemetry: _telemetry, onRpc: _rpc),
       'remote' || 'button' || 'scene_switch' => RemoteView(telemetry: _telemetry),
@@ -362,14 +362,14 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       // IR devices — routing theo detailLayout từ profile (ir_remote | ir_ac).
       // button_layout lấy từ profile ui_hints, không hardcode trong app.
       // Profile riêng mỗi loại thiết bị (ir_tv_lg, ir_tv_samsung, ir_fan_generic...)
-      // đều có detail_layout="ir_remote" → route vào đây với button_layout riêng.
-      'ir_remote' => IrRemoteControl(
+      // đều có detail_layout="irRemote" → route vào đây với button_layout riêng.
+      'irRemote' => IrRemoteControl(
           deviceId: widget.device.id,
           telemetry: _telemetry,
           onRpc: (method, params) => _rpc(method, params),
           buttonLayout: meta?.uiHints?.buttonLayout ?? const [],
         ),
-      'ir_ac' => IrAcControl(
+      'irAc' => IrAcControl(
           deviceName: widget.device.displayName,
           telemetry: _telemetry,
           onRpc: (method, params) => _rpc(method, params),
@@ -382,15 +382,15 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         ),
 
       // RF devices — routing theo detailLayout từ profile
-      'rf_fan' => RfFanControl(
+      'rfFan' => RfFanControl(
           telemetry: _telemetry,
           onRpc: (method, params) => _rpc(method, params),
         ),
-      'rf_socket' => RfSocketView(
+      'rfSocket' => RfSocketView(
           telemetry: _telemetry,
           onRpc: (method, params) => _rpc(method, params),
         ),
-      'rf_doorbell' => RfDoorbellView(telemetry: _telemetry),
+      'rfDoorbell' => RfDoorbellView(telemetry: _telemetry),
 
       'camera' => CameraView(telemetry: _telemetry, onRpc: _rpc),
       'gateway' => GatewayView(

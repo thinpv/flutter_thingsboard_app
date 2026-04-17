@@ -151,7 +151,7 @@ void main() {
     test('full metadata', () {
       const original = ProfileMetadata(
         v: 1,
-        uiType: 'smart_plug',
+        uiType: 'smartPlug',
         icon: 'power',
         colorPrimary: '#4CAF50',
         states: {
@@ -183,7 +183,7 @@ void main() {
       );
 
       expect(restored.v, 1);
-      expect(restored.uiType, 'smart_plug');
+      expect(restored.uiType, 'smartPlug');
       expect(restored.icon, 'power');
       expect(restored.colorPrimary, '#4CAF50');
       expect(restored.isEmpty, isFalse);

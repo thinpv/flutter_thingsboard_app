@@ -56,17 +56,17 @@ Color _hexColor(String hex) {
 
 IconData _deviceIconFor(String uiType) => switch (uiType) {
       'light' => Icons.lightbulb_outline,
-      'air_conditioner' => Icons.ac_unit,
-      'smart_plug' => Icons.electrical_services,
+      'airConditioner' => Icons.ac_unit,
+      'smartPlug' => Icons.electrical_services,
       'curtain' => Icons.blinds,
-      'door_sensor' => Icons.sensor_door_outlined,
-      'motion_sensor' => Icons.motion_photos_on_outlined,
-      'temp_humidity' => Icons.thermostat,
+      'doorSensor' => Icons.sensor_door_outlined,
+      'motionSensor' => Icons.motion_photos_on_outlined,
+      'tempHumidity' => Icons.thermostat,
       'camera' => Icons.videocam_outlined,
       'gateway' => Icons.router_outlined,
       'switch' => Icons.toggle_on_outlined,
       'lock' => Icons.lock_outline,
-      'smoke_sensor' => Icons.local_fire_department_outlined,
+      'smokeSensor' => Icons.local_fire_department_outlined,
       'electrical_switch' => Icons.power_settings_new,
       _ => Icons.devices_other,
     };
@@ -80,7 +80,7 @@ String _stateLabel(Map<String, dynamic> state, String uiType) {
     if (dim != null) return '$base · $dim%';
     return base;
   }
-  if (uiType == 'air_conditioner') {
+  if (uiType == 'airConditioner') {
     final sp = state['cool_sp'];
     final mode = state['mode'];
     final parts = <String>[base];
@@ -318,7 +318,7 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
 
   Map<String, dynamic> _defaultState(String uiType) {
     return switch (uiType) {
-      'air_conditioner' => {'onoff0': 1, 'mode': 'cool', 'cool_sp': 26},
+      'airConditioner' => {'onoff0': 1, 'mode': 'cool', 'cool_sp': 26},
       'curtain' => {'onoff0': 0, 'pos': 100},
       'light' => {'onoff0': 1, 'dim': 100},
       _ => {'onoff0': 1},
@@ -1219,7 +1219,7 @@ class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
           onToggle: _setOn,
           onChanged: (s) => setState(() => _state = s),
         ),
-      'air_conditioner' => _AcControls(
+      'airConditioner' => _AcControls(
           state: _state,
           isOn: _isOn,
           onToggle: _setOn,

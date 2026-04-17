@@ -87,7 +87,7 @@ void main() {
   const smartPlugDescription = '''
 {
   "v": 1,
-  "ui_type": "smart_plug",
+  "ui_type": "smartPlug",
   "icon": "power",
   "states": {
     "onoff0": {"type": "bool", "controllable": true},
@@ -118,7 +118,7 @@ void main() {
 
       final result = await service.getForProfile(profileId);
 
-      expect(result.uiType, 'smart_plug');
+      expect(result.uiType, 'smartPlug');
       expect(result.states['onoff0']?.controllable, isTrue);
       verifyNever(() => mockCache.put(profileId, any()));
     });
@@ -136,7 +136,7 @@ void main() {
 
       final result = await service.getForProfile(profileId);
 
-      expect(result.uiType, 'smart_plug');
+      expect(result.uiType, 'smartPlug');
       expect(result.icon, 'power');
       expect(result.states.length, 2);
       expect(result.states['power']?.unit, 'W');
@@ -145,7 +145,7 @@ void main() {
       final captured =
           verify(() => mockCache.put(profileId, captureAny())).captured.first
               as ProfileMetadata;
-      expect(captured.uiType, 'smart_plug');
+      expect(captured.uiType, 'smartPlug');
     });
 
     test('returns empty when description is null (backend chưa patch)', () async {
