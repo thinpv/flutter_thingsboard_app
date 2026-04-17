@@ -174,6 +174,13 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     }
   }
 
+  Future<void> _reloadProfile() async {
+    final profileId = widget.device.deviceProfileId ?? '';
+    if (profileId.isEmpty) return;
+    await ref.read(profileMetadataServiceProvider).invalidate(profileId);
+    ref.invalidate(deviceProfileMetadataProvider(profileId));
+  }
+
   Future<void> _editLabel() async {
     final controller = TextEditingController(text: _displayName);
     final newLabel = await showDialog<String>(
@@ -272,7 +279,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildBody(),
+          RefreshIndicator(
+            onRefresh: _reloadProfile,
+            child: _buildBody(),
+          ),
           DeviceHistoryView(
             deviceId: widget.device.id,
             telemetry: _telemetry,

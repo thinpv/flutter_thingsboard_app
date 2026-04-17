@@ -8,6 +8,7 @@ import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/room
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 // Light gray page background — makes white cards pop (Tuya-style).
@@ -73,6 +74,12 @@ class HomeTab extends ConsumerWidget {
                       for (final r in roomList) {
                         ref.invalidate(devicesInRoomProvider(r.id));
                       }
+                      // Xóa cache profile metadata để cập nhật giao diện thiết bị
+                      await ref
+                          .read(profileMetadataServiceProvider)
+                          .invalidateAll();
+                      ref.invalidate(profileMetadataProvider);
+                      ref.invalidate(deviceProfileMetadataProvider);
                       await Future.delayed(const Duration(milliseconds: 500));
                     },
                     child: selectedRoomId == null
