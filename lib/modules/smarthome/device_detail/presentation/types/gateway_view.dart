@@ -5,17 +5,24 @@ import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profil
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_ir_rf_device_page.dart';
 
 // Keys: cpu, mem, uptime, dev_cnt
-// RPC: reboot, startScan, stopScan
+// RPC: reboot, startScan, stopScan, irMonitor (two-way)
 class GatewayView extends StatelessWidget {
   const GatewayView({
     required this.telemetry,
     required this.onRpc,
+    this.onTwoWayRpc,
     this.gatewayId,
     this.meta,
     super.key,
   });
   final Map<String, dynamic> telemetry;
   final Future<void> Function(String method, Map<String, dynamic> params) onRpc;
+  /// Two-way RPC — dùng cho các lệnh cần response (irMonitor, ...).
+  final Future<dynamic> Function(
+    String method,
+    Map<String, dynamic> params, {
+    int? timeout,
+  })? onTwoWayRpc;
   final String? gatewayId;
   final ProfileMetadata? meta;
 
@@ -122,6 +129,17 @@ class GatewayView extends StatelessWidget {
                 ),
             ],
           ),
+          // Nút kiểm tra tín hiệu IR (debug: so sánh TX vs remote thật)
+          if (_supportsIr) ...[
+            const SizedBox(height: 10),
+            _GatewayAction(
+              icon: Icons.radar,
+              label: 'Kiểm tra tín hiệu IR',
+              color: Colors.deepOrange,
+              onTap: () => _showIrMonitorDialog(context),
+              fullWidth: true,
+            ),
+          ],
         ],
 
         const SizedBox(height: 10),
@@ -142,6 +160,16 @@ class GatewayView extends StatelessWidget {
           fullWidth: true,
         ),
       ],
+    );
+  }
+
+  void _showIrMonitorDialog(BuildContext context) {
+    final rpc = onTwoWayRpc;
+    if (rpc == null) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _IrMonitorDialog(onTwoWayRpc: rpc),
     );
   }
 
@@ -385,6 +413,203 @@ class _ResourceMeter extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IR Monitor Dialog
+// Gọi RPC irMonitor trên gateway — lắng nghe N giây, log từng frame IR nhận.
+// Dùng để so sánh tín hiệu gateway TX vs điều khiển thật (xem log serial IrEsp32).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum _MonitorState { idle, running, done, error }
+
+class _IrMonitorDialog extends StatefulWidget {
+  const _IrMonitorDialog({required this.onTwoWayRpc});
+  final Future<dynamic> Function(
+    String method,
+    Map<String, dynamic> params, {
+    int? timeout,
+  }) onTwoWayRpc;
+
+  @override
+  State<_IrMonitorDialog> createState() => _IrMonitorDialogState();
+}
+
+class _IrMonitorDialogState extends State<_IrMonitorDialog> {
+  _MonitorState _state = _MonitorState.idle;
+  int _selectedDuration = 10;
+  int _frames = 0;
+  String _errorMsg = '';
+
+  Future<void> _startMonitor() async {
+    setState(() => _state = _MonitorState.running);
+    try {
+      final timeoutMs = (_selectedDuration + 5) * 1000;
+      final raw = await widget.onTwoWayRpc(
+        'irMonitor',
+        {'duration': _selectedDuration},
+        timeout: timeoutMs,
+      );
+      final resp = raw as Map<String, dynamic>?;
+      final code = resp?['code'] as int? ?? -1;
+      if (code == 0) {
+        setState(() {
+          _state = _MonitorState.done;
+          _frames = resp?['frames'] as int? ?? 0;
+        });
+      } else {
+        setState(() {
+          _state = _MonitorState.error;
+          _errorMsg =
+              resp?['message'] as String? ?? 'Lỗi không xác định';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _state = _MonitorState.error;
+        _errorMsg = e.toString();
+      });
+    }
+  }
+
+  void _reset() => setState(() {
+        _state = _MonitorState.idle;
+        _frames = 0;
+        _errorMsg = '';
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.radar, color: Colors.deepOrange, size: 20),
+          SizedBox(width: 8),
+          Text('Kiểm tra tín hiệu IR'),
+        ],
+      ),
+      content: _buildContent(),
+      actions: _buildActions(context),
+    );
+  }
+
+  Widget _buildContent() {
+    return switch (_state) {
+      _MonitorState.idle => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Gateway lắng nghe tín hiệu IR và in ra log serial.\n'
+              'Bấm nút điều khiển thật trong thời gian này để so sánh '
+              'proto/code/raw với lệnh gateway phát.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Thời gian lắng nghe:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [10, 15, 30]
+                  .map(
+                    (d) => ChoiceChip(
+                      label: Text('${d}s'),
+                      selected: _selectedDuration == d,
+                      selectedColor: Colors.deepOrange.withValues(alpha: 0.15),
+                      onSelected: (_) =>
+                          setState(() => _selectedDuration = d),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      _MonitorState.running => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.deepOrange),
+            const SizedBox(height: 16),
+            Text(
+              'Đang lắng nghe $_selectedDuration giây...\n'
+              'Bấm nút điều khiển thật ngay bây giờ.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+      _MonitorState.done => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green.shade600, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Nhận được $_frames frame${_frames != 1 ? 's' : ''}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Xem log serial tag "IrEsp32":\n'
+              '"IR TX" = gateway phát\n"IR RX" = remote thật',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      _MonitorState.error => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: Colors.red.shade600, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              _errorMsg,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+    };
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    return switch (_state) {
+      _MonitorState.idle => [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+            onPressed: _startMonitor,
+            child: const Text(
+              'Bắt đầu',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      _MonitorState.running => const [],
+      _MonitorState.done || _MonitorState.error => [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+            onPressed: _reset,
+            child: const Text(
+              'Thử lại',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+    };
   }
 }
 

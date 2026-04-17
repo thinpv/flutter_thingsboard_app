@@ -135,6 +135,13 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     }
   }
 
+  Future<dynamic> _twoWayRpc(
+    String method,
+    Map<String, dynamic> params, {
+    int? timeout,
+  }) =>
+      _control.sendTwoWayRpc(widget.device.id, method, params, timeout: timeout);
+
   Future<void> _deleteDevice() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -400,6 +407,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       'gateway' => GatewayView(
           telemetry: _telemetry,
           onRpc: _rpc,
+          onTwoWayRpc: _twoWayRpc,
           gatewayId: widget.device.id,
           meta: meta,
         ),
