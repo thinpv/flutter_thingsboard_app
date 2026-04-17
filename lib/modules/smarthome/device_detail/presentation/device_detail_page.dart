@@ -310,17 +310,9 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       // routing không phụ thuộc vào uiType cụ thể — cho phép thêm thiết bị
       // mới mà không cần cập nhật app.
       final detailLayout = meta?.uiHints?.detailLayout;
-      String routeKey = (detailLayout != null && detailLayout != 'auto')
+      final routeKey = (detailLayout != null && detailLayout != 'auto')
           ? detailLayout
           : uiType;
-      // Fallback: profile cụ thể của IR (ir_tv_lg, ir_tv_samsung, ir_fan_generic…)
-      // đều dùng layout ir_remote. Xử lý trường hợp profile trên ThingsBoard
-      // chưa có ui_hints.detail_layout (nhập trước khi field này được thêm).
-      if (routeKey.startsWith('ir_') &&
-          routeKey != 'irRemote' &&
-          routeKey != 'irAc') {
-        routeKey = 'irRemote';
-      }
       return _buildLegacyBody(routeKey, meta: meta);
     }
 
@@ -343,7 +335,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         ),
       'curtain' => CurtainControl(telemetry: _telemetry, onRpc: _rpc),
       'switch' => SwitchControl(telemetry: _telemetry, onRpc: _rpc, meta: meta),
-      'electrical_switch' =>
+      'electricalSwitch' =>
         ElectricalSwitchView(telemetry: _telemetry, onRpc: _rpc, meta: meta),
       'doorSensor' => DoorSensorView(
           deviceId: widget.device.id,
@@ -355,15 +347,14 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
       'smokeSensor' => SmokeSensorView(telemetry: _telemetry),
       'leakSensor' => LeakSensorView(telemetry: _telemetry),
       'airQuality' => AirQualityView(telemetry: _telemetry),
-      'soil_sensor' => SoilSensorView(telemetry: _telemetry),
+      'soilSensor' => SoilSensorView(telemetry: _telemetry),
       'lock' => LockView(telemetry: _telemetry, onRpc: _rpc),
-      'remote' || 'button' || 'scene_switch' => RemoteView(telemetry: _telemetry),
+      'remote' || 'button' || 'sceneSwitch' => RemoteView(telemetry: _telemetry),
 
-      // IR devices — routing theo detailLayout từ profile (ir_remote | ir_ac).
-      // button_layout lấy từ profile ui_hints, không hardcode trong app.
-      // Profile riêng mỗi loại thiết bị (ir_tv_lg, ir_tv_samsung, ir_fan_generic...)
-      // đều có detail_layout="irRemote" → route vào đây với button_layout riêng.
-      'irRemote' => IrRemoteControl(
+      // IR devices — uiType (irTv/irFan/irProjector) dùng detailLayout để route.
+      // irTv/irFan/irProjector → detailLayout="irRemote" → IrRemoteControl
+      // irAc → detailLayout="irAc" → IrAcControl
+      'irTv' || 'irFan' || 'irProjector' || 'irRemote' => IrRemoteControl(
           deviceId: widget.device.id,
           telemetry: _telemetry,
           onRpc: (method, params) => _rpc(method, params),
