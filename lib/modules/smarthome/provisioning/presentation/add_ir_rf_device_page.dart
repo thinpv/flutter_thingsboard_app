@@ -4,7 +4,6 @@ import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_brand_page.dart';
-import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_category_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_model_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/codeset/codeset_test_page.dart';
 import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
@@ -13,10 +12,10 @@ import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.da
 /// Wizard thêm thiết bị IR/RF mới.
 ///
 /// Luồng:
-///   Step 1 — Chọn Gateway
-///   Step 2 — Browse catalog (protocol → category → brand → model → thử phím)
+///   Step 0 — Chọn Gateway (bỏ qua khi initialGatewayId != null)
+///   Step 1 — Catalog inline: chọn category → brand → model → thử phím
 ///            hoặc "Tự học" (custom binding)
-///   Step 3 — Đặt tên thiết bị → xác nhận
+///   Step 2 — Đặt tên thiết bị → xác nhận
 class AddIrRfDevicePage extends ConsumerStatefulWidget {
   const AddIrRfDevicePage({
     this.initialGatewayId,
@@ -66,7 +65,6 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   void initState() {
     super.initState();
     _selectedProtocol = widget.initialProtocol ?? 'ir';
-    // Nếu đã có gateway (mở từ GatewayView), bắt đầu ở step 1
     if (widget.initialGatewayId != null) {
       _step = 1;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,6 +72,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
       });
     }
     _loadGateways();
+    _loadCatalog(_selectedProtocol); // chủ động load ngay khi mở
   }
 
   @override
@@ -169,55 +168,39 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
 
   // ─── Catalog browsing ────────────────────────────────────────────────────────
 
-  Future<void> _browseCatalog() async {
-    if (_catalog == null) {
-      await _loadCatalog('ir');
-    }
+  Future<void> _selectCategory(String protocol, String category) async {
     if (_catalog == null || !mounted) return;
 
-    // Bước 0+1: chọn protocol + category
-    final catSel = await Navigator.push<CodesetCategorySelection>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CodesetCategoryPage(catalog: _catalog!),
-      ),
-    );
-    if (catSel == null || !mounted) return;
-
     setState(() {
-      _selectedProtocol = catSel.protocol;
-      _selectedCategory = catSel.category;
+      _selectedProtocol = protocol;
+      _selectedCategory = category;
     });
 
-    // Bước 2: chọn brand
     final brand = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (_) => CodesetBrandPage(
           catalog: _catalog!,
-          protocol: catSel.protocol,
-          category: catSel.category,
+          protocol: protocol,
+          category: category,
         ),
       ),
     );
     if (brand == null || !mounted) return;
 
-    // Bước 3: chọn model
-    final models =
-        _catalog!.modelsFor(catSel.protocol, catSel.category, brand);
+    final models = _catalog!.modelsFor(protocol, category, brand);
     final selectedModel = await Navigator.push<CodesetProfile>(
       context,
       MaterialPageRoute(
         builder: (_) => CodesetModelPage(
           models: models,
           brand: brand,
-          category: catSel.category,
+          category: category,
         ),
       ),
     );
     if (selectedModel == null || !mounted) return;
 
-    // Bước 4: thử phím (nếu profile có button_layout với proto)
     if (selectedModel.testButtons.isNotEmpty) {
       final confirmed = await Navigator.push<bool>(
         context,
@@ -229,25 +212,18 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
         ),
       );
       if (!mounted) return;
-      if (confirmed != true) {
-        // User không chọn → quay lại danh sách model
-        return _browseCatalog();
-      }
+      if (confirmed != true) return; // quay lại chọn lại
     }
 
-    // User đã xác nhận → đặt profile đã chọn
     setState(() {
       _selectedProfile = selectedModel;
       _isCustom = false;
     });
 
-    // Tự động suggest tên thiết bị
     if (_nameCtrl.text.isEmpty) {
-      final defaultName = _buildDefaultName(selectedModel);
-      _nameCtrl.text = defaultName;
+      _nameCtrl.text = _buildDefaultName(selectedModel);
     }
 
-    // Tiến sang step đặt tên nếu đang ở step catalog
     if (_step == 1) _next();
   }
 
@@ -322,7 +298,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thêm thiết bị IR / RF'),
+        title: Text('Thêm thiết bị ${kProtocolNames[_selectedProtocol]?['vi'] ?? _selectedProtocol.toUpperCase()}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _back,
@@ -343,16 +319,13 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
                   onSelect: (gw) => setState(() => _selectedGw = gw),
                 ),
                 _StepCatalog(
-                  selectedProfile: _selectedProfile,
-                  isCustom: _isCustom,
+                  catalog: _catalog,
                   isLoadingCatalog: _loadingCatalog,
                   catalogError: _catalogError,
-                  onBrowse: _browseCatalog,
+                  protocol: _selectedProtocol,
+                  onCategorySelect: _selectCategory,
                   onCustom: _selectCustom,
-                  onClear: () => setState(() {
-                    _selectedProfile = null;
-                    _isCustom = false;
-                  }),
+                  onRetry: () => _loadCatalog(_selectedProtocol),
                 ),
                 _StepName(
                   controller: _nameCtrl,
@@ -496,232 +469,167 @@ class _StepGateway extends StatelessWidget {
   }
 }
 
-// ── Step 2: Catalog browsing ─────────────────────────────────────────────────
+// ── Step 1: Catalog inline ───────────────────────────────────────────────────
 
 class _StepCatalog extends StatelessWidget {
   const _StepCatalog({
-    required this.selectedProfile,
-    required this.isCustom,
+    required this.catalog,
     required this.isLoadingCatalog,
     required this.catalogError,
-    required this.onBrowse,
+    required this.protocol,
+    required this.onCategorySelect,
     required this.onCustom,
-    required this.onClear,
+    required this.onRetry,
   });
-  final CodesetProfile? selectedProfile;
-  final bool isCustom;
+
+  final CodesetCatalog? catalog;
   final bool isLoadingCatalog;
   final String? catalogError;
-  final VoidCallback onBrowse;
+  final String protocol;
+  final void Function(String protocol, String category) onCategorySelect;
   final VoidCallback onCustom;
-  final VoidCallback onClear;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Chọn loại điều khiển',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(
-            'Chọn từ catalog có sẵn hoặc tự học lệnh từ remote thật.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 20),
+    final categories = catalog?.categoriesFor(protocol) ?? [];
 
-          // Đã chọn profile
-          if (selectedProfile != null) ...[
-            _SelectedProfileCard(
-                profile: selectedProfile!, onClear: onClear),
-            const SizedBox(height: 16),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Category area (fills available space)
+        Expanded(child: _buildBody(context, categories)),
 
-          // Nút duyệt catalog
-          if (selectedProfile == null && !isCustom) ...[
-            // Error
-            if (catalogError != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Text(
-                  'Không tải được catalog: $catalogError\n'
-                  'Vẫn có thể dùng chế độ tự học.',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.orange.shade800),
-                ),
-              ),
-
-            // Browse button
-            OutlinedButton.icon(
-              onPressed: isLoadingCatalog ? null : onBrowse,
-              icon: isLoadingCatalog
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child:
-                          CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.search),
-              label: Text(isLoadingCatalog
-                  ? 'Đang tải catalog...'
-                  : 'Tìm remote từ catalog'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
+        // Divider + manual button
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(children: [
+            Expanded(child: Divider()),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text('hoặc', style: TextStyle(fontSize: 12)),
             ),
-            const SizedBox(height: 12),
-
-            const Row(children: [
-              Expanded(child: Divider()),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text('hoặc', style: TextStyle(fontSize: 12)),
-              ),
-              Expanded(child: Divider()),
-            ]),
-            const SizedBox(height: 12),
-          ],
-
-          // Custom (tự học)
-          if (!isCustom) ...[
-            _CustomCard(
-              selected: isCustom,
-              onTap: onCustom,
-            ),
-          ] else ...[
-            _CustomCard(selected: true, onTap: onClear),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectedProfileCard extends StatelessWidget {
-  const _SelectedProfileCard(
-      {required this.profile, required this.onClear});
-  final CodesetProfile profile;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final brandName = brandDisplayName(profile.brand);
-    final catName = categoryDisplayName(profile.category);
-    final protoName =
-        kProtocolNames[profile.protocol]?['vi'] ?? profile.protocol.toUpperCase();
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            Expanded(child: Divider()),
+          ]),
         ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.settings_remote_outlined),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.displayName ?? '$brandName $catName',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  '$protoName · $brandName · ${profile.modelId}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                if (profile.buttonLayout.isNotEmpty)
-                  Text(
-                    '${profile.buttonLayout.length} nút đã có sẵn',
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.grey.shade600),
-                  ),
-              ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: OutlinedButton.icon(
+            onPressed: onCustom,
+            icon: Icon(Icons.school_outlined, color: Colors.orange.shade700),
+            label: const Text('Tự học từ remote thật'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(44),
+              foregroundColor: Colors.orange.shade700,
             ),
           ),
-          IconButton(
-            onPressed: onClear,
-            icon: const Icon(Icons.close, size: 18),
-            tooltip: 'Chọn lại',
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(BuildContext context, List<String> categories) {
+    if (isLoadingCatalog) {
+      return const Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text('Đang tải catalog...', style: TextStyle(color: Colors.grey)),
+        ]),
+      );
+    }
+
+    if (catalogError != null && catalog == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.orange.shade400),
+            const SizedBox(height: 12),
+            const Text('Không tải được catalog', textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text(catalogError!,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            OutlinedButton(onPressed: onRetry, child: const Text('Thử lại')),
+          ]),
+        ),
+      );
+    }
+
+    if (categories.isEmpty) {
+      return Center(
+        child: Text(
+          'Không có thiết bị ${protocol.toUpperCase()} nào trong catalog.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 2.2,
+        children: categories
+            .map((cat) => _CatCard(
+                  category: cat,
+                  onTap: () => onCategorySelect(protocol, cat),
+                ))
+            .toList(),
       ),
     );
   }
 }
 
-class _CustomCard extends StatelessWidget {
-  const _CustomCard({required this.selected, required this.onTap});
-  final bool selected;
+class _CatCard extends StatelessWidget {
+  const _CatCard({required this.category, required this.onTap});
+  final String category;
   final VoidCallback onTap;
 
+  IconData get _icon => const <String, IconData>{
+        'tv': Icons.tv_outlined,
+        'ac': Icons.ac_unit,
+        'fan': Icons.air,
+        'stb': Icons.settings_input_hdmi_outlined,
+        'projector': Icons.videocam_outlined,
+        'switch': Icons.toggle_on_outlined,
+        'curtain': Icons.blinds_outlined,
+        'doorbell': Icons.notifications_outlined,
+        'gate': Icons.garage_outlined,
+        'socket': Icons.electrical_services_outlined,
+      }[category] ??
+      Icons.devices_outlined;
+
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: selected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey.shade300,
-            width: selected ? 2 : 1,
-          ),
+          border: Border.all(color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(8),
-          color: selected
-              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.2)
-              : null,
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.school_outlined,
-              color: selected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.orange,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tự học (Custom)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: selected
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                  ),
-                  const Text(
-                    'Dạy từng phím từ remote thật sau khi thêm',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
+            Icon(_icon, size: 20, color: color),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                categoryDisplayName(category),
+                style: const TextStyle(fontSize: 13),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (selected) const Icon(Icons.check_circle, color: Colors.green),
           ],
         ),
       ),
@@ -780,9 +688,9 @@ class _StepName extends StatelessWidget {
               children: [
                 _SummaryRow(
                   label: 'Giao thức',
-                  value: (kProtocolNames[selectedProfile?.protocol ?? protocol]
+                  value: kProtocolNames[selectedProfile?.protocol ?? protocol]
                               ?['vi'] ??
-                          protocol.toUpperCase()),
+                          protocol.toUpperCase(),
                 ),
                 if (selectedProfile != null) ...[
                   _SummaryRow(
