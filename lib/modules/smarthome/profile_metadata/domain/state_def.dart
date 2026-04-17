@@ -19,8 +19,8 @@ class StateDef {
     return StateDef(
       type: json['type'] as String? ?? 'string',
       unit: json['unit'] as String?,
-      labelDefault: json['label_default'] as String?,
-      labelKey: json['label_key'] as String?,
+      labelDefault: json['labelDefault'] as String? ?? json['label_default'] as String?,
+      labelKey: json['labelKey'] as String? ?? json['label_key'] as String?,
       icon: json['icon'] as String?,
       controllable: json['controllable'] as bool? ?? false,
       cumulative: json['cumulative'] as bool? ?? false,
@@ -29,7 +29,7 @@ class StateDef {
           ? StateRange.fromJson(json['range'] as Map<String, dynamic>)
           : null,
       precision: json['precision'] as int?,
-      enumValues: (json['enum_values'] as List<dynamic>?)
+      enumValues: ((json['enumValues'] ?? json['enum_values']) as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
     );
@@ -67,15 +67,15 @@ class StateDef {
   Map<String, dynamic> toJson() => {
         'type': type,
         if (unit != null) 'unit': unit,
-        if (labelDefault != null) 'label_default': labelDefault,
-        if (labelKey != null) 'label_key': labelKey,
+        if (labelDefault != null) 'labelDefault': labelDefault,
+        if (labelKey != null) 'labelKey': labelKey,
         if (icon != null) 'icon': icon,
         'controllable': controllable,
         'cumulative': cumulative,
         'chartable': chartable,
         if (range != null) 'range': range!.toJson(),
         if (precision != null) 'precision': precision,
-        if (enumValues != null) 'enum_values': enumValues,
+        if (enumValues != null) 'enumValues': enumValues,
       };
 }
 

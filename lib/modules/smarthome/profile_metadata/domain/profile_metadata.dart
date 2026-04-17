@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/action_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/automation_caps.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
@@ -58,9 +59,9 @@ class ProfileMetadata {
   factory ProfileMetadata.fromJson(Map<String, dynamic> json) {
     return ProfileMetadata(
       v: json['v'] as int? ?? 1,
-      uiType: json['ui_type'] as String? ?? 'auto',
+      uiType: json['uiType'] as String? ?? json['ui_type'] as String? ?? 'auto',
       icon: json['icon'] as String?,
-      colorPrimary: json['color_primary'] as String?,
+      colorPrimary: json['colorPrimary'] as String? ?? json['color_primary'] as String?,
       states: (json['states'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(
               k,
@@ -78,8 +79,8 @@ class ProfileMetadata {
       automation: json['automation'] != null
           ? AutomationCaps.fromJson(json['automation'] as Map<String, dynamic>)
           : null,
-      uiHints: json['ui_hints'] != null
-          ? UiHints.fromJson(json['ui_hints'] as Map<String, dynamic>)
+      uiHints: (json['uiHints'] ?? json['ui_hints']) != null
+          ? UiHints.fromJson((json['uiHints'] ?? json['ui_hints']) as Map<String, dynamic>)
           : null,
       i18n: (json['i18n'] as Map<String, dynamic>?)?.map(
         (locale, translations) => MapEntry(
@@ -98,13 +99,24 @@ class ProfileMetadata {
   /// vẫn hoạt động bình thường khi metadata empty.
   factory ProfileMetadata.tryParse(String? description) {
     if (description == null || description.isEmpty) {
+      debugPrint('[ProfileMetadata.tryParse] description is null/empty');
       return const ProfileMetadata();
     }
     try {
       final decoded = jsonDecode(description);
-      if (decoded is! Map<String, dynamic>) return const ProfileMetadata();
-      return ProfileMetadata.fromJson(decoded);
-    } catch (_) {
+      if (decoded is! Map<String, dynamic>) {
+        debugPrint('[ProfileMetadata.tryParse] description is not a Map: ${description.substring(0, description.length.clamp(0, 200))}');
+        return const ProfileMetadata();
+      }
+      final meta = ProfileMetadata.fromJson(decoded);
+      debugPrint('[ProfileMetadata.tryParse] uiType=${meta.uiType} '
+          'detailLayout=${meta.uiHints?.detailLayout} '
+          'states=${meta.states.keys.toList()} '
+          'raw=${description.substring(0, description.length.clamp(0, 300))}');
+      return meta;
+    } catch (e) {
+      debugPrint('[ProfileMetadata.tryParse] parse error: $e '
+          'raw=${description.substring(0, description.length.clamp(0, 200))}');
       return const ProfileMetadata();
     }
   }
@@ -113,13 +125,13 @@ class ProfileMetadata {
 
   Map<String, dynamic> toJson() => {
         'v': v,
-        'ui_type': uiType,
+        'uiType': uiType,
         if (icon != null) 'icon': icon,
-        if (colorPrimary != null) 'color_primary': colorPrimary,
+        if (colorPrimary != null) 'colorPrimary': colorPrimary,
         'states': states.map((k, v) => MapEntry(k, v.toJson())),
         'actions': actions.map((k, v) => MapEntry(k, v.toJson())),
         if (automation != null) 'automation': automation!.toJson(),
-        if (uiHints != null) 'ui_hints': uiHints!.toJson(),
+        if (uiHints != null) 'uiHints': uiHints!.toJson(),
         if (i18n != null)
           'i18n': i18n!.map((locale, t) => MapEntry(locale, t)),
       };

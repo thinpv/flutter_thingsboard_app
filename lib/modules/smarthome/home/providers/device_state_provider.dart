@@ -213,7 +213,8 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
       String? defaultLabel;
       if (serverAttrs != null) {
         active = serverAttrs['active']?.value;
-        uiType = serverAttrs['ui_type']?.value;
+        final rawUiType = serverAttrs['ui_type']?.value;
+        uiType = (rawUiType != null && rawUiType.isNotEmpty) ? rawUiType : null;
         defaultLabel = serverAttrs['default_label']?.value;
       }
 

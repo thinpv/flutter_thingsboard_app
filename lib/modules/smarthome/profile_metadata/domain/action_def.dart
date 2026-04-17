@@ -5,7 +5,7 @@ class ActionMetaDef {
 
   factory ActionMetaDef.fromJson(Map<String, dynamic> json) {
     return ActionMetaDef(
-      paramsHint: (json['params_hint'] as List<dynamic>?)
+      paramsHint: ((json['paramsHint'] ?? json['params_hint']) as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -17,6 +17,6 @@ class ActionMetaDef {
   final List<String> paramsHint;
 
   Map<String, dynamic> toJson() => {
-        'params_hint': paramsHint,
+        'paramsHint': paramsHint,
       };
 }

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
@@ -123,7 +125,11 @@ class DeviceProfileUiService {
     }
 
     // Fall back to image-filename convention if description.ui_type not set.
-    uiType ??= _uiFromImage(img);
+    final imgUiType = _uiFromImage(img);
+    uiType ??= imgUiType;
+    debugPrint('[ProfileUiSvc] profileId=$profileId → '
+        'uiType=$uiType (imgFallback=$imgUiType) '
+        'profileName=$profileName img=$img');
 
     final result = DeviceUiMeta(
       uiType: uiType,

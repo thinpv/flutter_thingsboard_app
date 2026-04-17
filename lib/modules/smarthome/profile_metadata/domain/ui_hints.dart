@@ -9,12 +9,12 @@ class IrAcConfig {
   });
 
   factory IrAcConfig.fromJson(Map<String, dynamic> json) => IrAcConfig(
-        minTemp: (json['min_temp'] as num?)?.toInt() ?? 16,
-        maxTemp: (json['max_temp'] as num?)?.toInt() ?? 30,
-        defaultTemp: (json['default_temp'] as num?)?.toInt() ?? 25,
+        minTemp: ((json['minTemp'] ?? json['min_temp']) as num?)?.toInt() ?? 16,
+        maxTemp: ((json['maxTemp'] ?? json['max_temp']) as num?)?.toInt() ?? 30,
+        defaultTemp: ((json['defaultTemp'] ?? json['default_temp']) as num?)?.toInt() ?? 25,
         modes: (json['modes'] as List<dynamic>?)?.map((e) => e as String).toList()
             ?? const ['cool', 'heat', 'fan', 'dry', 'auto'],
-        fanSpeeds: (json['fan_speeds'] as List<dynamic>?)?.map((e) => e as String).toList()
+        fanSpeeds: ((json['fanSpeeds'] ?? json['fan_speeds']) as List<dynamic>?)?.map((e) => e as String).toList()
             ?? const ['auto', 'low', 'mid', 'high'],
       );
 
@@ -25,11 +25,11 @@ class IrAcConfig {
   final List<String> fanSpeeds;
 
   Map<String, dynamic> toJson() => {
-        'min_temp': minTemp,
-        'max_temp': maxTemp,
-        'default_temp': defaultTemp,
+        'minTemp': minTemp,
+        'maxTemp': maxTemp,
+        'defaultTemp': defaultTemp,
         'modes': modes,
-        'fan_speeds': fanSpeeds,
+        'fanSpeeds': fanSpeeds,
       };
 }
 
@@ -49,25 +49,25 @@ class UiHints {
   });
 
   factory UiHints.fromJson(Map<String, dynamic> json) {
-    final acRaw = json['ir_ac_config'];
+    final acRaw = json['irAcConfig'] ?? json['ir_ac_config'];
     return UiHints(
-      primaryState: json['primary_state'] as String?,
-      summaryStates: (json['summary_states'] as List<dynamic>?)
+      primaryState: json['primaryState'] as String? ?? json['primary_state'] as String?,
+      summaryStates: ((json['summaryStates'] ?? json['summary_states']) as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      cardLayout: json['card_layout'] as String? ?? 'auto',
-      detailLayout: json['detail_layout'] as String? ?? 'auto',
-      maxPower: (json['max_power'] as num?)?.toDouble(),
-      chartKeys: (json['chart_keys'] as List<dynamic>?)
+      cardLayout: json['cardLayout'] as String? ?? json['card_layout'] as String? ?? 'auto',
+      detailLayout: json['detailLayout'] as String? ?? json['detail_layout'] as String? ?? 'auto',
+      maxPower: ((json['maxPower'] ?? json['max_power']) as num?)?.toDouble(),
+      chartKeys: ((json['chartKeys'] ?? json['chart_keys']) as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      quickActions: (json['quick_actions'] as List<dynamic>?)
+      quickActions: ((json['quickActions'] ?? json['quick_actions']) as List<dynamic>?)
               ?.map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      buttonLayout: (json['button_layout'] as List<dynamic>?) ?? const [],
+      buttonLayout: ((json['buttonLayout'] ?? json['button_layout']) as List<dynamic>?) ?? const [],
       irAcConfig: acRaw != null
           ? IrAcConfig.fromJson(acRaw as Map<String, dynamic>)
           : null,
@@ -113,15 +113,15 @@ class UiHints {
   final List<String> capabilities;
 
   Map<String, dynamic> toJson() => {
-        if (primaryState != null) 'primary_state': primaryState,
-        'summary_states': summaryStates,
-        'card_layout': cardLayout,
-        'detail_layout': detailLayout,
-        if (maxPower != null) 'max_power': maxPower,
-        'chart_keys': chartKeys,
-        'quick_actions': quickActions.map((a) => a.toJson()).toList(),
-        if (buttonLayout.isNotEmpty) 'button_layout': buttonLayout,
-        if (irAcConfig != null) 'ir_ac_config': irAcConfig!.toJson(),
+        if (primaryState != null) 'primaryState': primaryState,
+        'summaryStates': summaryStates,
+        'cardLayout': cardLayout,
+        'detailLayout': detailLayout,
+        if (maxPower != null) 'maxPower': maxPower,
+        'chartKeys': chartKeys,
+        'quickActions': quickActions.map((a) => a.toJson()).toList(),
+        if (buttonLayout.isNotEmpty) 'buttonLayout': buttonLayout,
+        if (irAcConfig != null) 'irAcConfig': irAcConfig!.toJson(),
         if (capabilities.isNotEmpty) 'capabilities': capabilities,
       };
 }
