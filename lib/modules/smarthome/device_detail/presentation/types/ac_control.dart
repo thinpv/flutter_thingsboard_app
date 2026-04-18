@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: power (0/1), temp, hum, mode (cool/heat/auto/dry/fan),
-//       cool_sp, heat_sp, run_mode, run_state, energy
+//       coolSp, heatSp, runMode, runState, energy
 class AcControl extends StatefulWidget {
   const AcControl({required this.telemetry, required this.onRpc, super.key});
   final Map<String, dynamic> telemetry;

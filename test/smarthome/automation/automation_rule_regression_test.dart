@@ -122,7 +122,7 @@ AutomationRule _tempHumRule() => AutomationRule(
         RuleAction(raw: {
           'type': 'device',
           'deviceId': 'ac-001',
-          'data': {'onoff0': 1, 'cool_sp': 25},
+          'data': {'onoff0': 1, 'coolSp': 25},
         }),
       ],
     );
@@ -219,7 +219,7 @@ void main() {
       expect(rt.schedule!.days, 62);
       expect(rt.schedule!.timeFrom, '08:00');
       expect(rt.schedule!.timeTo, '22:00');
-      expect(rt.actions.first.raw['data']['cool_sp'], 25);
+      expect(rt.actions.first.raw['data']['coolSp'], 25);
     });
 
     test('AC rule: timer condition every day, no time window', () {
