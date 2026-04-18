@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
@@ -115,10 +115,10 @@ class _LightControlState extends State<LightControl> {
   Color get _hslColor =>
       HSLColor.fromAHSL(1, _h, _s / 100, _l / 100).toColor();
 
-  Color _previewColor(ColorScheme cs) {
+  Color _previewColor() {
     if (_hasColor) return _hslColor;
     if (_hasCct) return _cctColor;
-    return cs.primary;
+    return MpColors.amber;
   }
 
   // ─── Actions (all via setValue) ──────────────────────────────────────────
@@ -128,8 +128,7 @@ class _LightControlState extends State<LightControl> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final previewColor = _previewColor(cs);
+    final previewColor = _previewColor();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -143,7 +142,6 @@ class _LightControlState extends State<LightControl> {
             icon: Icons.lightbulb_rounded,
             onTap: _toggle,
             activeColor: previewColor,
-            glowColor: previewColor,
             size: 120,
           ),
         ),
@@ -151,9 +149,11 @@ class _LightControlState extends State<LightControl> {
         Center(
           child: Text(
             _isOn ? 'Bật  ${_hasDim ? "${_dim.round()}%" : ""}' : 'Tắt',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: _isOn ? null : Colors.grey,
-                ),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: _isOn ? MpColors.text : MpColors.text3,
+            ),
           ),
         ),
         const SizedBox(height: 32),
@@ -269,11 +269,11 @@ class _LightControlState extends State<LightControl> {
           ],
           const SizedBox(height: 20),
           Container(
-            height: 40,
+            height: 36,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               color: _colorMode == 'hs' ? _hslColor : _cctColor,
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
           ),
         ],
@@ -306,26 +306,28 @@ class _ModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? cs.primary : cs.surfaceContainerHighest,
+          color: selected ? MpColors.text : MpColors.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? cs.onPrimary : cs.onSurface),
+            Icon(icon,
+                size: 16,
+                color: selected ? MpColors.bg : MpColors.text2),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: selected ? cs.onPrimary : cs.onSurface,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                color: selected ? MpColors.bg : MpColors.text2,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/device_state_providers.dart';
@@ -63,9 +64,9 @@ class GaugeTile extends ConsumerWidget {
                     if (unit.isNotEmpty)
                       TextSpan(
                         text: ' $unit',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: MpColors.text3,
                         ),
                       ),
                   ],
@@ -79,7 +80,7 @@ class GaugeTile extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: fraction,
               minHeight: 6,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: MpColors.surfaceAlt,
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
@@ -88,12 +89,12 @@ class GaugeTile extends ConsumerWidget {
             children: [
               Text(
                 '${range.min.toStringAsFixed(0)}$unit',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                style: const TextStyle(fontSize: 10, color: MpColors.text3),
               ),
               const Spacer(),
               Text(
                 '${range.max.toStringAsFixed(0)}$unit',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                style: const TextStyle(fontSize: 10, color: MpColors.text3),
               ),
             ],
           ),
@@ -104,9 +105,9 @@ class GaugeTile extends ConsumerWidget {
 
   /// Màu gauge theo tỷ lệ: xanh lá → vàng → đỏ (cho cảm biến thông thường).
   Color _gaugeColor(double fraction, BuildContext context) {
-    if (fraction < 0.6) return Colors.green.shade600;
-    if (fraction < 0.8) return Colors.orange.shade600;
-    return Colors.red.shade600;
+    if (fraction < 0.6) return MpColors.green;
+    if (fraction < 0.8) return MpColors.amber;
+    return MpColors.red;
   }
 
   static double _toDouble(dynamic v) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // IrAcControl — giao diện điều khiển điều hòa IR (LG, Samsung, Daikin...).
@@ -281,7 +282,7 @@ class _IrAcControlState extends State<IrAcControl> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Nhiệt độ',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
+                style: TextStyle(fontSize: 13, color: MpColors.text3)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -301,10 +302,10 @@ class _IrAcControlState extends State<IrAcControl> {
                           const RoundSliderThumbShape(enabledThumbRadius: 10),
                       overlayShape:
                           const RoundSliderOverlayShape(overlayRadius: 18),
-                      activeTrackColor: _isOn ? _acColor : Colors.grey,
-                      thumbColor: _isOn ? _acColor : Colors.grey,
+                      activeTrackColor: _isOn ? _acColor : MpColors.text3,
+                      thumbColor: _isOn ? _acColor : MpColors.text3,
                       inactiveTrackColor:
-                          (_isOn ? _acColor : Colors.grey).withValues(alpha: 0.2),
+                          (_isOn ? _acColor : MpColors.text3).withValues(alpha: 0.2),
                     ),
                     child: Slider(
                       value: _temp.toDouble(),
@@ -335,10 +336,10 @@ class _IrAcControlState extends State<IrAcControl> {
                 children: [
                   Text('${widget.minTemp}°',
                       style:
-                          const TextStyle(fontSize: 11, color: Colors.grey)),
+                          const TextStyle(fontSize: 11, color: MpColors.text3)),
                   Text('${widget.maxTemp}°',
                       style:
-                          const TextStyle(fontSize: 11, color: Colors.grey)),
+                          const TextStyle(fontSize: 11, color: MpColors.text3)),
                 ],
               ),
             ),
@@ -359,7 +360,7 @@ class _IrAcControlState extends State<IrAcControl> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Chế độ',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
+                style: TextStyle(fontSize: 13, color: MpColors.text3)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -396,7 +397,7 @@ class _IrAcControlState extends State<IrAcControl> {
                           info?.icon ?? Icons.device_unknown,
                           color: selected && _isOn
                               ? (info?.color ?? _acColor)
-                              : Colors.grey,
+                              : MpColors.text3,
                           size: 22,
                         ),
                         const SizedBox(height: 4),
@@ -406,7 +407,7 @@ class _IrAcControlState extends State<IrAcControl> {
                             fontSize: 11,
                             color: selected && _isOn
                                 ? (info?.color ?? _acColor)
-                                : Colors.grey,
+                                : MpColors.text3,
                             fontWeight: selected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
@@ -435,7 +436,7 @@ class _IrAcControlState extends State<IrAcControl> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Tốc độ quạt',
-                style: TextStyle(fontSize: 13, color: Colors.grey)),
+                style: TextStyle(fontSize: 13, color: MpColors.text3)),
             const SizedBox(height: 12),
             Row(
               children: widget.supportedFanSpeeds.map((spd) {
@@ -456,9 +457,7 @@ class _IrAcControlState extends State<IrAcControl> {
                         borderRadius: BorderRadius.circular(10),
                         color: selected && _isOn
                             ? _acColor.withValues(alpha: 0.15)
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+                            : MpColors.surfaceAlt,
                         border: Border.all(
                           color: selected && _isOn
                               ? _acColor
@@ -477,14 +476,14 @@ class _IrAcControlState extends State<IrAcControl> {
                                     : spd == 'mid'
                                         ? 21
                                         : 24,
-                            color: selected && _isOn ? _acColor : Colors.grey,
+                            color: selected && _isOn ? _acColor : MpColors.text3,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             _fanInfo[spd]?.label ?? spd,
                             style: TextStyle(
                               fontSize: 11,
-                              color: selected && _isOn ? _acColor : Colors.grey,
+                              color: selected && _isOn ? _acColor : MpColors.text3,
                               fontWeight: selected
                                   ? FontWeight.w600
                                   : FontWeight.normal,
@@ -556,18 +555,18 @@ class _TempButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: enabled
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+              ? MpColors.blue.withValues(alpha: 0.1)
               : Colors.transparent,
           border: Border.all(
             color: enabled
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                : Colors.grey.withValues(alpha: 0.2),
+                ? MpColors.blue.withValues(alpha: 0.4)
+                : MpColors.text3.withValues(alpha: 0.2),
           ),
         ),
         child: Icon(
           icon,
           size: 20,
-          color: enabled ? Theme.of(context).colorScheme.primary : Colors.grey,
+          color: enabled ? MpColors.blue : MpColors.text3,
         ),
       ),
     );
@@ -597,11 +596,11 @@ class _ExtraButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: active
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
+              ? MpColors.blue.withValues(alpha: 0.15)
+              : MpColors.surfaceAlt,
           border: Border.all(
             color: active
-                ? Theme.of(context).colorScheme.primary
+                ? MpColors.blue
                 : Colors.transparent,
           ),
         ),
@@ -612,10 +611,10 @@ class _ExtraButton extends StatelessWidget {
               icon,
               size: 22,
               color: active
-                  ? Theme.of(context).colorScheme.primary
+                  ? MpColors.blue
                   : enabled
-                      ? Colors.grey
-                      : Colors.grey.withValues(alpha: 0.4),
+                      ? MpColors.text3
+                      : MpColors.text3.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 4),
             Text(
@@ -623,10 +622,10 @@ class _ExtraButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: active
-                    ? Theme.of(context).colorScheme.primary
+                    ? MpColors.blue
                     : enabled
-                        ? Colors.grey
-                        : Colors.grey.withValues(alpha: 0.4),
+                        ? MpColors.text3
+                        : MpColors.text3.withValues(alpha: 0.4),
               ),
             ),
           ],

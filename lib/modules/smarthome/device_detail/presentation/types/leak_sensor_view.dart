@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: leak (0/1), bat/pin
@@ -21,7 +22,7 @@ class LeakSensorView extends StatelessWidget {
           icon: Icons.water_drop_outlined,
           label: detected ? 'PHÁT HIỆN RÒ NƯỚC!' : 'Không rò nước',
           detected: detected,
-          alertColor: Colors.blue,
+          alertColor: MpColors.blue,
         ),
         if (detected) ...[
           const SizedBox(height: 16),
@@ -29,18 +30,18 @@ class LeakSensorView extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: MpColors.blue.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: MpColors.blue.withValues(alpha: 0.3)),
             ),
             child: const Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.blue),
+                Icon(Icons.warning_amber_rounded, color: MpColors.blue),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Vui lòng kiểm tra nguồn nước và khóa van nước ngay!',
-                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: lock (LOCK/UNLOCK or true/false), action, bat/pin
@@ -20,7 +21,7 @@ class LockView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locked = _isLocked;
-    final color = locked ? Colors.indigo : Colors.green;
+    final color = locked ? MpColors.violet : MpColors.green;
     final action = telemetry['action']?.toString();
 
     return ListView(
@@ -65,10 +66,11 @@ class LockView extends StatelessWidget {
             child: Text(
               locked ? 'Đã khóa' : 'Đã mở khóa',
               key: ValueKey(locked),
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
         ),
@@ -77,7 +79,7 @@ class LockView extends StatelessWidget {
         Center(
           child: Text(
             'Nhấn để ${locked ? "mở khóa" : "khóa"}',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+            style: const TextStyle(color: MpColors.text3, fontSize: 13),
           ),
         ),
         const SizedBox(height: 32),
@@ -88,17 +90,17 @@ class LockView extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: MpColors.surfaceAlt,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
             child: Row(
               children: [
-                Icon(Icons.history, color: Colors.grey.shade500, size: 20),
+                const Icon(Icons.history, color: MpColors.text3, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   'Hoạt động gần nhất: $action',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                  style: const TextStyle(color: MpColors.text2, fontSize: 13),
                 ),
               ],
             ),
@@ -112,7 +114,7 @@ class LockView extends StatelessWidget {
               child: _LockActionButton(
                 icon: Icons.lock_rounded,
                 label: 'Khóa',
-                color: Colors.indigo,
+                color: MpColors.violet,
                 active: locked,
                 onTap: () => onRpc('setValue', {'lock': 'LOCK'}),
               ),
@@ -122,7 +124,7 @@ class LockView extends StatelessWidget {
               child: _LockActionButton(
                 icon: Icons.lock_open_rounded,
                 label: 'Mở khóa',
-                color: Colors.green,
+                color: MpColors.green,
                 active: !locked,
                 onTap: () => onRpc('setValue', {'lock': 'UNLOCK'}),
               ),
@@ -160,17 +162,17 @@ class _LockActionButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: active ? color : Colors.grey.shade100,
+          color: active ? color : MpColors.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           children: [
-            Icon(icon, color: active ? Colors.white : Colors.grey, size: 28),
+            Icon(icon, color: active ? Colors.white : MpColors.text3, size: 28),
             const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
-                color: active ? Colors.white : Colors.grey,
+                color: active ? Colors.white : MpColors.text3,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),

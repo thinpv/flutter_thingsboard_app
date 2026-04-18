@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/device_state_providers.dart';
@@ -47,14 +48,14 @@ class StatusTile extends ConsumerWidget {
             Icon(
               isTrue ? Icons.check_circle_outline : Icons.cancel_outlined,
               size: 18,
-              color: isTrue ? Colors.green.shade600 : Colors.grey.shade400,
+              color: isTrue ? MpColors.green : MpColors.text3,
             ),
             const SizedBox(width: 6),
             Text(
               isTrue ? 'Có' : 'Không',
               style: TextStyle(
                 fontSize: 13,
-                color: isTrue ? Colors.green.shade700 : Colors.grey.shade600,
+                color: isTrue ? MpColors.green : MpColors.text2,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -74,10 +75,10 @@ class StatusTile extends ConsumerWidget {
         // string / fallback
         trailing = Text(
           raw?.toString() ?? '—',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: MpColors.text,
           ),
         );
     }

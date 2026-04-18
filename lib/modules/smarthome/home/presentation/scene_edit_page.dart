@@ -51,7 +51,7 @@ Color _hexColor(String hex) {
   try {
     return Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
   } catch (_) {
-    return Colors.blue;
+    return MpColors.blue;
   }
 }
 

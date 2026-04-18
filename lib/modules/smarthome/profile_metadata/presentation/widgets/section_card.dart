@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
 /// Card chứa một nhóm tile (Điều khiển / Trạng thái / Biểu đồ).
 class SectionCard extends StatelessWidget {
@@ -13,27 +14,30 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+      decoration: BoxDecoration(
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
-                  ),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: MpColors.text3,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
+          const Divider(height: 1, indent: 16, endIndent: 16,
+              color: MpColors.border),
           ...children,
         ],
       ),
@@ -53,19 +57,19 @@ class SkeletonTile extends StatelessWidget {
         children: [
           Container(
             width: 120,
-            height: 14,
+            height: 12,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(7),
+              color: MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(6),
             ),
           ),
           const Spacer(),
           Container(
             width: 44,
-            height: 26,
+            height: 24,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(13),
+              color: MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ],
@@ -86,13 +90,13 @@ class ErrorTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              size: 18, color: Colors.orange.shade700),
+          const Icon(Icons.warning_amber_rounded,
+              size: 16, color: MpColors.amber),
           const SizedBox(width: 8),
-          Expanded(
+          const Expanded(
             child: Text(
               'Không đọc được dữ liệu',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              style: TextStyle(color: MpColors.text3, fontSize: 13),
             ),
           ),
         ],

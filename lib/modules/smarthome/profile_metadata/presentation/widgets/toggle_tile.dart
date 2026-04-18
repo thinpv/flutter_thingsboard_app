@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/device_state_providers.dart';
@@ -31,30 +32,70 @@ class ToggleTile extends ConsumerWidget {
   }
 
   Widget _buildTile(BuildContext context, WidgetRef ref, bool value) {
-    return SwitchListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      title: Text(
-        def.labelDefault ?? stateKey,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      ),
-      subtitle: def.icon != null
-          ? null
-          : null, // Phase C: hiển thị icon
-      secondary: def.icon != null
-          ? Icon(
-              _resolveIcon(def.icon!),
-              size: 22,
-              color: value
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey.shade400,
-            )
-          : null,
-      value: value,
-      onChanged: def.controllable
-          ? (newValue) => ref
+    final iconColor = value ? MpColors.text : MpColors.text3;
+    return InkWell(
+      onTap: def.controllable
+          ? () => ref
               .read(deviceControlServiceProvider)
-              .setValue(deviceId, stateKey, newValue ? 1 : 0)
+              .setValue(deviceId, stateKey, value ? 0 : 1)
           : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            if (def.icon != null) ...[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: value ? MpColors.surfaceAlt : MpColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: MpColors.border, width: 0.5),
+                ),
+                child: Icon(_resolveIcon(def.icon!), size: 18, color: iconColor),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                def.labelDefault ?? stateKey,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: MpColors.text),
+              ),
+            ),
+            GestureDetector(
+              onTap: def.controllable
+                  ? () => ref
+                      .read(deviceControlServiceProvider)
+                      .setValue(deviceId, stateKey, value ? 0 : 1)
+                  : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 44,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: value
+                      ? (def.controllable ? MpColors.text : MpColors.text3)
+                      : MpColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(color: MpColors.border, width: 0.5),
+                ),
+                child: Align(
+                  alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: value ? MpColors.bg : MpColors.text3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

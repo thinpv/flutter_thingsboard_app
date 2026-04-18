@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
@@ -212,56 +213,45 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradColors = isClosed
-        ? [Colors.green.shade400, Colors.teal.shade500]
-        : [Colors.orange.shade400, Colors.deepOrange.shade500];
+    final accent = isClosed ? MpColors.green : MpColors.amber;
+    final accentSoft = isClosed ? MpColors.greenSoft : MpColors.amberSoft;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradColors,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: gradColors.first.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 350),
-            width: 140,
-            height: 140,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.25),
-              border: Border.all(color: Colors.white, width: 3),
+              color: accentSoft,
+              border: Border.all(color: accent, width: 2),
             ),
             child: Icon(
               isClosed ? Icons.sensor_door : Icons.sensor_door_outlined,
-              size: 68,
-              color: Colors.white,
+              size: 56,
+              color: accent,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Text(
             isClosed ? 'Cửa đóng' : 'Cửa mở',
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
+              color: MpColors.text,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             isClosed ? 'Không phát hiện xâm nhập' : 'Chú ý: cửa đang mở',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: MpColors.text3, fontSize: 12),
           ),
         ],
       ),
@@ -297,12 +287,11 @@ class _StatsRow extends StatelessWidget {
 
     return Row(
       children: [
-        _card(context, Icons.swap_vert, '$openCount', 'lần mở', Colors.blue),
+        _card(context, Icons.swap_vert, '$openCount', 'lần mở', MpColors.blue),
         const SizedBox(width: 10),
-        _card(context, Icons.timelapse, '${openMinutes}p', 'tổng thời gian',
-            Colors.orange),
+        _card(context, Icons.timelapse, '${openMinutes}p', 'tổng thời gian', MpColors.amber),
         const SizedBox(width: 10),
-        _card(context, Icons.history, lastStr, 'lần cuối', Colors.purple),
+        _card(context, Icons.history, lastStr, 'lần cuối', MpColors.violet),
       ],
     );
   }
@@ -311,28 +300,29 @@ class _StatsRow extends StatelessWidget {
       Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 5),
             FittedBox(
               child: Text(
                 value,
-                style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18),
+                style: const TextStyle(
+                    color: MpColors.text,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16),
               ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+              style: const TextStyle(color: MpColors.text3, fontSize: 10),
               textAlign: TextAlign.center,
             ),
           ],
@@ -359,21 +349,25 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(Icons.history, size: 18, color: Colors.grey.shade700),
-              const SizedBox(width: 6),
+              Icon(Icons.history, size: 16, color: MpColors.text3),
+              SizedBox(width: 6),
               Text('Lịch sử 24h',
-                  style: Theme.of(context).textTheme.titleSmall),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: MpColors.text2,
+                      letterSpacing: 0.3)),
             ],
           ),
           const SizedBox(height: 12),
@@ -382,15 +376,16 @@ class _HistoryCard extends StatelessWidget {
               height: 48,
               child: Center(
                   child: SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2))),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: MpColors.text3))),
             )
           else if (events == null || events!.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('Không có sự kiện trong 24 giờ qua',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                  style: TextStyle(color: MpColors.text3, fontSize: 13)),
             )
           else
             ..._buildEventList(),
@@ -406,40 +401,42 @@ class _HistoryCard extends StatelessWidget {
     final top = sorted.take(10);
     return top.map((e) {
       final opened = e.$2 == 0;
-      final color = opened ? Colors.orange : Colors.green;
+      final color = opened ? MpColors.amber : MpColors.green;
+      final bg = opened ? MpColors.amberSoft : MpColors.greenSoft;
       final icon = opened ? Icons.lock_open : Icons.lock;
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: bg,
+                borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(icon, color: color, size: 18),
+              child: Icon(icon, color: color, size: 16),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(opened ? 'Mở cửa' : 'Đóng cửa',
                       style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
+                          fontSize: 13, fontWeight: FontWeight.w500,
+                          color: MpColors.text)),
+                  const SizedBox(height: 1),
                   Text(ageFmt(e.$1),
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600)),
+                      style: const TextStyle(
+                          fontSize: 11, color: MpColors.text3)),
                 ],
               ),
             ),
             Text(timeFmt(e.$1),
-                style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 13,
+                style: const TextStyle(
+                    color: MpColors.text3,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -463,22 +460,26 @@ class _QuickActionsGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            Icon(Icons.flash_on, size: 18, color: Colors.grey.shade700),
-            const SizedBox(width: 6),
+            Icon(Icons.flash_on, size: 16, color: MpColors.text3),
+            SizedBox(width: 6),
             Text('Thao tác nhanh',
-                style: Theme.of(context).textTheme.titleSmall),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: MpColors.text2,
+                    letterSpacing: 0.3)),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
             _action(context, Icons.auto_awesome, 'Tạo automation',
-                Colors.deepPurple, onAutomationTap),
-            const SizedBox(width: 12),
+                MpColors.violet, onAutomationTap),
+            const SizedBox(width: 10),
             _action(context, Icons.notifications_active, 'Cảnh báo khi mở',
-                Colors.red, onNotifyTap),
+                MpColors.red, onNotifyTap),
           ],
         ),
       ],
@@ -488,30 +489,27 @@ class _QuickActionsGrid extends StatelessWidget {
   Widget _action(BuildContext context, IconData icon, String label,
       Color color, VoidCallback onTap) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              children: [
-                Icon(icon, color: color, size: 26),
-                const SizedBox(height: 8),
-                Text(label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12)),
-              ],
-            ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            color: MpColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MpColors.border, width: 0.5),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: MpColors.text2,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12)),
+            ],
           ),
         ),
       ),

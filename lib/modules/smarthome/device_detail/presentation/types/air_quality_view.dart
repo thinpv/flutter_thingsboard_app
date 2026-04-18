@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: pm1_0, pm2_5, pm10, co2, temp, hum, bat/pin
@@ -37,12 +38,13 @@ class AirQualityView extends StatelessWidget {
 
         // ── PM grid ──
         if (pm25 != null || pm10 != null || pm1 != null) ...[
-          Text(
+          const Text(
             'Hạt bụi mịn',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -53,8 +55,8 @@ class AirQualityView extends StatelessWidget {
                     icon: Icons.grain,
                     label: 'PM1.0',
                     value: '${pm1.toStringAsFixed(0)} µg/m³',
-                    iconColor: Colors.green,
-                    color: Colors.green.shade50,
+                    iconColor: MpColors.green,
+                    color: MpColors.greenSoft,
                   ),
                 ),
               if (pm1 != null && (pm25 != null || pm10 != null))
@@ -95,8 +97,8 @@ class AirQualityView extends StatelessWidget {
                     icon: Icons.thermostat,
                     label: 'Nhiệt độ',
                     value: '${temp.toStringAsFixed(1)} °C',
-                    iconColor: Colors.orange,
-                    color: Colors.orange.shade50,
+                    iconColor: MpColors.amber,
+                    color: MpColors.amberSoft,
                   ),
                 ),
               if (temp != null && hum != null) const SizedBox(width: 10),
@@ -106,8 +108,8 @@ class AirQualityView extends StatelessWidget {
                     icon: Icons.water_drop_outlined,
                     label: 'Độ ẩm',
                     value: '${hum.toStringAsFixed(0)}%',
-                    iconColor: Colors.blue,
-                    color: Colors.blue.shade50,
+                    iconColor: MpColors.blue,
+                    color: MpColors.blue.withValues(alpha: 0.08),
                   ),
                 ),
             ],
@@ -132,17 +134,17 @@ class AirQualityView extends StatelessWidget {
   }
 
   Color _pm25Color(double v) {
-    if (v <= 12) return Colors.green;
-    if (v <= 35.4) return Colors.yellow.shade700;
-    if (v <= 55.4) return Colors.orange;
-    return Colors.red;
+    if (v <= 12) return MpColors.green;
+    if (v <= 35.4) return MpColors.amber;
+    if (v <= 55.4) return MpColors.amber;
+    return MpColors.red;
   }
 
   Color _pm10Color(double v) {
-    if (v <= 54) return Colors.green;
-    if (v <= 154) return Colors.yellow.shade700;
-    if (v <= 254) return Colors.orange;
-    return Colors.red;
+    if (v <= 54) return MpColors.green;
+    if (v <= 154) return MpColors.amber;
+    if (v <= 254) return MpColors.amber;
+    return MpColors.red;
   }
 }
 
@@ -152,11 +154,11 @@ class _AqiHeroCard extends StatelessWidget {
   final double? pm25;
 
   static ({String label, Color color, IconData icon}) _meta(int aqi) {
-    if (aqi <= 50) return (label: 'Tốt', color: Colors.green, icon: Icons.sentiment_very_satisfied);
-    if (aqi <= 100) return (label: 'Trung bình', color: Colors.yellow.shade700, icon: Icons.sentiment_neutral);
-    if (aqi <= 150) return (label: 'Không lành mạnh\n(nhóm nhạy cảm)', color: Colors.orange, icon: Icons.sentiment_dissatisfied);
-    if (aqi <= 200) return (label: 'Không lành mạnh', color: Colors.red, icon: Icons.sentiment_very_dissatisfied);
-    return (label: 'Rất nguy hiểm', color: Colors.purple, icon: Icons.warning_rounded);
+    if (aqi <= 50) return (label: 'Tốt', color: MpColors.green, icon: Icons.sentiment_very_satisfied);
+    if (aqi <= 100) return (label: 'Trung bình', color: MpColors.amber, icon: Icons.sentiment_neutral);
+    if (aqi <= 150) return (label: 'Không lành mạnh\n(nhóm nhạy cảm)', color: MpColors.amber, icon: Icons.sentiment_dissatisfied);
+    if (aqi <= 200) return (label: 'Không lành mạnh', color: MpColors.red, icon: Icons.sentiment_very_dissatisfied);
+    return (label: 'Rất nguy hiểm', color: MpColors.violet, icon: Icons.warning_rounded);
   }
 
   @override
@@ -195,7 +197,7 @@ class _AqiHeroCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+                  color: MpColors.text3,
                 ),
               ),
             ],
@@ -219,7 +221,7 @@ class _AqiHeroCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'PM2.5: ${pm25!.toStringAsFixed(1)} µg/m³',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    style: const TextStyle(color: MpColors.text3, fontSize: 12),
                   ),
                 ],
               ],
@@ -236,10 +238,10 @@ class _Co2Card extends StatelessWidget {
   final double co2;
 
   Color get _color {
-    if (co2 < 600) return Colors.green;
-    if (co2 < 1000) return Colors.yellow.shade700;
-    if (co2 < 1500) return Colors.orange;
-    return Colors.red;
+    if (co2 < 600) return MpColors.green;
+    if (co2 < 1000) return MpColors.amber;
+    if (co2 < 1500) return MpColors.amber;
+    return MpColors.red;
   }
 
   String get _label {
@@ -265,7 +267,14 @@ class _Co2Card extends StatelessWidget {
             children: [
               Icon(Icons.co2, color: _color, size: 22),
               const SizedBox(width: 8),
-              Text('CO₂', style: Theme.of(context).textTheme.titleSmall),
+              const Text(
+                'CO₂',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text,
+                ),
+              ),
               const Spacer(),
               Text(
                 '${co2.toStringAsFixed(0)} ppm — $_label',
@@ -278,7 +287,7 @@ class _Co2Card extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (co2 / 2000).clamp(0.0, 1.0),
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: MpColors.surfaceAlt,
               color: _color,
               minHeight: 8,
             ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: pos (0-100%), onoff0 (open/close state)
@@ -39,20 +39,18 @@ class _CurtainControlState extends State<CurtainControl>
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       children: [
         const SizedBox(height: 16),
 
-        // ── Curtain visual ──
+        // Curtain visual
         Center(
           child: SizedBox(
             width: 220,
             height: 220,
             child: CustomPaint(
-              painter: _CurtainPainter(position: _pos / 100, color: cs.primary),
+              painter: _CurtainPainter(position: _pos / 100, color: MpColors.text),
             ),
           ),
         ),
@@ -60,10 +58,7 @@ class _CurtainControlState extends State<CurtainControl>
         Center(
           child: Text(
             '${_pos.round()}%',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                ),
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: MpColors.text),
           ),
         ),
         Center(
@@ -73,19 +68,17 @@ class _CurtainControlState extends State<CurtainControl>
                 : _pos <= 0
                     ? 'Đóng hoàn toàn'
                     : 'Mở ${_pos.round()}%',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            style: const TextStyle(fontSize: 14, color: MpColors.text3),
           ),
         ),
         const SizedBox(height: 24),
 
-        // ── Position slider ──
+        // Position slider
         SliderTheme(
-          data: SliderThemeData(
+          data: const SliderThemeData(
             trackHeight: 8,
-            activeTrackColor: cs.primary,
-            thumbColor: cs.primary,
+            activeTrackColor: MpColors.text,
+            thumbColor: MpColors.text,
           ),
           child: Slider(
             value: _pos,
@@ -94,28 +87,28 @@ class _CurtainControlState extends State<CurtainControl>
             divisions: 20,
             label: '${_pos.round()}%',
             onChanged: (v) => setState(() => _pos = v),
-            onChangeEnd: (v) =>
-                widget.onRpc('setPosition', {'pos': v.round()}),
+            onChangeEnd: (v) => widget.onRpc('setPosition', {'pos': v.round()}),
           ),
         ),
         const SizedBox(height: 8),
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text('Đóng', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            Text('Mở', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          children: [
+            Text('Đóng', style: TextStyle(fontSize: 12, color: MpColors.text3)),
+            Text('Mở', style: TextStyle(fontSize: 12, color: MpColors.text3)),
           ],
         ),
         const SizedBox(height: 24),
 
-        // ── Control buttons ──
+        // Control buttons
         Row(
           children: [
             Expanded(
               child: _CurtainActionButton(
                 icon: Icons.keyboard_double_arrow_up,
                 label: 'Mở',
-                color: cs.primary,
+                color: MpColors.green,
+                bgColor: MpColors.greenSoft,
                 onTap: () => widget.onRpc('open', {}),
               ),
             ),
@@ -124,7 +117,8 @@ class _CurtainControlState extends State<CurtainControl>
               child: _CurtainActionButton(
                 icon: Icons.stop_rounded,
                 label: 'Dừng',
-                color: Colors.orange,
+                color: MpColors.amber,
+                bgColor: MpColors.amberSoft,
                 onTap: () => widget.onRpc('stop', {}),
               ),
             ),
@@ -133,33 +127,42 @@ class _CurtainControlState extends State<CurtainControl>
               child: _CurtainActionButton(
                 icon: Icons.keyboard_double_arrow_down,
                 label: 'Đóng',
-                color: Colors.grey.shade700,
+                color: MpColors.text2,
+                bgColor: MpColors.surfaceAlt,
                 onTap: () => widget.onRpc('close', {}),
               ),
             ),
           ],
         ),
 
-        // ── Preset positions ──
+        // Preset positions
         const SizedBox(height: 20),
-        Text('Vị trí nhanh', style: Theme.of(context).textTheme.titleSmall),
+        const Text('Vị trí nhanh',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                color: MpColors.text2, letterSpacing: 0.4)),
         const SizedBox(height: 10),
         Row(
           children: [25, 50, 75, 100].map((pct) {
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: OutlinedButton(
-                  onPressed: () {
+                child: GestureDetector(
+                  onTap: () {
                     setState(() => _pos = pct.toDouble());
                     widget.onRpc('setPosition', {'pos': pct});
                   },
-                  style: OutlinedButton.styleFrom(
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    foregroundColor: cs.primary,
-                    side: BorderSide(color: cs.primary.withValues(alpha: 0.4)),
+                    decoration: BoxDecoration(
+                      color: MpColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: MpColors.border, width: 0.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('$pct%',
+                        style: const TextStyle(fontSize: 13,
+                            color: MpColors.text2, fontWeight: FontWeight.w500)),
                   ),
-                  child: Text('$pct%', style: const TextStyle(fontSize: 13)),
                 ),
               ),
             );
@@ -175,32 +178,33 @@ class _CurtainActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    required this.bgColor,
     required this.onTap,
   });
   final IconData icon;
   final String label;
   final Color color;
+  final Color bgColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 30),
-              const SizedBox(height: 4),
-              Text(label,
-                  style: TextStyle(
-                      color: color, fontSize: 13, fontWeight: FontWeight.w500)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 30),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
         ),
       ),
     );
@@ -209,7 +213,7 @@ class _CurtainActionButton extends StatelessWidget {
 
 class _CurtainPainter extends CustomPainter {
   const _CurtainPainter({required this.position, required this.color});
-  final double position; // 0=closed, 1=open
+  final double position;
   final Color color;
 
   @override
@@ -219,7 +223,7 @@ class _CurtainPainter extends CustomPainter {
       const Offset(10, 10),
       Offset(size.width - 10, 10),
       Paint()
-        ..color = Colors.grey.shade500
+        ..color = const Color(0xFFB0AFA8)
         ..strokeWidth = 5
         ..strokeCap = StrokeCap.round,
     );
@@ -227,11 +231,7 @@ class _CurtainPainter extends CustomPainter {
     // Ring hooks
     for (int i = 0; i < 7; i++) {
       final x = 16.0 + (size.width - 32) * i / 6;
-      canvas.drawCircle(
-        Offset(x, 10),
-        4,
-        Paint()..color = Colors.grey.shade400,
-      );
+      canvas.drawCircle(Offset(x, 10), 4, Paint()..color = const Color(0xFFCCCAC2));
     }
 
     final curtainPaint = Paint()..color = color.withValues(alpha: 0.25);
@@ -249,16 +249,10 @@ class _CurtainPainter extends CustomPainter {
       final rrect = RRect.fromRectAndRadius(leftRect, rr);
       canvas.drawRRect(rrect, curtainPaint);
       canvas.drawRRect(rrect, curtainBorder);
-      // Fold lines
       for (int i = 1; i <= 4; i++) {
         final y = 18.0 + (size.height - 18) * i / 5;
-        canvas.drawLine(
-          Offset(leftRect.left + 4, y),
-          Offset(leftRect.right - 4, y),
-          Paint()
-            ..color = color.withValues(alpha: 0.15)
-            ..strokeWidth = 1,
-        );
+        canvas.drawLine(Offset(leftRect.left + 4, y), Offset(leftRect.right - 4, y),
+            Paint()..color = color.withValues(alpha: 0.15)..strokeWidth = 1);
       }
     }
     if (rightRect.width > 0) {
@@ -267,13 +261,8 @@ class _CurtainPainter extends CustomPainter {
       canvas.drawRRect(rrect, curtainBorder);
       for (int i = 1; i <= 4; i++) {
         final y = 18.0 + (size.height - 18) * i / 5;
-        canvas.drawLine(
-          Offset(rightRect.left + 4, y),
-          Offset(rightRect.right - 4, y),
-          Paint()
-            ..color = color.withValues(alpha: 0.15)
-            ..strokeWidth = 1,
-        );
+        canvas.drawLine(Offset(rightRect.left + 4, y), Offset(rightRect.right - 4, y),
+            Paint()..color = color.withValues(alpha: 0.15)..strokeWidth = 1);
       }
     }
 
@@ -281,7 +270,7 @@ class _CurtainPainter extends CustomPainter {
     if (position > 0.05) {
       canvas.drawRect(
         Rect.fromLTWH(size.width * 0.5 - openW, 18, openW * 2, size.height - 18),
-        Paint()..color = Colors.amber.withValues(alpha: 0.12 * position),
+        Paint()..color = const Color(0xFFFFD080).withValues(alpha: 0.15 * position),
       );
     }
   }

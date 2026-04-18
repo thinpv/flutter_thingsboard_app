@@ -125,7 +125,7 @@ Color _hexColor(String hex) {
   try {
     return Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
   } catch (_) {
-    return Colors.blue;
+    return MpColors.blue;
   }
 }
 
@@ -750,7 +750,7 @@ class _StyleCard extends StatelessWidget {
                         : null,
                   ),
                   child: selected
-                      ? const Icon(Icons.check, color: Colors.white, size: 14)
+                      ? const Icon(Icons.check, color: MpColors.bg, size: 14)
                       : null,
                 ),
               );
@@ -977,21 +977,19 @@ class _ConditionCard extends StatelessWidget {
   }
 
   static (IconData, Color) _iconColor(RuleCondition c) {
-    if (c.type == 'timer') return (Icons.schedule_rounded, Colors.orange);
-    if (c.type == 'offline') {
-      return (Icons.wifi_off_rounded, Colors.grey);
-    }
+    if (c.type == 'timer') return (Icons.schedule_rounded, MpColors.amber);
+    if (c.type == 'offline') return (Icons.wifi_off_rounded, MpColors.text3);
     final key = c.raw['key'] as String? ?? '';
     return switch (key) {
-      'temp' || 'coolSp' => (Icons.thermostat_outlined, Colors.red.shade400),
-      'hum' => (Icons.water_drop_outlined, Colors.blue.shade400),
-      'pir' => (Icons.motion_photos_on_outlined, Colors.purple),
-      'door' => (Icons.sensor_door_outlined, Colors.teal),
-      'onoff0' || 'onoff1' || 'onoff2' => (Icons.power_settings_new_rounded, Colors.blue),
-      'lux' => (Icons.wb_sunny_outlined, Colors.orange.shade400),
-      'co2' => (Icons.co2_outlined, Colors.green),
-      'power' => (Icons.bolt_outlined, Colors.amber),
-      _ => (Icons.sensors_outlined, const Color(0xFF1976D2)),
+      'temp' || 'coolSp' => (Icons.thermostat_outlined, MpColors.red),
+      'hum' => (Icons.water_drop_outlined, MpColors.blue),
+      'pir' => (Icons.motion_photos_on_outlined, MpColors.violet),
+      'door' => (Icons.sensor_door_outlined, MpColors.green),
+      'onoff0' || 'onoff1' || 'onoff2' => (Icons.power_settings_new_rounded, MpColors.text2),
+      'lux' => (Icons.wb_sunny_outlined, MpColors.amber),
+      'co2' => (Icons.co2_outlined, MpColors.green),
+      'power' => (Icons.bolt_outlined, MpColors.amber),
+      _ => (Icons.sensors_outlined, MpColors.blue),
     };
   }
 }
@@ -1082,23 +1080,15 @@ class _ActionCard extends StatelessWidget {
   }
 
   static (IconData, Color) _iconColor(RuleAction a) {
-    if (a.type == 'delay') {
-      return (Icons.hourglass_bottom_outlined, Colors.purple);
-    }
-    if (a.type == 'notify') {
-      return (Icons.notifications_outlined, Colors.teal);
-    }
-    if (a.type == 'scene') {
-      return (Icons.auto_awesome_outlined, Colors.amber.shade700);
-    }
+    if (a.type == 'delay') return (Icons.hourglass_bottom_outlined, MpColors.violet);
+    if (a.type == 'notify') return (Icons.notifications_outlined, MpColors.blue);
+    if (a.type == 'scene') return (Icons.auto_awesome_outlined, MpColors.amber);
     final data = a.raw['data'] as Map?;
     final hasOff = data?['onoff0'] == 0 || data?['onoff1'] == 0;
     final hasOn = data?['onoff0'] == 1 || data?['onoff1'] == 1;
-    if (hasOn) return (Icons.power_settings_new_rounded, const Color(0xFF388E3C));
-    if (hasOff) {
-      return (Icons.power_settings_new_rounded, Colors.grey);
-    }
-    return (Icons.settings_remote_outlined, const Color(0xFF388E3C));
+    if (hasOn) return (Icons.power_settings_new_rounded, MpColors.green);
+    if (hasOff) return (Icons.power_settings_new_rounded, MpColors.text3);
+    return (Icons.settings_remote_outlined, MpColors.green);
   }
 }
 
@@ -1609,7 +1599,6 @@ class _DeviceConditionSheetState
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final keys = _availableKeys;
     final ops = _availableOps;
     final currentKey = _key ?? (keys.isNotEmpty ? keys.first : null);
@@ -1702,7 +1691,7 @@ class _DeviceConditionSheetState
                             Navigator.pop(context, cond);
                           },
                     style: FilledButton.styleFrom(
-                        backgroundColor: cs.primary),
+                        backgroundColor: MpColors.text),
                     child: Text(widget.initial != null ? 'Lưu' : 'Thêm'),
                   ),
                 ),
@@ -1739,7 +1728,6 @@ class _TimerConditionSheetState extends State<_TimerConditionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -1752,37 +1740,32 @@ class _TimerConditionSheetState extends State<_TimerConditionSheet> {
             const Text('Hẹn giờ',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
-            // Time display + picker
             GestureDetector(
               onTap: _pickTime,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: cs.primaryContainer.withValues(alpha: 0.4),
+                  color: MpColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: MpColors.border, width: 0.5),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.access_time_rounded),
+                    const Icon(Icons.access_time_rounded, color: MpColors.text2),
                     const SizedBox(width: 12),
                     Text(
                       _time,
-                      style: const TextStyle(
-                          fontSize: 32, fontWeight: FontWeight.w700),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: MpColors.text),
                     ),
                     const Spacer(),
-                    Icon(Icons.edit_outlined,
-                        size: 18,
-                        color: cs.onSurface.withValues(alpha: 0.4)),
+                    const Icon(Icons.edit_outlined, size: 18, color: MpColors.text3),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
             const Text('Ngày trong tuần',
-                style:
-                    TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1801,7 +1784,7 @@ class _TimerConditionSheetState extends State<_TimerConditionSheet> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: on ? cs.primary : cs.surfaceContainerLow,
+                      color: on ? MpColors.text : MpColors.surfaceAlt,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -1810,7 +1793,7 @@ class _TimerConditionSheetState extends State<_TimerConditionSheet> {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: on ? cs.onPrimary : cs.onSurface),
+                          color: on ? MpColors.bg : MpColors.text2),
                     ),
                   ),
                 );
@@ -1918,7 +1901,6 @@ class _DeviceActionSheetState
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final hasMetaKeys =
         _meta != null && _meta!.states.values.any((d) => d.controllable);
 
@@ -1950,8 +1932,9 @@ class _DeviceActionSheetState
             ),
             if (_device != null) ...[
               const SizedBox(height: 12),
-              Text('Điều khiển',
-                  style: Theme.of(context).textTheme.labelMedium),
+              const Text('Điều khiển',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                      color: MpColors.text3, letterSpacing: 0.4)),
               const SizedBox(height: 8),
               if (hasMetaKeys)
                 ..._meta!.states.entries
@@ -1961,8 +1944,7 @@ class _DeviceActionSheetState
                       final def = e.value;
                       final included = _data.containsKey(key);
                       final label = def.labelDefault ?? _keyLabel(key);
-                      final disabledColor =
-                          Theme.of(context).disabledColor;
+                      const disabledColor = MpColors.text3;
 
                       if (def.type == 'bool') {
                         final isOn = included &&
@@ -2110,7 +2092,7 @@ class _DeviceActionSheetState
                             Navigator.pop(context, action);
                           },
                     style: FilledButton.styleFrom(
-                        backgroundColor: cs.primary),
+                        backgroundColor: MpColors.text),
                     child: const Text('Thêm'),
                   ),
                 ),
@@ -2163,7 +2145,7 @@ class _DelaySheetState extends State<_DelaySheet> {
               style: TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.primary),
+                  color: MpColors.text),
             ),
             Slider(
               value: _seconds.toDouble(),

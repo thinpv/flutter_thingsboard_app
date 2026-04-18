@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
 // RF Fan Control — điều khiển quạt trần / quạt đứng RF (EV1527, PT2262...).
 // Keys: onoff0 (bool virtual), speed (1/2/3 virtual), timer_minutes (int virtual)
@@ -68,9 +69,9 @@ class RfFanControl extends StatelessWidget {
           ),
         ] else ...[
           Center(
-            child: Text(
+            child: const Text(
               'Nhấn nút để bật quạt',
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              style: TextStyle(color: MpColors.text3, fontSize: 14),
             ),
           ),
         ],
@@ -101,16 +102,16 @@ class _PowerButton extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isOn
-                ? Colors.teal.shade400.withValues(alpha: 0.15)
-                : Colors.grey.withValues(alpha: 0.08),
+                ? MpColors.green.withValues(alpha: 0.15)
+                : MpColors.text3.withValues(alpha: 0.08),
             border: Border.all(
-              color: isOn ? Colors.teal.shade400 : Colors.grey.shade300,
+              color: isOn ? MpColors.green : MpColors.border,
               width: 2.5,
             ),
             boxShadow: isOn
                 ? [
                     BoxShadow(
-                      color: Colors.teal.withValues(alpha: 0.3),
+                      color: MpColors.green.withValues(alpha: 0.3),
                       blurRadius: 20,
                     )
                   ]
@@ -119,7 +120,7 @@ class _PowerButton extends StatelessWidget {
           child: Icon(
             Icons.air,
             size: 42,
-            color: isOn ? Colors.teal.shade400 : Colors.grey.shade400,
+            color: isOn ? MpColors.green : MpColors.text3,
           ),
         ),
       ),
@@ -135,10 +136,10 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: Theme.of(context)
-          .textTheme
-          .titleSmall
-          ?.copyWith(fontWeight: FontWeight.w700),
+      style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: MpColors.text),
     );
   }
 }
@@ -167,13 +168,13 @@ class _SpeedSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
                   color: selected
-                      ? Colors.teal.shade400.withValues(alpha: 0.12)
-                      : Colors.grey.withValues(alpha: 0.06),
+                      ? MpColors.green.withValues(alpha: 0.12)
+                      : MpColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: selected
-                        ? Colors.teal.shade400
-                        : Colors.grey.shade200,
+                        ? MpColors.green
+                        : MpColors.border,
                     width: selected ? 1.5 : 1,
                   ),
                 ),
@@ -181,14 +182,14 @@ class _SpeedSelector extends StatelessWidget {
                   children: [
                     Icon(
                       _icons[i],
-                      color: selected ? Colors.teal.shade400 : Colors.grey.shade400,
+                      color: selected ? MpColors.green : MpColors.text3,
                       size: 24,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _labels[i],
                       style: TextStyle(
-                        color: selected ? Colors.teal.shade700 : Colors.grey.shade600,
+                        color: selected ? MpColors.green : MpColors.text2,
                         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                         fontSize: 13,
                       ),
@@ -196,7 +197,7 @@ class _SpeedSelector extends StatelessWidget {
                     Text(
                       '$level',
                       style: TextStyle(
-                        color: selected ? Colors.teal.shade400 : Colors.grey.shade400,
+                        color: selected ? MpColors.green : MpColors.text3,
                         fontSize: 11,
                       ),
                     ),
@@ -231,13 +232,13 @@ class _TimerRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: currentMinutes == min
-                      ? Colors.orange.withValues(alpha: 0.1)
-                      : Colors.grey.withValues(alpha: 0.06),
+                      ? MpColors.amber.withValues(alpha: 0.1)
+                      : MpColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: currentMinutes == min
-                        ? Colors.orange.shade400
-                        : Colors.grey.shade200,
+                        ? MpColors.amber
+                        : MpColors.border,
                   ),
                 ),
                 child: Column(
@@ -245,8 +246,8 @@ class _TimerRow extends StatelessWidget {
                     Icon(Icons.timer,
                         size: 18,
                         color: currentMinutes == min
-                            ? Colors.orange.shade400
-                            : Colors.grey.shade400),
+                            ? MpColors.amber
+                            : MpColors.text3),
                     const SizedBox(height: 4),
                     Text(
                       min >= 60 ? '${min ~/ 60}h' : '${min}ph',
@@ -254,8 +255,8 @@ class _TimerRow extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: currentMinutes == min
-                            ? Colors.orange.shade700
-                            : Colors.grey.shade600,
+                            ? MpColors.amber
+                            : MpColors.text2,
                       ),
                     ),
                   ],
@@ -275,18 +276,18 @@ class _RfVirtualNote extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.05),
+        color: MpColors.blueSoft,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+        border: Border.all(color: MpColors.blue.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Colors.blue.shade300, size: 16),
+          const Icon(Icons.info_outline, color: MpColors.blue, size: 16),
           const SizedBox(width: 8),
-          Expanded(
+          const Expanded(
             child: Text(
               'Trạng thái ảo — hiển thị lệnh đã gửi, không phải phản hồi thực từ thiết bị',
-              style: TextStyle(color: Colors.blue.shade400, fontSize: 11),
+              style: TextStyle(color: MpColors.blue, fontSize: 11),
             ),
           ),
         ],

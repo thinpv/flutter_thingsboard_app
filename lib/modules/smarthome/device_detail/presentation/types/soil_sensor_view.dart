@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: temp, hum (soil moisture %), phSoil, phWater, ecSoil, ecWater, percentOxyWater, bat/pin
@@ -34,20 +35,21 @@ class SoilSensorView extends StatelessWidget {
             icon: Icons.thermostat,
             label: 'Nhiệt độ đất',
             value: '${temp.toStringAsFixed(1)} °C',
-            iconColor: Colors.orange,
-            color: Colors.orange.shade50,
+            iconColor: MpColors.amber,
+            color: MpColors.amberSoft,
           ),
           const SizedBox(height: 12),
         ],
 
         // ── pH section ──
         if (phSoil != null || phWater != null) ...[
-          Text(
+          const Text(
             'Độ pH',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -64,12 +66,13 @@ class SoilSensorView extends StatelessWidget {
 
         // ── EC section ──
         if (ecSoil != null || ecWater != null) ...[
-          Text(
+          const Text(
             'Độ dẫn điện (EC)',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -80,8 +83,8 @@ class SoilSensorView extends StatelessWidget {
                     icon: Icons.electric_bolt,
                     label: 'EC đất',
                     value: '${ecSoil.toStringAsFixed(0)} µS/cm',
-                    iconColor: Colors.amber,
-                    color: Colors.amber.shade50,
+                    iconColor: MpColors.amber,
+                    color: MpColors.amberSoft,
                   ),
                 ),
               if (ecSoil != null && ecWater != null) const SizedBox(width: 10),
@@ -91,8 +94,8 @@ class SoilSensorView extends StatelessWidget {
                     icon: Icons.electric_bolt,
                     label: 'EC nước',
                     value: '${ecWater.toStringAsFixed(0)} µS/cm',
-                    iconColor: Colors.cyan,
-                    color: Colors.cyan.shade50,
+                    iconColor: MpColors.blue,
+                    color: MpColors.blue.withValues(alpha: 0.08),
                   ),
                 ),
             ],
@@ -106,8 +109,8 @@ class SoilSensorView extends StatelessWidget {
             icon: Icons.bubble_chart,
             label: 'Oxy hòa tan',
             value: '${oxyWater.toStringAsFixed(1)}%',
-            iconColor: Colors.lightBlue,
-            color: Colors.lightBlue.shade50,
+            iconColor: MpColors.blue,
+            color: MpColors.blue.withValues(alpha: 0.08),
           ),
           const SizedBox(height: 16),
         ],
@@ -124,10 +127,10 @@ class _SoilMoistureCard extends StatelessWidget {
   final double hum;
 
   Color get _color {
-    if (hum < 20) return Colors.red;
-    if (hum < 40) return Colors.orange;
-    if (hum <= 70) return Colors.green;
-    return Colors.blue;
+    if (hum < 20) return MpColors.red;
+    if (hum < 40) return MpColors.amber;
+    if (hum <= 70) return MpColors.green;
+    return MpColors.blue;
   }
 
   String get _label {
@@ -160,9 +163,13 @@ class _SoilMoistureCard extends StatelessWidget {
             children: [
               Icon(Icons.water_drop, color: _color, size: 22),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'Độ ẩm đất',
-                style: Theme.of(context).textTheme.titleSmall,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text,
+                ),
               ),
               const Spacer(),
               Text(
@@ -180,7 +187,7 @@ class _SoilMoistureCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: hum / 100,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: MpColors.surfaceAlt,
               color: _color,
               minHeight: 10,
             ),
@@ -203,11 +210,11 @@ class _PhCard extends StatelessWidget {
   final IconData icon;
 
   Color get _color {
-    if (value < 5.5) return Colors.red;
-    if (value < 6.0) return Colors.orange;
-    if (value <= 7.0) return Colors.green;
-    if (value <= 7.5) return Colors.teal;
-    return Colors.blue;
+    if (value < 5.5) return MpColors.red;
+    if (value < 6.0) return MpColors.amber;
+    if (value <= 7.0) return MpColors.green;
+    if (value <= 7.5) return MpColors.green;
+    return MpColors.blue;
   }
 
   String get _phLabel {
@@ -234,7 +241,7 @@ class _PhCard extends StatelessWidget {
             children: [
               Icon(icon, color: _color, size: 18),
               const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              Text(label, style: const TextStyle(color: MpColors.text2, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 6),

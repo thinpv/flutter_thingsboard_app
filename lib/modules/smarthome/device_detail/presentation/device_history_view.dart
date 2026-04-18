@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 
 // ─── Key classification ───────────────────────────────────────────────────────
@@ -354,9 +355,8 @@ class _PeriodBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: cs.surface,
+      color: MpColors.bg,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: _Period.values.map((p) {
@@ -369,7 +369,7 @@ class _PeriodBar extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? cs.primary : cs.surfaceContainerLow,
+                  color: isSelected ? MpColors.text : MpColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
@@ -378,7 +378,7 @@ class _PeriodBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? cs.onPrimary : cs.onSurface,
+                    color: isSelected ? MpColors.bg : MpColors.text2,
                   ),
                 ),
               ),
@@ -408,66 +408,54 @@ class _SensorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final latest = points.last.$2;
 
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
             children: [
-              Icon(_iconFor(keyName), size: 18, color: cs.primary),
+              Icon(_iconFor(keyName), size: 18, color: MpColors.text2),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: MpColors.text)),
               ),
               Text(
                 '${_fmtNum(latest)}$unit',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: MpColors.text),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          // Chart
           SizedBox(
             height: 90,
             child: CustomPaint(
-              painter: _SparklinePainter(
-                points: points,
-                color: cs.primary,
-              ),
+              painter: _SparklinePainter(points: points, color: MpColors.text),
               child: const SizedBox.expand(),
             ),
           ),
           const SizedBox(height: 12),
-          // Min / Avg / Max row
           Row(
             children: [
               _StatChip(
                   label: 'Thấp',
                   value: '${_fmtNum(stats.min)}$unit',
                   icon: Icons.arrow_downward_rounded,
-                  color: Colors.blue.shade400),
+                  color: MpColors.blue),
               const SizedBox(width: 8),
               _StatChip(
                   label: 'Trung bình',
                   value: '${_fmtNum(stats.avg)}$unit',
                   icon: Icons.remove_rounded,
-                  color: cs.primary),
+                  color: MpColors.text2),
               const SizedBox(width: 8),
               _StatChip(
                   label: 'Cao',
                   value: '${_fmtNum(stats.max)}$unit',
                   icon: Icons.arrow_upward_rounded,
-                  color: Colors.orange.shade600),
+                  color: MpColors.amber),
             ],
           ),
         ],
@@ -501,7 +489,6 @@ class _EnergyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return _SectionCard(
       child: Row(
         children: [
@@ -509,34 +496,30 @@ class _EnergyCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.12),
+              color: MpColors.amberSoft,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
-            child: const Icon(Icons.electric_meter_outlined,
-                color: Colors.orange, size: 26),
+            child: const Icon(Icons.electric_meter_outlined, color: MpColors.amber, size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Điện năng tiêu thụ',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.6))),
+                const Text('Điện năng tiêu thụ',
+                    style: TextStyle(fontSize: 13, color: MpColors.text3)),
                 const SizedBox(height: 2),
                 Text(
                   '${_fmtNum(consumed, precision: 2)} kWh',
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: MpColors.text),
                 ),
               ],
             ),
           ),
           Text(
             'trong ${period.label.toLowerCase()}',
-            style:
-                TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.4)),
+            style: const TextStyle(fontSize: 12, color: MpColors.text3),
           ),
         ],
       ),
@@ -560,12 +543,8 @@ class _ToggleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    // Newest-first for display
     final sortedIntervals = intervals.reversed.toList();
 
-    // Group by date
     final groups = <String, List<_Interval>>{};
     for (final iv in sortedIntervals) {
       final dateKey = _dateHeader(iv.start);
@@ -576,15 +555,13 @@ class _ToggleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header + summary stats
           Row(
             children: [
-              Icon(_iconFor(keyName), size: 18, color: cs.primary),
+              Icon(_iconFor(keyName), size: 18, color: MpColors.text2),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(label,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: MpColors.text)),
               ),
             ],
           ),
@@ -638,35 +615,33 @@ class _SummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: cs.primaryContainer.withValues(alpha: 0.45),
+        color: MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Row(
         children: [
-          const Icon(Icons.timer_outlined, size: 16),
+          const Icon(Icons.timer_outlined, size: 16, color: MpColors.text2),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               'Tổng thời gian: ${_fmtDuration(totalTime)}',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: MpColors.text),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
+              color: MpColors.bg,
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
             child: Text(
               '$count lần',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: MpColors.text2),
             ),
           ),
         ],
@@ -687,10 +662,10 @@ class _DateLabel extends StatelessWidget {
       padding: const EdgeInsets.only(top: 14, bottom: 4),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+          color: MpColors.text3,
           letterSpacing: 0.5,
         ),
       ),
@@ -712,47 +687,35 @@ class _IntervalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isActive = interval.isActive;
-    final activeColor = cs.primary;
-    const inactiveColor = Colors.grey;
-
-    final stateColor = isActive ? activeColor : inactiveColor;
     final stateLabel = isActive ? activeLabel : inactiveLabel;
 
     final startStr = DateFormat('HH:mm').format(interval.start);
-    // If still ongoing (endTs ≈ now), show no end time
-    final isOngoing =
-        DateTime.now().millisecondsSinceEpoch - interval.endTs < 10000;
+    final isOngoing = DateTime.now().millisecondsSinceEpoch - interval.endTs < 10000;
     final endStr = isOngoing ? 'hiện tại' : DateFormat('HH:mm').format(interval.end);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          // Colored state bar on the left
           Container(
             width: 4,
             height: 42,
             margin: const EdgeInsets.only(right: 10),
             decoration: BoxDecoration(
-              color: isActive
-                  ? activeColor
-                  : cs.surfaceContainerHighest,
+              color: isActive ? MpColors.text : MpColors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // Dot indicator
           Container(
             width: 8,
             height: 8,
             margin: const EdgeInsets.only(right: 10),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: stateColor.withValues(alpha: isActive ? 1 : 0.4),
+              color: isActive ? MpColors.text : MpColors.text3,
             ),
           ),
-          // State label
           Expanded(
             flex: 3,
             child: Text(
@@ -760,38 +723,28 @@ class _IntervalTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive
-                    ? cs.onSurface
-                    : cs.onSurface.withValues(alpha: 0.55),
+                color: isActive ? MpColors.text : MpColors.text3,
               ),
             ),
           ),
-          // Time range
           Text(
             '$startStr → $endStr',
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: 0.5),
-            ),
+            style: const TextStyle(fontSize: 12, color: MpColors.text3),
           ),
           const SizedBox(width: 8),
-          // Duration badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: isActive
-                  ? activeColor.withValues(alpha: 0.10)
-                  : cs.surfaceContainerLow,
+              color: isActive ? MpColors.surfaceAlt : MpColors.surfaceAlt,
               borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
             child: Text(
               _fmtDuration(interval.duration),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: isActive
-                    ? activeColor
-                    : cs.onSurface.withValues(alpha: 0.4),
+                color: isActive ? MpColors.text2 : MpColors.text3,
               ),
             ),
           ),
@@ -817,27 +770,24 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
+          color: MpColors.surfaceAlt,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: MpColors.border, width: 0.5),
         ),
         child: Column(
           children: [
             Icon(icon, size: 14, color: color),
             const SizedBox(height: 2),
             Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: MpColors.text),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             Text(label,
-                style: TextStyle(
-                    fontSize: 10,
-                    color: cs.onSurface.withValues(alpha: 0.5))),
+                style: const TextStyle(fontSize: 10, color: MpColors.text3)),
           ],
         ),
       ),
@@ -853,20 +803,13 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: child,
     );
@@ -951,7 +894,7 @@ class _SparklinePainter extends CustomPainter {
     final last = toOffset(points.last);
     canvas.drawCircle(last, 4, Paint()..color = color);
     canvas.drawCircle(
-        last, 4, Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 1.5);
+        last, 4, Paint()..color = MpColors.bg..style = PaintingStyle.stroke..strokeWidth = 1.5);
 
     // Y-axis labels (min/max)
     _drawYLabel(canvas, size, _fmtNum(maxY), const Offset(4, 2));
@@ -986,23 +929,34 @@ class _EmptyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.history_toggle_off_outlined, size: 60, color: cs.outline),
+          const Icon(Icons.history_toggle_off_outlined, size: 60, color: MpColors.text3),
           const SizedBox(height: 12),
-          Text('Chưa có dữ liệu lịch sử',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: cs.outline)),
+          const Text('Chưa có dữ liệu lịch sử',
+              style: TextStyle(fontSize: 14, color: MpColors.text3)),
           const SizedBox(height: 16),
-          TextButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Tải lại')),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: MpColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: MpColors.border, width: 0.5),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.refresh, size: 16, color: MpColors.text2),
+                  SizedBox(width: 6),
+                  Text('Tải lại', style: TextStyle(fontSize: 14, color: MpColors.text2)),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1022,22 +976,35 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const Icon(Icons.error_outline, size: 48, color: MpColors.red),
             const SizedBox(height: 12),
             const Text('Không thể tải lịch sử',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MpColors.text)),
             const SizedBox(height: 6),
             Text(error,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 12, color: MpColors.text3),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 20),
-            FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Thử lại')),
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: MpColors.text,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh, size: 16, color: MpColors.bg),
+                    SizedBox(width: 6),
+                    Text('Thử lại', style: TextStyle(fontSize: 14, color: MpColors.bg, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

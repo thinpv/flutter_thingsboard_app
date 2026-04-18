@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: temp (°C), hum (%), pressure (hPa), bat/pin
@@ -37,16 +37,17 @@ class TempHumView extends StatelessWidget {
                     children: [
                       Text(
                         temp.toStringAsFixed(1),
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: _tempColor(temp),
-                              height: 1,
-                            ),
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.w600,
+                          color: _tempColor(temp),
+                          height: 1,
+                        ),
                       ),
                       Text(
                         '°C',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           color: _tempColor(temp),
                           fontWeight: FontWeight.w300,
                         ),
@@ -84,16 +85,14 @@ class TempHumView extends StatelessWidget {
                 icon: Icons.compress,
                 label: 'Áp suất',
                 value: '${pressure.toStringAsFixed(0)} hPa',
-                iconColor: Colors.blueGrey,
-                color: Colors.blueGrey.shade50,
+                iconColor: MpColors.text2,
               ),
             if (batLevel(telemetry) != null)
               InfoCard(
                 icon: Icons.battery_std,
                 label: 'Pin',
                 value: '${batLevel(telemetry)}%',
-                iconColor: Colors.green,
-                color: Colors.green.shade50,
+                iconColor: MpColors.green,
               ),
           ],
         ),
@@ -102,11 +101,11 @@ class TempHumView extends StatelessWidget {
   }
 
   Color _tempColor(double t) {
-    if (t < 10) return Colors.blue;
-    if (t < 20) return Colors.cyan;
-    if (t < 28) return Colors.green;
-    if (t < 35) return Colors.orange;
-    return Colors.red;
+    if (t < 10) return MpColors.blue;
+    if (t < 20) return MpColors.violet;
+    if (t < 28) return MpColors.green;
+    if (t < 35) return MpColors.amber;
+    return MpColors.red;
   }
 }
 
@@ -123,11 +122,11 @@ class _TempBadge extends StatelessWidget {
   }
 
   static Color _color(double t) {
-    if (t < 10) return Colors.blue;
-    if (t < 20) return Colors.cyan;
-    if (t < 28) return Colors.green;
-    if (t < 35) return Colors.orange;
-    return Colors.red;
+    if (t < 10) return MpColors.blue;
+    if (t < 20) return MpColors.violet;
+    if (t < 28) return MpColors.green;
+    if (t < 35) return MpColors.amber;
+    return MpColors.red;
   }
 
   @override
@@ -152,9 +151,9 @@ class _HumidityCard extends StatelessWidget {
   final double hum;
 
   Color get _color {
-    if (hum < 30) return Colors.orange;
-    if (hum > 70) return Colors.blue;
-    return Colors.teal;
+    if (hum < 30) return MpColors.amber;
+    if (hum > 70) return MpColors.blue;
+    return MpColors.green;
   }
 
   String get _label {
@@ -168,19 +167,21 @@ class _HumidityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.water_drop_outlined, color: _color, size: 20),
+              Icon(Icons.water_drop_outlined, color: _color, size: 18),
               const SizedBox(width: 8),
-              Text('Độ ẩm', style: Theme.of(context).textTheme.bodyMedium),
+              const Text('Độ ẩm',
+                  style: TextStyle(fontSize: 14, color: MpColors.text)),
               const Spacer(),
               Text(
                 '${hum.toStringAsFixed(0)}%  $_label',
@@ -192,10 +193,10 @@ class _HumidityCard extends StatelessWidget {
           const SizedBox(height: 10),
           LinearProgressIndicator(
             value: hum / 100,
-            backgroundColor: Colors.grey.shade200,
+            backgroundColor: MpColors.surfaceAlt,
             color: _color,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(3),
           ),
         ],
       ),

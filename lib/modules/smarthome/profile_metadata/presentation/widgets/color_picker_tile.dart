@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/device_state_providers.dart';
@@ -63,10 +64,10 @@ class _ColorPickerTileState extends ConsumerState<ColorPickerTile> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
       trailing: Text(
         currentValue.toStringAsFixed(widget.def.precision ?? 0),
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurface,
+          color: MpColors.text,
         ),
       ),
     );
@@ -97,7 +98,7 @@ class _ColorPickerTileState extends ConsumerState<ColorPickerTile> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _ctColor(value),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: MpColors.border),
                 ),
               ),
               const SizedBox(width: 6),
@@ -156,7 +157,7 @@ class _ColorPickerTileState extends ConsumerState<ColorPickerTile> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: HSLColor.fromAHSL(1.0, value, 1.0, 0.5).toColor(),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: MpColors.border),
                 ),
               ),
               const SizedBox(width: 6),

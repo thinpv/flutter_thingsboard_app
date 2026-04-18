@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
@@ -30,7 +30,6 @@ class SwitchControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final gangs = _gangs;
     final allOn = gangs.every((g) => _gangOn(g.key));
     final anyOn = gangs.any((g) => _gangOn(g.key));
@@ -46,7 +45,6 @@ class SwitchControl extends StatelessWidget {
             isOn: anyOn,
             icon: Icons.power_settings_new,
             size: 88,
-            activeColor: cs.primary,
             onTap: () {
               final target = allOn ? 0 : 1;
               onRpc('setValue', {for (final g in gangs) g.key: target});
@@ -57,10 +55,11 @@ class SwitchControl extends StatelessWidget {
         Center(
           child: Text(
             allOn ? 'Tất cả bật' : anyOn ? 'Một số đang bật' : 'Tất cả tắt',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: anyOn ? cs.primary : Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
+            style: TextStyle(
+              fontSize: 14,
+              color: anyOn ? MpColors.text : MpColors.text3,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -94,16 +93,14 @@ class SwitchControl extends StatelessWidget {
                   icon: Icons.bolt,
                   label: 'Công suất',
                   value: '${telemetry['power']} W',
-                  iconColor: Colors.orange,
-                  color: Colors.orange.shade50,
+                  iconColor: MpColors.amber,
                 ),
               if (telemetry['energy'] != null)
                 InfoCard(
                   icon: Icons.electric_meter,
                   label: 'Điện năng',
                   value: '${telemetry['energy']} kWh',
-                  iconColor: Colors.green,
-                  color: Colors.green.shade50,
+                  iconColor: MpColors.green,
                 ),
             ],
           ),

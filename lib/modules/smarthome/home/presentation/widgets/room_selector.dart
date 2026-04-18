@@ -134,11 +134,9 @@ class _RoomManagementSheet extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 children: [
-                  Text(
+                  const Text(
                     'Quản lý phòng',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: MpColors.text),
                   ),
                 ],
               ),
@@ -169,10 +167,22 @@ class _RoomManagementSheet extends ConsumerWidget {
                   ),
                   ...rooms.map((room) => _RoomRow(room: room)),
                   if (rooms.isEmpty)
-                    const ListTile(
-                      leading: Icon(Icons.info_outline, color: Colors.grey),
-                      title: Text('Chưa có phòng nào'),
-                      subtitle: Text('Vào tab Tôi để tạo phòng'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 20, color: MpColors.text3),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text('Chưa có phòng nào', style: TextStyle(fontSize: 14, color: MpColors.text)),
+                              SizedBox(height: 2),
+                              Text('Vào tab Tôi để tạo phòng', style: TextStyle(fontSize: 12, color: MpColors.text3)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                 ],
               ),
@@ -271,14 +281,32 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        Icons.devices_other,
-        color: widget.device.isOnline ? Colors.green : Colors.grey,
-      ),
-      title: Text(widget.device.name),
-      subtitle: Text(widget.device.type),
-      trailing: _busy
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: MpColors.border, width: 0.5),
+            ),
+            child: Icon(Icons.devices_other, size: 18,
+                color: widget.device.isOnline ? MpColors.green : MpColors.text3),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.device.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: MpColors.text)),
+                Text(widget.device.type, style: const TextStyle(fontSize: 12, color: MpColors.text3)),
+              ],
+            ),
+          ),
+          _busy
           ? const SizedBox(
               width: 20,
               height: 20,
@@ -316,6 +344,8 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
                 ),
               ),
             ),
+        ],
+      ),
     );
   }
 }
@@ -331,10 +361,21 @@ class _RoomRow extends ConsumerWidget {
     final devices = ref.watch(devicesInRoomProvider(room.id));
     final count = devices.valueOrNull?.length ?? 0;
 
-    return ListTile(
-      leading: const Icon(Icons.meeting_room_outlined),
-      title: Text(room.name),
-      trailing: Text('$count', style: Theme.of(context).textTheme.bodyLarge),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const Icon(Icons.meeting_room_outlined, size: 20, color: MpColors.text3),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(room.name, style: const TextStyle(fontSize: 14, color: MpColors.text)),
+          ),
+          Text(
+            '$count thiết bị',
+            style: const TextStyle(fontSize: 13, color: MpColors.text3),
+          ),
+        ],
+      ),
     );
   }
 }

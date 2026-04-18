@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: bt/bt0..btN (button events), action, bat/pin
@@ -69,7 +69,7 @@ class RemoteView extends StatelessWidget {
             width: 100,
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade800,
+              color: const Color(0xFF424242),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -84,9 +84,9 @@ class RemoteView extends StatelessWidget {
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.grey.shade700,
+                    color: Color(0xFF616161),
                   ),
                   child: const Icon(Icons.sensors, color: Colors.white54, size: 18),
                 ),
@@ -98,7 +98,7 @@ class RemoteView extends StatelessWidget {
                     child: Container(
                       height: 28,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade600,
+                        color: const Color(0xFF757575),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Center(
@@ -125,18 +125,18 @@ class RemoteView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.shade50,
+              color: MpColors.violetSoft,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.deepPurple.shade100),
+              border: Border.all(color: MpColors.violet.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.touch_app, color: Colors.deepPurple.shade400, size: 20),
+                const Icon(Icons.touch_app, color: MpColors.violet, size: 20),
                 const SizedBox(width: 10),
                 Text(
                   'Sự kiện: $action',
-                  style: TextStyle(
-                    color: Colors.deepPurple.shade700,
+                  style: const TextStyle(
+                    color: MpColors.violet,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -147,9 +147,12 @@ class RemoteView extends StatelessWidget {
         ],
 
         // ── Button status grid ──
-        Text(
+        const Text(
           'Nút bấm',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: MpColors.text),
         ),
         const SizedBox(height: 12),
 
@@ -192,12 +195,12 @@ class _ButtonCard extends StatelessWidget {
   final bool active;
 
   static const _colors = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.red,
+    MpColors.blue,
+    MpColors.green,
+    MpColors.amber,
+    MpColors.violet,
+    MpColors.green,
+    MpColors.red,
   ];
 
   @override
@@ -206,10 +209,10 @@ class _ButtonCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: active ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+        color: active ? color.withValues(alpha: 0.1) : MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: active ? color.withValues(alpha: 0.4) : Colors.grey.shade200,
+          color: active ? color.withValues(alpha: 0.4) : MpColors.border,
         ),
       ),
       child: Column(
@@ -221,13 +224,13 @@ class _ButtonCard extends StatelessWidget {
               Icon(
                 Icons.radio_button_checked,
                 size: 16,
-                color: active ? color : Colors.grey.shade400,
+                color: active ? color : MpColors.text3,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: active ? color : Colors.grey.shade600,
+                  color: active ? color : MpColors.text2,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
@@ -237,8 +240,8 @@ class _ButtonCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             event,
-            style: TextStyle(
-              color: Colors.grey.shade600,
+            style: const TextStyle(
+              color: MpColors.text2,
               fontSize: 12,
             ),
             maxLines: 1,

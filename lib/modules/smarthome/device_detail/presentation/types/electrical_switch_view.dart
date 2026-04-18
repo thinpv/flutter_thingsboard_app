@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
@@ -22,7 +23,6 @@ class ElectricalSwitchView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final gangs = detectSwitchGangs(telemetry, meta: meta);
     final anyOn = gangs.any((g) => isOn(telemetry[g.key]));
     final allOn = gangs.every((g) => isOn(telemetry[g.key]));
@@ -52,10 +52,11 @@ class ElectricalSwitchView extends StatelessWidget {
                 : anyOn
                     ? 'Một số đang bật'
                     : 'Tất cả tắt',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: anyOn ? cs.primary : Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
+            style: TextStyle(
+              fontSize: 14,
+              color: anyOn ? MpColors.text : MpColors.text3,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -76,7 +77,14 @@ class ElectricalSwitchView extends StatelessWidget {
         // ── Energy monitoring ──
         if (telemetry['power'] != null || telemetry['volt'] != null) ...[
           const SizedBox(height: 24),
-          Text('Đo lường điện', style: Theme.of(context).textTheme.titleSmall),
+          const Text(
+            'Đo lường điện',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+            ),
+          ),
           const SizedBox(height: 10),
           if (telemetry['power'] != null) ...[
             _PowerBar(power: doubleVal(telemetry['power']) ?? 0),
@@ -95,24 +103,24 @@ class ElectricalSwitchView extends StatelessWidget {
                   icon: Icons.electric_meter,
                   label: 'Điện năng',
                   value: '${telemetry['energy']} kWh',
-                  iconColor: Colors.green,
-                  color: Colors.green.shade50,
+                  iconColor: MpColors.green,
+                  color: MpColors.greenSoft,
                 ),
               if (telemetry['volt'] != null)
                 InfoCard(
                   icon: Icons.electrical_services,
                   label: 'Điện áp',
                   value: '${telemetry['volt']} V',
-                  iconColor: Colors.blue,
-                  color: Colors.blue.shade50,
+                  iconColor: MpColors.blue,
+                  color: MpColors.blue.withValues(alpha: 0.08),
                 ),
               if (telemetry['curr'] != null)
                 InfoCard(
                   icon: Icons.speed,
                   label: 'Dòng điện',
                   value: '${telemetry['curr']} A',
-                  iconColor: Colors.purple,
-                  color: Colors.purple.shade50,
+                  iconColor: MpColors.violet,
+                  color: MpColors.violetSoft,
                 ),
             ],
           ),
@@ -129,10 +137,10 @@ class _PowerBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = power > 2400
-        ? Colors.red
+        ? MpColors.red
         : power > 1500
-            ? Colors.orange
-            : Colors.green;
+            ? MpColors.amber
+            : MpColors.green;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -140,19 +148,25 @@ class _PowerBar extends StatelessWidget {
           children: [
             Icon(Icons.bolt, size: 16, color: color),
             const SizedBox(width: 6),
-            Text('Công suất', style: Theme.of(context).textTheme.bodySmall),
+            const Text(
+              'Công suất',
+              style: TextStyle(fontSize: 12, color: MpColors.text2),
+            ),
             const Spacer(),
             Text(
               '${power.toStringAsFixed(1)} W',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 6),
         LinearProgressIndicator(
           value: (power / 3000).clamp(0.0, 1.0),
-          backgroundColor: Colors.grey.shade200,
+          backgroundColor: MpColors.surfaceAlt,
           color: color,
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),

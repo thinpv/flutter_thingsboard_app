@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
 // IR Remote Control — điều khiển thiết bị IR (TV, quạt, điều hòa...) từ
 // button_layout trong binding. Hiển thị grid nút bấm, gửi RPC khi nhấn.
@@ -111,7 +112,7 @@ class IrRemoteControl extends StatelessWidget {
   }
 
   static List<IrButtonMeta> get _defaultButtons => [
-    const IrButtonMeta(action: 'toggle', label: 'Bật/Tắt', icon: Icons.power_settings_new, color: Colors.red, row: 0, col: 0),
+    const IrButtonMeta(action: 'toggle', label: 'Bật/Tắt', icon: Icons.power_settings_new, color: MpColors.red, row: 0, col: 0),
   ];
 
   /// Tính số cột tối đa trong layout
@@ -171,12 +172,12 @@ class IrRemoteControl extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isOn
-                        ? Colors.deepOrange.shade400
-                        : Colors.grey.shade600,
+                        ? MpColors.amber
+                        : const Color(0xFF616161),
                     boxShadow: isOn
                         ? [
                             BoxShadow(
-                              color: Colors.deepOrange.withValues(alpha: 0.6),
+                              color: MpColors.amber.withValues(alpha: 0.6),
                               blurRadius: 8,
                             )
                           ]
@@ -240,20 +241,20 @@ class _StatusBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isOn
-            ? Colors.deepOrange.withValues(alpha: 0.08)
-            : Colors.grey.withValues(alpha: 0.06),
+            ? MpColors.amber.withValues(alpha: 0.08)
+            : MpColors.text3.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isOn
-              ? Colors.deepOrange.withValues(alpha: 0.2)
-              : Colors.grey.withValues(alpha: 0.15),
+              ? MpColors.amber.withValues(alpha: 0.2)
+              : MpColors.border,
         ),
       ),
       child: Row(
         children: [
           Icon(
             isOn ? Icons.wifi_tethering : Icons.wifi_tethering_off,
-            color: isOn ? Colors.deepOrange : Colors.grey,
+            color: isOn ? MpColors.amber : MpColors.text3,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -263,7 +264,7 @@ class _StatusBar extends StatelessWidget {
                   ? (parts.isEmpty ? 'Đang bật' : parts.join('  ·  '))
                   : 'Đang tắt',
               style: TextStyle(
-                color: isOn ? Colors.deepOrange.shade700 : Colors.grey.shade500,
+                color: isOn ? MpColors.amber : MpColors.text3,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -316,7 +317,7 @@ class _RemoteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = btn.color ?? Colors.blueGrey.shade300;
+    final color = btn.color ?? MpColors.text2;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -376,11 +377,11 @@ class _StateInfoPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Trạng thái hiện tại',
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
+        const Text('Trạng thái hiện tại',
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: MpColors.text)),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -405,13 +406,13 @@ class _StateChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.blueGrey.withValues(alpha: 0.08),
+        color: MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blueGrey.withValues(alpha: 0.2)),
+        border: Border.all(color: MpColors.border),
       ),
       child: Text(
         '$label: $value',
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: MpColors.text2),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
@@ -194,45 +195,34 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = isOn ? Colors.orange : Colors.grey.shade400;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isOn
-              ? [Colors.orange.shade400, Colors.deepOrange.shade400]
-              : [Colors.grey.shade300, Colors.grey.shade400],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: activeColor.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: isOn ? MpColors.amberSoft : MpColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.power, color: Colors.white, size: 22),
+                child: Icon(Icons.power,
+                    color: isOn ? MpColors.amber : MpColors.text3, size: 16),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 isOn ? 'Đang bật' : 'Đã tắt',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
+                style: TextStyle(
+                  color: isOn ? MpColors.text : MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
                 ),
               ),
             ],
@@ -241,32 +231,33 @@ class _HeroCard extends StatelessWidget {
           GestureDetector(
             onTap: onToggle,
             child: Container(
-              width: 130,
-              height: 130,
+              width: 110,
+              height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.25),
-                border: Border.all(color: Colors.white, width: 3),
+                color: isOn ? MpColors.text : MpColors.surfaceAlt,
+                border: Border.all(
+                    color: isOn ? MpColors.text : MpColors.border, width: 2),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.power_settings_new,
-                size: 60,
-                color: Colors.white,
+                size: 48,
+                color: isOn ? MpColors.bg : MpColors.text3,
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Text(
             '${power.toStringAsFixed(1)} W',
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
+              color: MpColors.text,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const Text(
             'Công suất hiện tại',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(color: MpColors.text3, fontSize: 11),
           ),
         ],
       ),
@@ -290,19 +281,19 @@ class _MetricsStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _miniCard(Icons.bolt, 'W', power.toStringAsFixed(1), Colors.orange),
-        const SizedBox(width: 10),
+        _miniCard(Icons.bolt, 'W', power.toStringAsFixed(1), MpColors.amber),
+        const SizedBox(width: 8),
         _miniCard(Icons.electrical_services, 'V',
-            volt == null ? '—' : volt!.toStringAsFixed(0), Colors.blue),
-        const SizedBox(width: 10),
+            volt == null ? '—' : volt!.toStringAsFixed(0), MpColors.blue),
+        const SizedBox(width: 8),
         _miniCard(Icons.speed, 'A',
-            curr == null ? '—' : curr!.toStringAsFixed(2), Colors.purple),
-        const SizedBox(width: 10),
+            curr == null ? '—' : curr!.toStringAsFixed(2), MpColors.violet),
+        const SizedBox(width: 8),
         _miniCard(
             Icons.electric_meter,
             'kWh',
             energyNow == null ? '—' : energyNow!.toStringAsFixed(1),
-            Colors.green),
+            MpColors.green),
       ],
     );
   }
@@ -310,31 +301,32 @@ class _MetricsStrip extends StatelessWidget {
   Widget _miniCard(IconData icon, String unit, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 6),
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 5),
             FittedBox(
               child: Text(
                 value,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
+                style: const TextStyle(
+                  color: MpColors.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
             ),
             const SizedBox(height: 2),
             Text(
               unit,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 11,
+              style: const TextStyle(
+                color: MpColors.text3,
+                fontSize: 10,
               ),
             ),
           ],
@@ -359,24 +351,25 @@ class _Power24hStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.orange.shade100),
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(Icons.insights, size: 18, color: Colors.orange.shade700),
-              const SizedBox(width: 6),
+              Icon(Icons.insights, size: 16, color: MpColors.text3),
+              SizedBox(width: 6),
               Text('Thống kê 24h',
                   style: TextStyle(
-                      color: Colors.orange.shade800,
+                      color: MpColors.text2,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13)),
+                      fontSize: 13,
+                      letterSpacing: 0.3)),
             ],
           ),
           const SizedBox(height: 14),
@@ -409,26 +402,29 @@ class _Power24hStatsCard extends StatelessWidget {
       child: Column(
         children: [
           Text(label,
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+              style:
+                  const TextStyle(color: MpColors.text3, fontSize: 11)),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                value == null ? '—' : value.toStringAsFixed(unit == 'kWh' ? 2 : 1),
-                style: TextStyle(
-                  color: Colors.orange.shade900,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
+                value == null
+                    ? '—'
+                    : value.toStringAsFixed(unit == 'kWh' ? 2 : 1),
+                style: const TextStyle(
+                  color: MpColors.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
                 ),
               ),
               const SizedBox(width: 3),
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(unit,
-                    style:
-                        TextStyle(color: Colors.orange.shade700, fontSize: 11)),
+                    style: const TextStyle(
+                        color: MpColors.text3, fontSize: 10)),
               ),
             ],
           ),
@@ -439,8 +435,8 @@ class _Power24hStatsCard extends StatelessWidget {
 
   Widget _divider() => Container(
         width: 1,
-        height: 36,
-        color: Colors.orange.shade200,
+        height: 32,
+        color: MpColors.border,
         margin: const EdgeInsets.symmetric(horizontal: 4),
       );
 }
@@ -455,21 +451,25 @@ class _Power24hChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(Icons.show_chart, size: 18, color: Colors.grey.shade700),
-              const SizedBox(width: 6),
+              Icon(Icons.show_chart, size: 16, color: MpColors.text3),
+              SizedBox(width: 6),
               Text('Công suất 24h',
-                  style: Theme.of(context).textTheme.titleSmall),
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: MpColors.text2,
+                      letterSpacing: 0.3)),
             ],
           ),
           const SizedBox(height: 14),
@@ -492,8 +492,8 @@ class _Power24hChart extends StatelessWidget {
     final d = data;
     if (d == null || d.isEmpty) {
       return Center(
-        child: Text('Chưa có dữ liệu',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+        child: const Text('Chưa có dữ liệu',
+            style: TextStyle(color: MpColors.text3, fontSize: 12)),
       );
     }
 
@@ -514,17 +514,10 @@ class _Power24hChart extends StatelessWidget {
                   heightFactor: frac.clamp(0.02, 1.0),
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 1),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.orange.shade400,
-                          Colors.deepOrange.shade300,
-                        ],
-                      ),
+                    decoration: const BoxDecoration(
+                      color: MpColors.text,
                       borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(3)),
+                          BorderRadius.vertical(top: Radius.circular(3)),
                     ),
                   ),
                 ),
@@ -534,7 +527,7 @@ class _Power24hChart extends StatelessWidget {
                 showLabel
                     ? '${bar.$1.hour.toString().padLeft(2, '0')}h'
                     : '',
-                style: const TextStyle(fontSize: 9, color: Colors.grey),
+                style: const TextStyle(fontSize: 9, color: MpColors.text3),
               ),
             ],
           ),
@@ -559,22 +552,26 @@ class _QuickActionsGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            Icon(Icons.flash_on, size: 18, color: Colors.grey.shade700),
-            const SizedBox(width: 6),
+            Icon(Icons.flash_on, size: 16, color: MpColors.text3),
+            SizedBox(width: 6),
             Text('Thao tác nhanh',
-                style: Theme.of(context).textTheme.titleSmall),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: MpColors.text2,
+                    letterSpacing: 0.3)),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
-            _action(context, Icons.schedule, 'Hẹn giờ', Colors.blue,
+            _action(context, Icons.schedule, 'Hẹn giờ', MpColors.blue,
                 onScheduleTap),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             _action(context, Icons.auto_awesome, 'Automation',
-                Colors.deepPurple, onAutomationTap),
+                MpColors.violet, onAutomationTap),
           ],
         ),
       ],
@@ -584,29 +581,26 @@ class _QuickActionsGrid extends StatelessWidget {
   Widget _action(BuildContext context, IconData icon, String label,
       Color color, VoidCallback onTap) {
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              children: [
-                Icon(icon, color: color, size: 26),
-                const SizedBox(height: 8),
-                Text(label,
-                    style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
-              ],
-            ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: MpColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MpColors.border, width: 0.5),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: const TextStyle(
+                      color: MpColors.text2,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12)),
+            ],
           ),
         ),
       ),

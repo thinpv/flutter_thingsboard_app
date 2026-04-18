@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: pir (0/1), lux, bat/pin, sensi (sensitivity 0-100)
@@ -32,7 +32,7 @@ class MotionSensorView extends StatelessWidget {
                   height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.orange.withValues(alpha: 0.07),
+                    color: MpColors.amberSoft,
                   ),
                 ),
               // Inner circle
@@ -41,18 +41,18 @@ class MotionSensorView extends StatelessWidget {
                 height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: detected
-                      ? Colors.orange.withValues(alpha: 0.15)
-                      : Colors.grey.withValues(alpha: 0.08),
+                  color: detected ? MpColors.amberSoft : MpColors.surfaceAlt,
                   border: Border.all(
-                    color: detected ? Colors.orange : Colors.grey.shade300,
+                    color: detected ? MpColors.amber : MpColors.border,
                     width: 2,
                   ),
                 ),
                 child: Icon(
-                  detected ? Icons.directions_walk : Icons.motion_photos_off_outlined,
+                  detected
+                      ? Icons.directions_walk
+                      : Icons.motion_photos_off_outlined,
                   size: 60,
-                  color: detected ? Colors.orange : Colors.grey,
+                  color: detected ? MpColors.amber : MpColors.text3,
                 ),
               ),
             ],
@@ -65,9 +65,10 @@ class MotionSensorView extends StatelessWidget {
             child: Text(
               detected ? 'Phát hiện chuyển động!' : 'Không có chuyển động',
               key: ValueKey(detected),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: detected ? Colors.orange.shade800 : Colors.grey,
-                    fontWeight: FontWeight.w700,
+              style: TextStyle(
+                    fontSize: 18,
+                    color: detected ? MpColors.amber : MpColors.text3,
+                    fontWeight: FontWeight.w600,
                   ),
             ),
           ),
@@ -88,24 +89,21 @@ class MotionSensorView extends StatelessWidget {
                 icon: Icons.light_mode_outlined,
                 label: 'Ánh sáng',
                 value: '${lux.toStringAsFixed(0)} lux',
-                iconColor: Colors.amber,
-                color: Colors.amber.shade50,
+                iconColor: MpColors.amber,
               ),
             if (distance != null)
               InfoCard(
                 icon: Icons.social_distance,
                 label: 'Khoảng cách',
                 value: '${(distance / 100).toStringAsFixed(1)} m',
-                iconColor: Colors.teal,
-                color: Colors.teal.shade50,
+                iconColor: MpColors.text2,
               ),
             if (batLevel(telemetry) != null)
               InfoCard(
                 icon: Icons.battery_std,
                 label: 'Pin',
                 value: '${batLevel(telemetry)}%',
-                iconColor: Colors.green,
-                color: Colors.green.shade50,
+                iconColor: MpColors.green,
               ),
           ],
         ),

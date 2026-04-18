@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/presentation/activity_tab.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/home_tab.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/profile_tab.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/smart_tab.dart';
@@ -7,6 +8,7 @@ import 'package:thingsboard_app/modules/smarthome/smarthome_shell.dart';
 abstract final class SmarthomeRoutes {
   static const home = '/smarthome/home';
   static const smart = '/smarthome/smart';
+  static const activity = '/smarthome/activity';
   static const profile = '/smarthome/profile';
 }
 
@@ -30,6 +32,14 @@ List<RouteBase> getSmarthomeRoutes() {
             GoRoute(
               path: SmarthomeRoutes.smart,
               builder: (context, state) => const SmartTab(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: SmarthomeRoutes.activity,
+              builder: (context, state) => const ActivityTab(),
             ),
           ],
         ),

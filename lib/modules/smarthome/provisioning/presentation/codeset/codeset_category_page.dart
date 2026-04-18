@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 
 /// Bước 0+1: Chọn protocol (IR/RF) + category (TV, AC, Fan...).
@@ -41,18 +42,22 @@ class _CodesetCategoryPageState extends State<CodesetCategoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chọn loại thiết bị')),
+      backgroundColor: MpColors.bg,
+      appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        title: const Text('Chọn loại thiết bị',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: MpColors.text)),
+        iconTheme: const IconThemeData(color: MpColors.text),
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Protocol selector
-            Text('Giao thức',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const Text('Giao thức',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                    color: MpColors.text3, letterSpacing: 0.4)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -77,12 +82,9 @@ class _CodesetCategoryPageState extends State<CodesetCategoryPage> {
             ),
             const SizedBox(height: 24),
 
-            // Category grid
-            Text('Loại thiết bị',
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            const Text('Loại thiết bị',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                    color: MpColors.text3, letterSpacing: 0.4)),
             const SizedBox(height: 8),
 
             if (_categories.isEmpty)
@@ -92,7 +94,7 @@ class _CodesetCategoryPageState extends State<CodesetCategoryPage> {
                   child: Text(
                     'Không có thiết bị ${_protocol.toUpperCase()} nào trong catalog.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: const TextStyle(color: MpColors.text3),
                   ),
                 ),
               )
@@ -147,31 +149,29 @@ class _ProtoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
+          color: selected ? MpColors.text : MpColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? color : Colors.grey.shade300,
-            width: selected ? 2 : 1,
+            color: selected ? MpColors.text : MpColors.border,
+            width: selected ? 1.5 : 0.5,
           ),
-          borderRadius: BorderRadius.circular(8),
-          color: selected ? color.withValues(alpha: 0.08) : null,
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? color : Colors.grey.shade600),
+            Icon(icon, color: selected ? MpColors.bg : MpColors.text3, size: 22),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
-                color: selected ? color : null,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                color: selected ? MpColors.bg : MpColors.text2,
               ),
               textAlign: TextAlign.center,
             ),
@@ -212,36 +212,30 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    final label = name;
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
+          color: selected ? MpColors.text : MpColors.surface,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? color : Colors.grey.shade300,
-            width: selected ? 2 : 1,
+            color: selected ? MpColors.text : MpColors.border,
+            width: selected ? 1.5 : 0.5,
           ),
-          borderRadius: BorderRadius.circular(8),
-          color: selected
-              ? color.withValues(alpha: 0.08)
-              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(_icon, size: 20,
-                color: selected ? color : Colors.grey.shade600),
+            Icon(_icon, size: 20, color: selected ? MpColors.bg : MpColors.text3),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                label,
+                name,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.normal,
-                  color: selected ? color : null,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                  color: selected ? MpColors.bg : MpColors.text,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),

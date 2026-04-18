@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 
 /// Bước 3: Danh sách model remotes — user chọn remote giống với remote thật.
@@ -85,17 +86,13 @@ class _CodesetModelPageState extends State<CodesetModelPage> {
             margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.3),
+              color: MpColors.surfaceAlt,
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: MpColors.border, width: 0.5),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.primary),
+                const Icon(Icons.info_outline, size: 18, color: MpColors.text2),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -115,7 +112,7 @@ class _CodesetModelPageState extends State<CodesetModelPage> {
                       _query.isEmpty
                           ? 'Không có remote nào.'
                           : 'Không tìm thấy remote "$_query".',
-                      style: const TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: MpColors.text3),
                     ),
                   )
                 : ListView.separated(
@@ -170,10 +167,7 @@ class _ModelTile extends StatelessWidget {
         children: [
           Text(
             '${model.buttonLayout.length} nút',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade500,
-            ),
+            style: const TextStyle(fontSize: 11, color: MpColors.text3),
           ),
           const SizedBox(width: 4),
           const Icon(Icons.chevron_right),
@@ -204,16 +198,15 @@ class _ModelTile extends StatelessWidget {
       return Text(text,
           style: const TextStyle(fontWeight: FontWeight.w500));
     }
-    final color = Theme.of(context).colorScheme.primary;
     return Text.rich(TextSpan(
       style: const TextStyle(fontWeight: FontWeight.w500),
       children: [
         if (idx > 0) TextSpan(text: text.substring(0, idx)),
         TextSpan(
           text: text.substring(idx, idx + query.length),
-          style: TextStyle(
-            backgroundColor: color.withValues(alpha: 0.18),
-            color: color,
+          style: const TextStyle(
+            backgroundColor: MpColors.surfaceAlt,
+            color: MpColors.text,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -250,13 +243,11 @@ class _ModelImage extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
-      child: Icon(
-        Icons.settings_remote_outlined,
-        color: Colors.grey.shade400,
-      ),
+      child: const Icon(Icons.settings_remote_outlined, color: MpColors.text3),
     );
   }
 }

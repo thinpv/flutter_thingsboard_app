@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: power (0/1), temp, hum, mode (cool/heat/auto/dry/fan),
@@ -15,11 +15,11 @@ class AcControl extends StatefulWidget {
 
 class _AcControlState extends State<AcControl> {
   static const _modes = [
-    ('cool', Icons.ac_unit, 'Lạnh', Colors.blue),
-    ('heat', Icons.whatshot, 'Sưởi', Colors.deepOrange),
-    ('auto', Icons.autorenew, 'Tự động', Colors.green),
-    ('dry', Icons.water_drop_outlined, 'Hút ẩm', Colors.cyan),
-    ('fan', Icons.air, 'Quạt', Colors.blueGrey),
+    ('cool', Icons.ac_unit, 'Lạnh', MpColors.blue),
+    ('heat', Icons.whatshot, 'Sưởi', MpColors.red),
+    ('auto', Icons.autorenew, 'Tự động', MpColors.green),
+    ('dry', Icons.water_drop_outlined, 'Hút ẩm', MpColors.violet),
+    ('fan', Icons.air, 'Quạt', MpColors.text2),
   ];
 
   late double _temp;
@@ -46,7 +46,7 @@ class _AcControlState extends State<AcControl> {
 
   Color _modeColor(String mode) {
     final found = _modes.where((m) => m.$1 == mode).firstOrNull;
-    return found?.$4 ?? Colors.grey;
+    return found?.$4 ?? MpColors.text2;
   }
 
   @override
@@ -58,48 +58,72 @@ class _AcControlState extends State<AcControl> {
       children: [
         // ── Hero card ──
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: _isOn
-                  ? [activeColor.withValues(alpha: 0.15), activeColor.withValues(alpha: 0.05)]
-                  : [Colors.grey.shade100, Colors.grey.shade50],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: _isOn ? activeColor.withValues(alpha: 0.3) : Colors.grey.shade200,
-            ),
+            color: MpColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: MpColors.border, width: 0.5),
           ),
           child: Column(
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.ac_unit,
-                    color: _isOn ? activeColor : Colors.grey,
-                    size: 22,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: _isOn
+                          ? activeColor.withValues(alpha: 0.1)
+                          : MpColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.ac_unit,
+                      color: _isOn ? activeColor : MpColors.text3,
+                      size: 16,
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Text(
                     _isOn
                         ? (_runState != null ? 'Đang $_runState' : 'Đang hoạt động')
                         : 'Đã tắt',
                     style: TextStyle(
-                      color: _isOn ? activeColor : Colors.grey,
+                      color: _isOn ? activeColor : MpColors.text3,
                       fontWeight: FontWeight.w500,
+                      fontSize: 13,
                     ),
                   ),
                   const Spacer(),
-                  Switch.adaptive(
-                    value: _isOn,
-                    activeColor: activeColor,
-                    onChanged: (_) => widget.onRpc('toggle', {}),
+                  GestureDetector(
+                    onTap: () => widget.onRpc('toggle', {}),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 44,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: _isOn ? MpColors.text : MpColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Align(
+                        alignment: _isOn
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isOn ? MpColors.bg : MpColors.text3,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               // Temperature display + +/- buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -118,17 +142,18 @@ class _AcControlState extends State<AcControl> {
                     children: [
                       Text(
                         '${_temp.round()}',
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              fontWeight: FontWeight.w200,
-                              color: _isOn ? activeColor : Colors.grey,
-                              height: 1,
-                            ),
+                        style: TextStyle(
+                          fontSize: 72,
+                          fontWeight: FontWeight.w200,
+                          color: _isOn ? MpColors.text : MpColors.text3,
+                          height: 1,
+                        ),
                       ),
                       Text(
                         '°C',
                         style: TextStyle(
-                          fontSize: 20,
-                          color: _isOn ? activeColor : Colors.grey,
+                          fontSize: 18,
+                          color: _isOn ? MpColors.text2 : MpColors.text3,
                         ),
                       ),
                     ],
@@ -150,11 +175,11 @@ class _AcControlState extends State<AcControl> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.water_drop, size: 16, color: Colors.blue),
+                    const Icon(Icons.water_drop, size: 14, color: MpColors.blue),
                     const SizedBox(width: 4),
                     Text(
                       'Độ ẩm phòng: ${widget.telemetry['hum']}%',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      style: const TextStyle(color: MpColors.text3, fontSize: 12),
                     ),
                   ],
                 ),
@@ -165,7 +190,12 @@ class _AcControlState extends State<AcControl> {
         const SizedBox(height: 24),
 
         // ── Mode selector ──
-        Text('Chế độ hoạt động', style: Theme.of(context).textTheme.titleSmall),
+        const Text('Chế độ hoạt động',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: MpColors.text2,
+                letterSpacing: 0.4)),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -178,31 +208,28 @@ class _AcControlState extends State<AcControl> {
                 child: Column(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
                         color: selected
-                            ? (m.$4 as Color).withValues(alpha: 0.15)
-                            : Colors.grey.shade100,
-                        border: Border.all(
-                          color: selected ? (m.$4 as Color) : Colors.grey.shade300,
-                          width: selected ? 2 : 1,
-                        ),
+                            ? MpColors.text
+                            : MpColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         m.$2,
-                        color: selected ? (m.$4 as Color) : Colors.grey,
-                        size: 26,
+                        color: selected ? MpColors.bg : MpColors.text3,
+                        size: 22,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       m.$3,
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                        color: selected ? (m.$4 as Color) : Colors.grey.shade600,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.normal,
+                        color: selected ? MpColors.text : MpColors.text3,
                       ),
                     ),
                   ],
@@ -223,9 +250,17 @@ class _AcControlState extends State<AcControl> {
           childAspectRatio: 1.5,
           children: [
             if (widget.telemetry['power'] != null)
-              InfoCard(icon: Icons.bolt, label: 'Công suất', value: '${widget.telemetry['power']} W', iconColor: Colors.orange, color: Colors.orange.shade50),
+              InfoCard(
+                  icon: Icons.bolt,
+                  label: 'Công suất',
+                  value: '${widget.telemetry['power']} W',
+                  iconColor: MpColors.amber),
             if (widget.telemetry['energy'] != null)
-              InfoCard(icon: Icons.electric_meter, label: 'Điện năng', value: '${widget.telemetry['energy']} kWh', iconColor: Colors.green, color: Colors.green.shade50),
+              InfoCard(
+                  icon: Icons.electric_meter,
+                  label: 'Điện năng',
+                  value: '${widget.telemetry['energy']} kWh',
+                  iconColor: MpColors.green),
           ],
         ),
       ],
@@ -240,19 +275,20 @@ class _TempButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: onTap != null ? Colors.grey.shade100 : Colors.grey.shade50,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Icon(
-            icon,
-            size: 22,
-            color: onTap != null ? Colors.black87 : Colors.grey.shade300,
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: onTap != null ? MpColors.surfaceAlt : MpColors.bg,
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: onTap != null ? MpColors.text : MpColors.text3,
         ),
       ),
     );

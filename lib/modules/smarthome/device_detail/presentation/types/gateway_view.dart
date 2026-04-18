@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_ir_rf_device_page.dart';
@@ -72,12 +73,13 @@ class GatewayView extends StatelessWidget {
         ],
 
         // ── Actions ──
-        Text(
+        const Text(
           'Thao tác',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: MpColors.text,
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -87,7 +89,7 @@ class GatewayView extends StatelessWidget {
               child: _GatewayAction(
                 icon: Icons.bluetooth_searching,
                 label: 'Ghép thiết bị',
-                color: Colors.blue,
+                color: MpColors.blue,
                 onTap: () => onRpc('startScan', {}),
               ),
             ),
@@ -96,7 +98,7 @@ class GatewayView extends StatelessWidget {
               child: _GatewayAction(
                 icon: Icons.bluetooth_disabled,
                 label: 'Dừng ghép',
-                color: Colors.grey,
+                color: MpColors.text3,
                 onTap: () => onRpc('stopScan', {}),
               ),
             ),
@@ -113,7 +115,7 @@ class GatewayView extends StatelessWidget {
                   child: _GatewayAction(
                     icon: Icons.settings_remote,
                     label: 'Thêm thiết bị IR',
-                    color: Colors.deepPurple,
+                    color: MpColors.violet,
                     onTap: () => _openAddIrRf(context, 'ir'),
                   ),
                 ),
@@ -123,7 +125,7 @@ class GatewayView extends StatelessWidget {
                   child: _GatewayAction(
                     icon: Icons.sensors,
                     label: 'Thêm thiết bị RF',
-                    color: Colors.indigo,
+                    color: MpColors.violet,
                     onTap: () => _openAddIrRf(context, 'rf'),
                   ),
                 ),
@@ -135,7 +137,7 @@ class GatewayView extends StatelessWidget {
             _GatewayAction(
               icon: Icons.radar,
               label: 'Kiểm tra tín hiệu IR',
-              color: Colors.deepOrange,
+              color: MpColors.red,
               onTap: () => _showIrMonitorDialog(context),
               fullWidth: true,
             ),
@@ -146,7 +148,7 @@ class GatewayView extends StatelessWidget {
         _GatewayAction(
           icon: Icons.sync,
           label: 'Cập nhật Descriptor thiết bị',
-          color: Colors.teal,
+          color: MpColors.green,
           onTap: () => _confirmRefreshDescriptor(context),
           fullWidth: true,
         ),
@@ -155,7 +157,7 @@ class GatewayView extends StatelessWidget {
         _GatewayAction(
           icon: Icons.restart_alt,
           label: 'Khởi động lại Gateway',
-          color: Colors.orange,
+          color: MpColors.amber,
           onTap: () => _confirmReboot(context),
           fullWidth: true,
         ),
@@ -186,15 +188,15 @@ class GatewayView extends StatelessWidget {
   }
 
   Color _cpuColor(double v) {
-    if (v < 50) return Colors.green;
-    if (v < 80) return Colors.orange;
-    return Colors.red;
+    if (v < 50) return MpColors.green;
+    if (v < 80) return MpColors.amber;
+    return MpColors.red;
   }
 
   Color _memColor(double v) {
-    if (v < 60) return Colors.green;
-    if (v < 85) return Colors.orange;
-    return Colors.red;
+    if (v < 60) return MpColors.green;
+    if (v < 85) return MpColors.amber;
+    return MpColors.red;
   }
 
   void _confirmRefreshDescriptor(BuildContext context) {
@@ -211,13 +213,19 @@ class GatewayView extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Hủy'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.pop(ctx);
               onRpc('refreshDescriptor', {'descId': '*'});
             },
-            child: const Text('Cập nhật', style: TextStyle(color: Colors.white)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: MpColors.green,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Cập nhật', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           ),
         ],
       ),
@@ -237,13 +245,19 @@ class GatewayView extends StatelessWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Hủy'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.pop(ctx);
               onRpc('reboot', {});
             },
-            child: const Text('Khởi động lại', style: TextStyle(color: Colors.white)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: MpColors.amber,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Khởi động lại', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           ),
         ],
       ),
@@ -273,14 +287,17 @@ class _GatewayStatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.teal.shade700, Colors.teal.shade400],
+          colors: [
+            MpColors.green,
+            MpColors.green.withValues(alpha: 0.75),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.teal.withValues(alpha: 0.3),
+            color: MpColors.green.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -302,7 +319,7 @@ class _GatewayStatusCard extends StatelessWidget {
                 ),
               ),
               Spacer(),
-              const OnlineBadge(isOnline: true),
+              OnlineBadge(isOnline: true),
             ],
           ),
           const SizedBox(height: 16),
@@ -388,7 +405,10 @@ class _ResourceMeter extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(label, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 14, color: MpColors.text),
+              ),
               const Spacer(),
               Text(
                 '${value.toStringAsFixed(0)}%',
@@ -405,7 +425,7 @@ class _ResourceMeter extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: value / 100,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: MpColors.surfaceAlt,
               color: color,
               minHeight: 8,
             ),
@@ -485,7 +505,7 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
       title: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.radar, color: Colors.deepOrange, size: 20),
+          Icon(Icons.radar, color: MpColors.red, size: 20),
           SizedBox(width: 8),
           Text('Kiểm tra tín hiệu IR'),
         ],
@@ -520,7 +540,7 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
                     (d) => ChoiceChip(
                       label: Text('${d}s'),
                       selected: _selectedDuration == d,
-                      selectedColor: Colors.deepOrange.withValues(alpha: 0.15),
+                      selectedColor: MpColors.red.withValues(alpha: 0.15),
                       onSelected: (_) =>
                           setState(() => _selectedDuration = d),
                     ),
@@ -532,7 +552,7 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
       _MonitorState.running => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: Colors.deepOrange),
+            const CircularProgressIndicator(color: MpColors.red),
             const SizedBox(height: 16),
             Text(
               'Đang lắng nghe $_selectedDuration giây...\n'
@@ -545,7 +565,7 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
       _MonitorState.done => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle, color: Colors.green.shade600, size: 48),
+            const Icon(Icons.check_circle, color: MpColors.green, size: 48),
             const SizedBox(height: 12),
             Text(
               'Nhận được $_frames frame${_frames != 1 ? 's' : ''}.',
@@ -557,14 +577,14 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
               'Xem log serial tag "IrEsp32":\n'
               '"IR TX" = gateway phát\n"IR RX" = remote thật',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: MpColors.text3),
             ),
           ],
         ),
       _MonitorState.error => Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, color: Colors.red.shade600, size: 48),
+            const Icon(Icons.error_outline, color: MpColors.red, size: 48),
             const SizedBox(height: 12),
             Text(
               _errorMsg,
@@ -583,13 +603,18 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Hủy'),
           ),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-            onPressed: _startMonitor,
-            child: const Text(
-              'Bắt đầu',
-              style: TextStyle(color: Colors.white),
+          GestureDetector(
+            onTap: _startMonitor,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: MpColors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Bắt đầu',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -599,13 +624,18 @@ class _IrMonitorDialogState extends State<_IrMonitorDialog> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Đóng'),
           ),
-          ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-            onPressed: _reset,
-            child: const Text(
-              'Thử lại',
-              style: TextStyle(color: Colors.white),
+          GestureDetector(
+            onTap: _reset,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: MpColors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Thử lại',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],

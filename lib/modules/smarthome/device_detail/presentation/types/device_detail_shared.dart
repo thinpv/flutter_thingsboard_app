@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
 // ─── Helpers (top-level, accessible from all type files) ─────────────────────
@@ -117,9 +118,7 @@ class OnlineBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isOnline
-            ? Colors.green.withValues(alpha: 0.12)
-            : Colors.grey.withValues(alpha: 0.12),
+        color: isOnline ? MpColors.greenSoft : MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -130,7 +129,7 @@ class OnlineBadge extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isOnline ? Colors.green : Colors.grey,
+              color: isOnline ? MpColors.green : MpColors.text3,
             ),
           ),
           const SizedBox(width: 5),
@@ -139,7 +138,7 @@ class OnlineBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: isOnline ? Colors.green.shade700 : Colors.grey.shade600,
+              color: isOnline ? MpColors.green : MpColors.text3,
             ),
           ),
         ],
@@ -169,7 +168,7 @@ class PowerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = activeColor ?? Theme.of(context).colorScheme.primary;
+    final color = activeColor ?? MpColors.text;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -177,27 +176,16 @@ class PowerButton extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isOn
-              ? color.withValues(alpha: 0.15)
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: isOn ? color.withValues(alpha: 0.1) : MpColors.surfaceAlt,
           border: Border.all(
-            color: isOn ? color : Colors.grey.shade300,
-            width: 3,
+            color: isOn ? color : MpColors.border,
+            width: 2,
           ),
-          boxShadow: isOn
-              ? [
-                  BoxShadow(
-                    color: (glowColor ?? color).withValues(alpha: 0.3),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                  )
-                ]
-              : null,
         ),
         child: Icon(
           icon,
           size: size * 0.4,
-          color: isOn ? color : Colors.grey.shade400,
+          color: isOn ? color : MpColors.text3,
         ),
       ),
     );
@@ -223,30 +211,31 @@ class InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Theme.of(context).colorScheme.primaryContainer;
+    final bg = color ?? MpColors.surfaceAlt;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: iconColor ?? Theme.of(context).colorScheme.primary),
+          Icon(icon, size: 20, color: iconColor ?? MpColors.text2),
           const Spacer(),
           Text(
             value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+            style: const TextStyle(fontSize: 11, color: MpColors.text3),
           ),
         ],
       ),
@@ -273,15 +262,19 @@ class DetailRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey.shade500),
+          Icon(icon, size: 20, color: MpColors.text3),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(fontSize: 14, color: MpColors.text)),
+          ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+            ),
           ),
         ],
       ),
@@ -310,15 +303,19 @@ class InfoTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey.shade500),
+          Icon(icon, size: 20, color: MpColors.text3),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(fontSize: 14, color: MpColors.text)),
+          ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: valueColor ?? Theme.of(context).colorScheme.primary,
-                ),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: valueColor ?? MpColors.text,
+            ),
           ),
         ],
       ),
@@ -335,16 +332,22 @@ class BatteryIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = level > 50
-        ? Colors.green
+        ? MpColors.green
         : level > 20
-            ? Colors.orange
-            : Colors.red;
+            ? MpColors.amber
+            : MpColors.red;
+    final bg = level > 50
+        ? MpColors.greenSoft
+        : level > 20
+            ? MpColors.amberSoft
+            : MpColors.redSoft;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Row(
         children: [
@@ -357,17 +360,19 @@ class BatteryIndicator extends StatelessWidget {
                         ? Icons.battery_3_bar
                         : Icons.battery_1_bar,
             color: color,
-            size: 28,
+            size: 24,
           ),
-          const SizedBox(width: 12),
-          Text('Pin', style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(width: 10),
+          const Text('Pin',
+              style: TextStyle(fontSize: 14, color: MpColors.text)),
           const Spacer(),
           Text(
             '${level.round()}%',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -392,7 +397,7 @@ class AlertCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = detected ? alertColor : Colors.grey;
+    final color = detected ? alertColor : MpColors.text3;
     return Column(
       children: [
         Container(
@@ -400,18 +405,19 @@ class AlertCircle extends StatelessWidget {
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.12),
-            border: Border.all(color: color, width: 3),
+            color: color.withValues(alpha: 0.1),
+            border: Border.all(color: color, width: 2),
           ),
           child: Icon(icon, size: 60, color: color),
         ),
         const SizedBox(height: 16),
         Text(
           label,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-              ),
+          style: TextStyle(
+            fontSize: 18,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -449,15 +455,17 @@ class SliderSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: Colors.grey.shade600),
+            Icon(icon, size: 18, color: MpColors.text3),
             const SizedBox(width: 8),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            Text(label,
+                style: const TextStyle(fontSize: 14, color: MpColors.text)),
             const Spacer(),
             Text(
               valueLabel,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text),
             ),
           ],
         ),
@@ -509,24 +517,11 @@ class WallPlateView extends StatelessWidget {
     if (n == 0) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.grey.shade100,
-            Colors.grey.shade200,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: MpColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: switch (n) {
         1 => _singleLayout(),
@@ -586,73 +581,64 @@ class _Button extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final color = button.isOn ? cs.primary : Colors.grey.shade400;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: button.onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: button.isOn ? Colors.white : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: button.isOn ? cs.primary : Colors.grey.shade300,
-              width: button.isOn ? 2 : 1,
+    final isOn = button.isOn;
+    return InkWell(
+      onTap: button.onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isOn ? MpColors.text : MpColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isOn ? MpColors.text : MpColors.border,
+            width: 0.5,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isOn
+                    ? MpColors.amberSoft
+                    : MpColors.surfaceAlt,
+              ),
+              child: Icon(
+                button.icon,
+                color: isOn ? MpColors.amber : MpColors.text3,
+                size: 22,
+              ),
             ),
-            boxShadow: button.isOn
-                ? [
-                    BoxShadow(
-                      color: cs.primary.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: button.isOn
-                      ? cs.primary.withValues(alpha: 0.15)
-                      : Colors.grey.shade200,
-                ),
-                child: Icon(button.icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text(
-                  button.label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: button.isOn ? cs.primary : Colors.grey.shade700,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                button.isOn ? 'BẬT' : 'TẮT',
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                button.label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10,
-                  letterSpacing: 1,
+                  color: isOn ? MpColors.bg : MpColors.text,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              isOn ? 'BẬT' : 'TẮT',
+              style: TextStyle(
+                color: isOn ? MpColors.bg.withValues(alpha: 0.6) : MpColors.text3,
+                fontWeight: FontWeight.w500,
+                fontSize: 10,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -684,7 +670,7 @@ class GaugePainter extends CustomPainter {
       sweepTotal,
       false,
       Paint()
-        ..color = Colors.grey.shade200
+        ..color = const Color(0xFFE0E0DA)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 10
         ..strokeCap = StrokeCap.round,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 class LocationPage extends StatefulWidget {
@@ -109,17 +110,16 @@ class _LocationPageState extends State<LocationPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: MpColors.surfaceAlt,
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: MpColors.border, width: 0.5),
                           ),
                           child: Column(
                             children: [
                               Icon(
                                 Icons.location_on,
                                 size: 48,
-                                color: _lat != null
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Colors.grey.shade400,
+                                color: _lat != null ? MpColors.text : MpColors.text3,
                               ),
                               const SizedBox(height: 12),
                               if (_lat != null && _lng != null) ...[
@@ -135,9 +135,9 @@ class _LocationPageState extends State<LocationPage> {
                                       fontFamily: 'monospace', fontSize: 14),
                                 ),
                               ] else
-                                Text(
+                                const Text(
                                   'Chưa có vị trí',
-                                  style: TextStyle(color: Colors.grey.shade500),
+                                  style: TextStyle(color: MpColors.text3),
                                 ),
                             ],
                           ),
@@ -147,10 +147,7 @@ class _LocationPageState extends State<LocationPage> {
                           const SizedBox(height: 12),
                           Text(
                             _error!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 13,
-                            ),
+                            style: const TextStyle(color: MpColors.red, fontSize: 13),
                           ),
                         ],
 

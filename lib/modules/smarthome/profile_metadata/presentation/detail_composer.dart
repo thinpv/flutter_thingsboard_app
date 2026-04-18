@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/action_button_row.dart';
@@ -201,11 +202,11 @@ class _EmptyMetaView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.devices_other, size: 48, color: Colors.grey),
+          Icon(Icons.devices_other, size: 48, color: MpColors.text3),
           SizedBox(height: 12),
           Text(
             'Chưa có metadata cho thiết bị này',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: MpColors.text3),
           ),
         ],
       ),

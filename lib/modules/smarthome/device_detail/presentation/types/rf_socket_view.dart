@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
 // RF Socket View — ổ cắm RF (PT2262...) và chuông cửa RF (HT6P20).
 //
@@ -46,7 +47,7 @@ class RfSocketView extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: _isOn ? Colors.green.shade600 : Colors.grey.shade500,
+              color: _isOn ? MpColors.green : MpColors.text3,
             ),
           ),
         ),
@@ -54,7 +55,7 @@ class RfSocketView extends StatelessWidget {
         Center(
           child: Text(
             'Ổ cắm RF',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+            style: TextStyle(color: MpColors.text3, fontSize: 13),
           ),
         ),
         const SizedBox(height: 40),
@@ -86,16 +87,16 @@ class _SocketToggle extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isOn
-              ? Colors.green.shade400.withValues(alpha: 0.12)
-              : Colors.grey.withValues(alpha: 0.08),
+              ? MpColors.green.withValues(alpha: 0.12)
+              : MpColors.text3.withValues(alpha: 0.08),
           border: Border.all(
-            color: isOn ? Colors.green.shade400 : Colors.grey.shade300,
+            color: isOn ? MpColors.green : MpColors.border,
             width: 3,
           ),
           boxShadow: isOn
               ? [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.3),
+                    color: MpColors.green.withValues(alpha: 0.3),
                     blurRadius: 24,
                   )
                 ]
@@ -104,7 +105,7 @@ class _SocketToggle extends StatelessWidget {
         child: Icon(
           Icons.power,
           size: 52,
-          color: isOn ? Colors.green.shade500 : Colors.grey.shade400,
+          color: isOn ? MpColors.green : MpColors.text3,
         ),
       ),
     );
@@ -122,14 +123,14 @@ class _QuickRow extends StatelessWidget {
         _QuickBtn(
           label: 'Bật',
           icon: Icons.power,
-          color: Colors.green,
+          color: MpColors.green,
           onTap: () => onRpc('setValue', {'onoff0': 1}),
         ),
         const SizedBox(width: 12),
         _QuickBtn(
           label: 'Tắt',
           icon: Icons.power_off,
-          color: Colors.red,
+          color: MpColors.red,
           onTap: () => onRpc('setValue', {'onoff0': 0}),
         ),
       ],
@@ -146,7 +147,7 @@ class _QuickBtn extends StatelessWidget {
   });
   final String label;
   final IconData icon;
-  final MaterialColor color;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -164,12 +165,12 @@ class _QuickBtn extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color.shade600, size: 18),
+              Icon(icon, color: color, size: 18),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: color.shade700,
+                  color: color,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -188,18 +189,18 @@ class _RfSocketNote extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.05),
+        color: MpColors.blueSoft,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+        border: Border.all(color: MpColors.blue.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Colors.blue.shade300, size: 16),
+          Icon(Icons.info_outline, color: MpColors.blue, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Trạng thái ảo — RF không có phản hồi từ thiết bị',
-              style: TextStyle(color: Colors.blue.shade400, fontSize: 11),
+              style: TextStyle(color: MpColors.blue, fontSize: 11),
             ),
           ),
         ],
@@ -231,28 +232,28 @@ class RfDoorbellView extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: pressed != null
-                  ? Colors.amber.withValues(alpha: 0.12)
-                  : Colors.grey.withValues(alpha: 0.08),
+                  ? MpColors.amber.withValues(alpha: 0.12)
+                  : MpColors.text3.withValues(alpha: 0.08),
               border: Border.all(
-                color: pressed != null ? Colors.amber : Colors.grey.shade300,
+                color: pressed != null ? MpColors.amber : MpColors.border,
                 width: 2.5,
               ),
             ),
             child: Icon(
               Icons.doorbell,
               size: 46,
-              color: pressed != null ? Colors.amber.shade600 : Colors.grey.shade400,
+              color: pressed != null ? MpColors.amber : MpColors.text3,
             ),
           ),
         ),
         const SizedBox(height: 24),
         Center(
-          child: Text(
+          child: const Text(
             'Chuông cửa RF',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: MpColors.text),
           ),
         ),
         const SizedBox(height: 8),
@@ -262,16 +263,16 @@ class RfDoorbellView extends StatelessWidget {
                 ? 'Chuông vừa được nhấn'
                 : 'Chưa có sự kiện',
             style: TextStyle(
-              color: pressed != null ? Colors.amber.shade700 : Colors.grey.shade400,
+              color: pressed != null ? MpColors.amber : MpColors.text3,
               fontSize: 13,
             ),
           ),
         ),
         const SizedBox(height: 12),
         Center(
-          child: Text(
+          child: const Text(
             '(Read-only — thiết bị RF một chiều)',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+            style: TextStyle(color: MpColors.text3, fontSize: 11),
           ),
         ),
       ],

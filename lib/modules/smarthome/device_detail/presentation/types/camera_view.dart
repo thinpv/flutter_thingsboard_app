@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/device_detail_shared.dart';
 
 // Keys: pir (motion detection)
@@ -44,16 +45,16 @@ class _CameraViewState extends State<CameraView> {
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: Colors.grey.shade900,
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Stack(
             children: [
-              Center(
+              const Center(
                 child: Icon(
                   Icons.videocam_outlined,
                   size: 64,
-                  color: Colors.grey.shade600,
+                  color: MpColors.text3,
                 ),
               ),
               // Motion badge
@@ -64,7 +65,7 @@ class _CameraViewState extends State<CameraView> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade600,
+                      color: MpColors.red,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
@@ -97,7 +98,7 @@ class _CameraViewState extends State<CameraView> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.circle, color: Colors.red, size: 8),
+                      Icon(Icons.circle, color: MpColors.red, size: 8),
                       SizedBox(width: 4),
                       Text(
                         'LIVE',
@@ -117,33 +118,46 @@ class _CameraViewState extends State<CameraView> {
         const SizedBox(height: 20),
 
         // ── Snapshot button ──
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _snapshotLoading ? null : _snapshot,
-            icon: _snapshotLoading
-                ? const SizedBox(
+        GestureDetector(
+          onTap: _snapshotLoading ? null : _snapshot,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: MpColors.blue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: MpColors.border, width: 0.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_snapshotLoading)
+                  const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: MpColors.blue),
                   )
-                : const Icon(Icons.camera_alt_outlined),
-            label: const Text('Chụp ảnh'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                else
+                  const Icon(Icons.camera_alt_outlined, color: MpColors.blue),
+                const SizedBox(width: 8),
+                const Text(
+                  'Chụp ảnh',
+                  style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 24),
 
         // ── PTZ controls ──
-        Text(
+        const Text(
           'Điều hướng camera (PTZ)',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: MpColors.text,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -159,11 +173,11 @@ class _CameraViewState extends State<CameraView> {
                 Container(
                   width: 50,
                   height: 50,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.grey.shade200,
+                    color: MpColors.surfaceAlt,
                   ),
-                  child: Icon(Icons.crop_free, color: Colors.grey.shade400),
+                  child: const Icon(Icons.crop_free, color: MpColors.text3),
                 ),
                 // Up
                 Positioned(
@@ -214,7 +228,7 @@ class _CameraViewState extends State<CameraView> {
               iconSize: 28,
             ),
             const SizedBox(width: 8),
-            const Text('Zoom', style: TextStyle(color: Colors.grey)),
+            const Text('Zoom', style: TextStyle(color: MpColors.text3)),
             const SizedBox(width: 8),
             _PtzButton(
               icon: Icons.zoom_in,
@@ -230,24 +244,27 @@ class _CameraViewState extends State<CameraView> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: motion ? Colors.orange.shade50 : Colors.grey.shade50,
+            color: motion ? MpColors.amberSoft : MpColors.surfaceAlt,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: motion ? Colors.orange.shade200 : Colors.grey.shade200,
+              color: motion
+                  ? MpColors.amber.withValues(alpha: 0.3)
+                  : MpColors.border,
+              width: 0.5,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 motion ? Icons.directions_walk : Icons.motion_photos_off_outlined,
-                color: motion ? Colors.orange : Colors.grey,
+                color: motion ? MpColors.amber : MpColors.text3,
                 size: 20,
               ),
               const SizedBox(width: 12),
               Text(
                 motion ? 'Phát hiện chuyển động!' : 'Không có chuyển động',
                 style: TextStyle(
-                  color: motion ? Colors.orange.shade800 : Colors.grey,
+                  color: motion ? MpColors.amber : MpColors.text3,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -279,7 +296,7 @@ class _PtzButton extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: MpColors.surfaceAlt,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -289,7 +306,7 @@ class _PtzButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, size: iconSize, color: Colors.grey.shade700),
+        child: Icon(icon, size: iconSize, color: MpColors.text2),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/codeset_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 
@@ -85,11 +86,9 @@ class _CodesetTestPageState extends State<CodesetTestPage> {
                   _InfoCard(isRf: isRf),
                   const SizedBox(height: 20),
 
-                  Text('Ấn các nút bên dưới',
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  const Text('Ấn các nút bên dưới',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                          color: MpColors.text3, letterSpacing: 0.4)),
                   const SizedBox(height: 12),
 
                   // Test buttons grid
@@ -117,10 +116,7 @@ class _CodesetTestPageState extends State<CodesetTestPage> {
                   if (profile.buttonLayout.length > testBtns.length)
                     Text(
                       '+ ${profile.buttonLayout.length - testBtns.length} nút khác sẽ có sau khi thêm thiết bị.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: MpColors.text3),
                     ),
 
                   const SizedBox(height: 32),
@@ -135,17 +131,30 @@ class _CodesetTestPageState extends State<CodesetTestPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
                 children: [
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context, true),
+                    child: Container(
+                      width: double.infinity,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: MpColors.text,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text('Chọn remote này',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: MpColors.bg)),
                     ),
-                    child: const Text('Chọn remote này'),
                   ),
                   const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Remote không khớp — thử remote khác'),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context, false),
+                    child: Container(
+                      width: double.infinity,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: const Text('Remote không khớp — thử remote khác',
+                          style: TextStyle(fontSize: 14, color: MpColors.text2)),
+                    ),
                   ),
                 ],
               ),
@@ -174,14 +183,14 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.tips_and_updates_outlined,
-              size: 18, color: Theme.of(context).colorScheme.primary),
+          const Icon(Icons.tips_and_updates_outlined, size: 18, color: MpColors.text2),
           const SizedBox(width: 8),
           Expanded(
             child: Text(text, style: const TextStyle(fontSize: 13)),
@@ -203,21 +212,18 @@ class _StatusBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: isOk ? Colors.green.shade50 : Colors.red.shade50,
+      color: isOk ? MpColors.greenSoft : MpColors.redSoft,
       child: Row(
         children: [
           Icon(
             isOk ? Icons.check_circle : Icons.error_outline,
-            color: isOk ? Colors.green.shade700 : Colors.red.shade700,
+            color: isOk ? MpColors.green : MpColors.red,
             size: 18,
           ),
           const SizedBox(width: 8),
           Text(
             isOk ? 'Đã phát tín hiệu — thiết bị có phản hồi không?' : 'Không gửi được — kiểm tra kết nối gateway',
-            style: TextStyle(
-              fontSize: 13,
-              color: isOk ? Colors.green.shade700 : Colors.red.shade700,
-            ),
+            style: TextStyle(fontSize: 13, color: isOk ? MpColors.green : MpColors.red),
           ),
         ],
       ),
@@ -240,25 +246,26 @@ class _TestButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = button['label'] as String? ?? (button['action'] as String);
-    Color? borderColor;
-    if (lastResult == 'ok') borderColor = Colors.green;
-    if (lastResult == 'error') borderColor = Colors.red;
+    Color borderColor = MpColors.border;
+    Color? bgColor;
+    Color textColor = MpColors.text;
+    if (lastResult == 'ok') {
+      borderColor = MpColors.green;
+      bgColor = MpColors.greenSoft;
+      textColor = MpColors.green;
+    } else if (lastResult == 'error') {
+      borderColor = MpColors.red;
+      bgColor = MpColors.redSoft;
+      textColor = MpColors.red;
+    }
 
-    return InkWell(
+    return GestureDetector(
       onTap: isSending ? null : onTap,
-      borderRadius: BorderRadius.circular(8),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(
-            color: borderColor ?? Colors.grey.shade300,
-            width: lastResult != null ? 2 : 1,
-          ),
+          border: Border.all(color: borderColor, width: lastResult != null ? 1.5 : 0.5),
           borderRadius: BorderRadius.circular(8),
-          color: lastResult == 'ok'
-              ? Colors.green.shade50
-              : lastResult == 'error'
-                  ? Colors.red.shade50
-                  : null,
+          color: bgColor ?? MpColors.surface,
         ),
         child: isSending
             ? const Center(
@@ -271,23 +278,15 @@ class _TestButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (lastResult == 'ok')
-                      Icon(Icons.check, size: 16, color: Colors.green.shade600)
+                      const Icon(Icons.check, size: 16, color: MpColors.green)
                     else if (lastResult == 'error')
-                      Icon(Icons.close, size: 16, color: Colors.red.shade600)
+                      const Icon(Icons.close, size: 16, color: MpColors.red)
                     else
-                      const Icon(Icons.send, size: 14, color: Colors.grey),
+                      const Icon(Icons.send, size: 14, color: MpColors.text3),
                     const SizedBox(width: 6),
                     Text(
                       label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: lastResult == 'ok'
-                            ? Colors.green.shade700
-                            : lastResult == 'error'
-                                ? Colors.red.shade700
-                                : null,
-                      ),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: textColor),
                     ),
                   ],
                 ),

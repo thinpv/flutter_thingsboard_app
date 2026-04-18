@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/device_state_providers.dart';
@@ -47,17 +48,17 @@ class NumberDisplay extends ConsumerWidget {
         children: [
           Text(
             display,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: MpColors.text,
             ),
           ),
           if (unit.isNotEmpty) ...[
             const SizedBox(width: 3),
             Text(
               unit,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: const TextStyle(fontSize: 12, color: MpColors.text3),
             ),
           ],
         ],

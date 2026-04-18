@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/widgets/section_card.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
@@ -84,10 +85,10 @@ class _RangeChartState extends ConsumerState<RangeChart> {
               if (!_loading && _points != null && _points!.isNotEmpty)
                 Text(
                   '${_points!.last.$2.toStringAsFixed(widget.def.precision ?? 1)} $unit',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: MpColors.text,
                   ),
                 ),
               const SizedBox(width: 8),
@@ -110,9 +111,9 @@ class _RangeChartState extends ConsumerState<RangeChart> {
             child: _buildChart(context),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             '24 giờ qua',
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 10, color: MpColors.text3),
           ),
         ],
       ),
@@ -131,17 +132,17 @@ class _RangeChartState extends ConsumerState<RangeChart> {
     }
     final pts = _points ?? [];
     if (pts.isEmpty) {
-      return Center(
+      return const Center(
         child: Text(
           'Chưa có dữ liệu',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          style: TextStyle(color: MpColors.text3, fontSize: 12),
         ),
       );
     }
     return CustomPaint(
       painter: _LineChartPainter(
         points: pts,
-        color: Theme.of(context).colorScheme.primary,
+        color: MpColors.text,
         range: widget.def.range,
       ),
       child: const SizedBox.expand(),
