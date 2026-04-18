@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
@@ -330,29 +331,54 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isNew = widget.rule == null;
 
     return Scaffold(
-      backgroundColor: cs.surfaceContainerLow,
+      backgroundColor: MpColors.bg,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        title: Text(isNew ? 'Tạo automation' : 'Sửa automation'),
+        backgroundColor: MpColors.bg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Huỷ',
+            style: TextStyle(fontSize: 15, color: MpColors.text2),
+          ),
+        ),
+        title: Text(
+          isNew ? 'Tạo automation' : 'Sửa automation',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: MpColors.text,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           if (_saving)
             const Padding(
               padding: EdgeInsets.all(14),
               child: SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: MpColors.text3,
+                ),
               ),
             )
           else
             TextButton(
               onPressed: _save,
-              child: Text('Lưu',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, color: cs.primary)),
+              child: const Text(
+                'Lưu',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.blue,
+                ),
+              ),
             ),
         ],
       ),
@@ -614,21 +640,27 @@ class _NameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: TextField(
         controller: ctrl,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+          color: MpColors.text,
+        ),
+        decoration: const InputDecoration(
           hintText: 'Đặt tên automation…',
           hintStyle: TextStyle(
-              fontSize: 17, fontWeight: FontWeight.w400,
-              color: cs.onSurface.withValues(alpha: 0.35)),
+            fontSize: 17,
+            fontWeight: FontWeight.w400,
+            color: MpColors.text3,
+          ),
           border: InputBorder.none,
         ),
       ),
@@ -652,12 +684,12 @@ class _StyleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,21 +707,23 @@ class _StyleCard extends StatelessWidget {
                   onTap: () => onIconChanged(key),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    width: 48,
-                    height: 48,
+                    width: 46,
+                    height: 46,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       color: selected
-                          ? accent.withValues(alpha: 0.15)
-                          : cs.surfaceContainerLow,
+                          ? accent.withValues(alpha: 0.12)
+                          : MpColors.surfaceAlt,
                       border: selected
-                          ? Border.all(color: accent, width: 2)
+                          ? Border.all(color: accent, width: 1.5)
                           : null,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon,
-                        color: selected ? accent : cs.onSurface.withValues(alpha: 0.45),
-                        size: 22),
+                    child: Icon(
+                      icon,
+                      color: selected ? accent : MpColors.text3,
+                      size: 20,
+                    ),
                   ),
                 );
               }).toList(),
@@ -705,18 +739,18 @@ class _StyleCard extends StatelessWidget {
                 onTap: () => onColorChanged(hex),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  width: selected ? 32 : 28,
-                  height: selected ? 32 : 28,
+                  width: selected ? 30 : 26,
+                  height: selected ? 30 : 26,
                   margin: const EdgeInsets.only(right: 10),
                   decoration: BoxDecoration(
                     color: c,
                     shape: BoxShape.circle,
                     boxShadow: selected
-                        ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 6)]
+                        ? [BoxShadow(color: c.withValues(alpha: 0.4), blurRadius: 5)]
                         : null,
                   ),
                   child: selected
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
                       : null,
                 ),
               );
@@ -744,32 +778,31 @@ class _SectionBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     label,
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: color,
                       letterSpacing: 0.5,
                     ),
@@ -783,7 +816,6 @@ class _SectionBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Content
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Column(children: children),
@@ -804,13 +836,12 @@ class _ConditionMatchPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final isAll = value == ConditionMatch.all;
     return Container(
-      height: 30,
+      height: 28,
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
+        color: MpColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -838,22 +869,21 @@ class _PillOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: selected ? cs.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(7),
+          color: selected ? MpColors.text : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: selected ? cs.onPrimary : cs.onSurface.withValues(alpha: 0.6),
+            color: selected ? MpColors.bg : MpColors.text3,
           ),
         ),
       ),
@@ -877,69 +907,69 @@ class _ConditionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final (icon, color) = _iconColor(condition);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: color, width: 3),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: MpColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(color: color, width: 3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 17, color: color),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(icon, size: 18, color: color),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _conditionTitle(condition),
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _conditionTitle(condition),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: MpColors.text,
                       ),
-                      if (deviceName != null || _conditionSubtitle(condition).isNotEmpty)
-                        Text(
-                          [
-                            if (deviceName != null) deviceName!,
-                            if (_conditionSubtitle(condition).isNotEmpty)
-                              _conditionSubtitle(condition),
-                          ].join(' · '),
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.55)),
+                    ),
+                    if (deviceName != null || _conditionSubtitle(condition).isNotEmpty)
+                      Text(
+                        [
+                          if (deviceName != null) deviceName!,
+                          if (_conditionSubtitle(condition).isNotEmpty)
+                            _conditionSubtitle(condition),
+                        ].join(' · '),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: MpColors.text3,
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.close_rounded,
-                      size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
-                  onPressed: onDelete,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              GestureDetector(
+                onTap: onDelete,
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: MpColors.text3,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -982,69 +1012,69 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final (icon, color) = _iconColor(action);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: color, width: 3),
-              ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: MpColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(color: color, width: 3),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(icon, size: 18, color: color),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Icon(icon, size: 17, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      action.type == 'delay'
+                          ? 'Chờ ${_actionSubtitle(action)}'
+                          : (deviceName ?? _actionTitle(action)),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: MpColors.text,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (action.type == 'device')
                       Text(
-                        action.type == 'delay'
-                            ? 'Chờ ${_actionSubtitle(action)}'
-                            : (deviceName ?? _actionTitle(action)),
+                        _actionTitle(action),
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+                          fontSize: 11,
+                          color: MpColors.text3,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (action.type == 'device')
-                        Text(
-                          _actionTitle(action),
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.55)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.close_rounded,
-                      size: 18, color: cs.onSurface.withValues(alpha: 0.4)),
-                  onPressed: onDelete,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              GestureDetector(
+                onTap: onDelete,
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 16,
+                  color: MpColors.text3,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1081,32 +1111,27 @@ class _AddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: cs.primary.withValues(alpha: 0.35),
-            width: 1.5,
-            // dashed via BoxBorder is not directly supported in Flutter;
-            // using solid with lower alpha achieves a similar soft look
-          ),
+          border: Border.all(color: MpColors.borderStrong, width: 0.5),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded, size: 18, color: cs.primary),
+            const Icon(Icons.add_rounded, size: 16, color: MpColors.text2),
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: MpColors.text2,
+              ),
             ),
           ],
         ),
@@ -1125,15 +1150,15 @@ class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade400),
+          Icon(icon, size: 16, color: MpColors.text3),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              style: const TextStyle(fontSize: 12, color: MpColors.text3),
             ),
           ),
         ],
@@ -1181,27 +1206,32 @@ class _ScheduleCardState extends State<_ScheduleCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final s = widget.schedule ?? const RuleSchedule(days: 127);
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Column(
         children: [
-          // Toggle row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month_outlined, size: 20),
+                const Icon(Icons.calendar_month_outlined,
+                    size: 18, color: MpColors.text2),
                 const SizedBox(width: 10),
                 const Expanded(
-                  child: Text('Giới hạn thời gian',
-                      style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Giới hạn thời gian',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.text,
+                    ),
+                  ),
                 ),
                 Switch.adaptive(
                   value: widget.enabled,
@@ -1330,21 +1360,21 @@ class _ExecutionTargetCardState extends State<_ExecutionTargetCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     if (_target == null) return const SizedBox.shrink();
     final isGw = _target!.startsWith('gw:');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: MpColors.surface,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
       child: Row(
         children: [
           Icon(
             isGw ? Icons.router_outlined : Icons.cloud_outlined,
-            size: 20,
-            color: isGw ? Colors.orange : cs.primary,
+            size: 18,
+            color: isGw ? MpColors.amber : MpColors.blue,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1354,15 +1384,14 @@ class _ExecutionTargetCardState extends State<_ExecutionTargetCard> {
                 Text(
                   isGw ? 'Thực thi trên Gateway' : 'Thực thi trên Server',
                   style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text,
+                  ),
                 ),
                 Text(
-                  isGw
-                      ? 'Hoạt động offline, độ trễ thấp'
-                      : 'Cần kết nối cloud',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurface.withValues(alpha: 0.5)),
+                  isGw ? 'Hoạt động offline, độ trễ thấp' : 'Cần kết nối cloud',
+                  style: const TextStyle(fontSize: 11, color: MpColors.text3),
                 ),
               ],
             ),
@@ -1370,16 +1399,16 @@ class _ExecutionTargetCardState extends State<_ExecutionTargetCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: (isGw ? Colors.orange : cs.primary)
-                  .withValues(alpha: 0.12),
+              color: isGw ? MpColors.amberSoft : MpColors.blueSoft,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               isGw ? '⚡ Local' : '☁️ Cloud',
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isGw ? Colors.orange : cs.primary),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isGw ? MpColors.amber : MpColors.blue,
+              ),
             ),
           ),
         ],
@@ -1398,41 +1427,87 @@ class _TypePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            ...options.map((opt) {
-              final (type, icon, label, subtitle) = opt;
-              return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                leading: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: cs.primary, size: 20),
+    return Container(
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: MpColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: MpColors.text,
+              ),
+            ),
+          ),
+          ...options.map((opt) {
+            final (type, icon, label, subtitle) = opt;
+            return InkWell(
+              onTap: () => Navigator.pop(context, type),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: MpColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, color: MpColors.text2, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: MpColors.text,
+                            ),
+                          ),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: MpColors.text3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 16, color: MpColors.text3),
+                  ],
                 ),
-                title: Text(label,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(subtitle,
-                    style: const TextStyle(fontSize: 12)),
-                onTap: () => Navigator.pop(context, type),
-              );
-            }),
-          ],
-        ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

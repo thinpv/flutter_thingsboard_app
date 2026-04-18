@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_history_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/ac_control.dart';
@@ -146,20 +147,26 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa khỏi nhà'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xóa khỏi nhà',
+            style: TextStyle(
+                color: MpColors.text, fontWeight: FontWeight.w600)),
         content: Text(
           'Bỏ "${widget.device.displayName}" khỏi nhà của bạn?\n'
           'Thiết bị sẽ ngừng hiển thị nhưng dữ liệu không bị xóa khỏi máy chủ.',
+          style: const TextStyle(color: MpColors.text2, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa'),
+            child: const Text('Xóa',
+                style: TextStyle(
+                    color: MpColors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -193,21 +200,37 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
     final newLabel = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Đổi tên thiết bị'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Đổi tên thiết bị',
+            style: TextStyle(
+                color: MpColors.text, fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Nhập tên mới…'),
+          style: const TextStyle(color: MpColors.text),
+          decoration: InputDecoration(
+            hintText: 'Nhập tên mới…',
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surfaceAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Lưu'),
+            child: const Text('Lưu',
+                style: TextStyle(
+                    color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -236,8 +259,12 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: MpColors.bg,
       appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: MpColors.text),
         title: GestureDetector(
           onTap: _editLabel,
           child: Row(
@@ -247,10 +274,15 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
                 child: Text(
                   _displayName,
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: MpColors.text,
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.edit_outlined, size: 16),
+              const Icon(Icons.edit_outlined, size: 15, color: MpColors.text3),
             ],
           ),
         ),
@@ -258,6 +290,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         actions: [
           _OnlineBadge(isOnline: _isOnline),
           PopupMenuButton<String>(
+            color: MpColors.surface,
             onSelected: (v) {
               if (v == 'delete') _deleteDevice();
             },
@@ -266,9 +299,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    Icon(Icons.delete_outline, color: MpColors.red, size: 20),
                     SizedBox(width: 10),
-                    Text('Xóa khỏi nhà', style: TextStyle(color: Colors.red)),
+                    Text('Xóa khỏi nhà',
+                        style: TextStyle(color: MpColors.red)),
                   ],
                 ),
               ),
@@ -277,6 +311,13 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         ],
         bottom: TabBar(
           controller: _tabController,
+          labelColor: MpColors.text,
+          unselectedLabelColor: MpColors.text3,
+          labelStyle: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w500),
+          indicatorColor: MpColors.text,
+          indicatorWeight: 2,
+          dividerColor: MpColors.border,
           tabs: const [
             Tab(text: 'Chi tiết'),
             Tab(text: 'Lịch sử'),
@@ -428,9 +469,7 @@ class _OnlineBadge extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isOnline
-            ? Colors.green.withValues(alpha: 0.12)
-            : Colors.grey.withValues(alpha: 0.12),
+        color: isOnline ? MpColors.greenSoft : MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -441,7 +480,7 @@ class _OnlineBadge extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isOnline ? Colors.green : Colors.grey,
+              color: isOnline ? MpColors.green : MpColors.text3,
             ),
           ),
           const SizedBox(width: 5),
@@ -450,7 +489,7 @@ class _OnlineBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: isOnline ? Colors.green.shade700 : Colors.grey.shade600,
+              color: isOnline ? MpColors.green : MpColors.text3,
             ),
           ),
         ],
@@ -475,9 +514,12 @@ class _GenericView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.devices_other, size: 56, color: Colors.grey),
+            Icon(Icons.devices_other, size: 56, color: MpColors.text3),
             SizedBox(height: 12),
-            Text('Chưa có dữ liệu telemetry'),
+            Text(
+              'Chưa có dữ liệu telemetry',
+              style: TextStyle(color: MpColors.text2),
+            ),
           ],
         ),
       );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/home_detail_page.dart';
@@ -13,7 +14,21 @@ class HomeManagementPage extends ConsumerWidget {
     final homesAsync = ref.watch(homesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Quản lý nhà'), elevation: 0),
+      backgroundColor: MpColors.bg,
+      appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Quản lý nhà',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: MpColors.text),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -26,33 +41,55 @@ class HomeManagementPage extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.home_outlined,
-                            size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
-                        const Text('Chưa có nhà nào'),
+                        const Icon(Icons.home_outlined,
+                            size: 56, color: MpColors.text3),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Chưa có nhà nào',
+                          style: TextStyle(color: MpColors.text2, fontSize: 15),
+                        ),
                       ],
                     ),
                   );
                 }
-                return ListView.separated(
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   itemCount: homes.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, indent: 16),
                   itemBuilder: (context, i) => _HomeTile(home: homes[i]),
                 );
               },
             ),
           ),
-          // ── Add home button ─────────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _addHome(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm nhà mới'),
+                child: GestureDetector(
+                  onTap: () => _addHome(context, ref),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: MpColors.text,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add, color: MpColors.bg, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'Thêm nhà mới',
+                          style: TextStyle(
+                            color: MpColors.bg,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -67,13 +104,23 @@ class HomeManagementPage extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Thêm nhà mới'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Thêm nhà mới',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: MpColors.text),
+          decoration: InputDecoration(
             hintText: 'VD: Nhà tôi',
-            border: OutlineInputBorder(),
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surfaceAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
           ),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
@@ -81,11 +128,13 @@ class HomeManagementPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: const Text('Hủy',
+                style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Tạo'),
+            child: const Text('Tạo',
+                style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -111,12 +160,44 @@ class _HomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.home_outlined),
-      title: Text(home.name),
-      trailing: const Icon(Icons.chevron_right),
+    return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => HomeDetailPage(home: home)),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: MpColors.blueSoft,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.home_outlined,
+                  size: 18, color: MpColors.blue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                home.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: MpColors.text,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: MpColors.text3),
+          ],
+        ),
       ),
     );
   }

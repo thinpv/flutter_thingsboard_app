@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -167,37 +168,56 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
     final accent = _hexColor(_color);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: MpColors.bg,
       appBar: AppBar(
-        title: Text(isEdit ? 'Sửa kịch bản' : 'Tạo kịch bản'),
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: MpColors.text),
+        title: Text(
+          isEdit ? 'Sửa kịch bản' : 'Tạo kịch bản',
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
         centerTitle: true,
         actions: [
           if (isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              icon: const Icon(Icons.delete_outline, color: MpColors.red),
               tooltip: 'Xóa',
               onPressed: _delete,
             ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                minimumSize: const Size(0, 36),
-              ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+            child: GestureDetector(
+              onTap: _saving ? null : _save,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                decoration: BoxDecoration(
+                  color: _saving ? MpColors.surfaceAlt : accent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Lưu',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    )
-                  : const Text('Lưu'),
+              ),
             ),
           ),
         ],
@@ -364,17 +384,26 @@ class _SceneEditPageState extends ConsumerState<SceneEditPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa kịch bản?'),
-        content: Text('Xóa "${widget.scene!.name}"? Hành động này không thể hoàn tác.'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xóa kịch bản?',
+            style: TextStyle(
+                color: MpColors.text, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Xóa "${widget.scene!.name}"? Hành động này không thể hoàn tác.',
+          style: const TextStyle(color: MpColors.text2, fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Huỷ'),
+            child: const Text('Huỷ',
+                style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa'),
+            child: const Text('Xóa',
+                style: TextStyle(
+                    color: MpColors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -547,26 +576,27 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-              ),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text3,
+            letterSpacing: 0.6,
+          ),
         ),
         if (badge != null) ...[
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
+              color: MpColors.surfaceAlt,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               badge!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+                color: MpColors.text2,
               ),
             ),
           ),
@@ -587,38 +617,32 @@ class _EmptyActionsPlaceholder extends StatelessWidget {
     return GestureDetector(
       onTap: onAdd,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 32),
+        padding: const EdgeInsets.symmetric(vertical: 28),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-            width: 1.5,
-            style: BorderStyle.none,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+          color: MpColors.surfaceAlt,
+          border: Border.all(color: MpColors.border, width: 0.5),
         ),
-        child: Column(
+        child: const Column(
           children: [
             Icon(
               Icons.add_circle_outline,
-              size: 40,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+              size: 36,
+              color: MpColors.text3,
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 8),
             Text(
               'Thêm thiết bị',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
+                color: MpColors.text2,
                 fontWeight: FontWeight.w500,
+                fontSize: 14,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 2),
             Text(
               'Chọn thiết bị và trạng thái mong muốn',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey.shade500),
+              style: TextStyle(color: MpColors.text3, fontSize: 12),
             ),
           ],
         ),
@@ -650,76 +674,72 @@ class _DeviceActionCard extends StatelessWidget {
     final name = device?.displayName ?? '${deviceId.substring(0, 8)}…';
     final icon = _deviceIconFor(uiType);
     final summary = _stateLabel(state, uiType);
-    final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onEdit,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              // Device icon circle
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 22, color: cs.primary),
+    return InkWell(
+      onTap: onEdit,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: MpColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: MpColors.surface,
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(width: 12),
+              child: Icon(icon, size: 20, color: MpColors.text2),
+            ),
+            const SizedBox(width: 12),
 
-              // Name + summary
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: MpColors.text,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      summary,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Edit chevron
-              Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 20),
-              const SizedBox(width: 4),
-
-              // Delete button
-              InkWell(
-                onTap: onRemove,
-                customBorder: const CircleBorder(),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: Colors.red.shade400,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    summary,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: MpColors.text3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Icon(Icons.chevron_right,
+                color: MpColors.text3, size: 18),
+            const SizedBox(width: 4),
+
+            InkWell(
+              onTap: onRemove,
+              customBorder: const CircleBorder(),
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: MpColors.red,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -734,15 +754,27 @@ class _AddDeviceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.add, size: 18),
-      label: const Text('Thêm thiết bị'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.borderStrong),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add, size: 16, color: MpColors.text2),
+            SizedBox(width: 6),
+            Text(
+              'Thêm thiết bị',
+              style: TextStyle(
+                  color: MpColors.text2,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
       ),
     );
@@ -758,9 +790,9 @@ class _IconPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: Column(
@@ -769,20 +801,22 @@ class _IconPickerSheet extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 36,
+              height: 3,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: MpColors.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Chọn biểu tượng',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -791,7 +825,6 @@ class _IconPickerSheet extends StatelessWidget {
             children: _kIconOptions.map((opt) {
               final (key, iconData, label) = opt;
               final selected = current == key;
-              final primary = Theme.of(context).colorScheme.primary;
               return GestureDetector(
                 onTap: () => Navigator.of(context).pop(key),
                 child: AnimatedContainer(
@@ -799,28 +832,23 @@ class _IconPickerSheet extends StatelessWidget {
                   width: 70,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? primary.withValues(alpha: 0.12)
-                        : Colors.grey.shade100,
+                    color:
+                        selected ? MpColors.text : MpColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected ? primary : Colors.transparent,
-                      width: 1.5,
-                    ),
                   ),
                   child: Column(
                     children: [
                       Icon(
                         iconData,
-                        size: 26,
-                        color: selected ? primary : Colors.grey.shade700,
+                        size: 24,
+                        color: selected ? MpColors.bg : MpColors.text2,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         label,
                         style: TextStyle(
                           fontSize: 10,
-                          color: selected ? primary : Colors.grey.shade600,
+                          color: selected ? MpColors.bg : MpColors.text3,
                           fontWeight: selected
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -861,9 +889,9 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       child: Column(
@@ -872,20 +900,22 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 36,
+              height: 3,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: MpColors.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Chọn màu sắc',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -897,38 +927,50 @@ class _ColorPickerSheetState extends State<_ColorPickerSheet> {
                 onTap: () => setState(() => _selected = hex),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: c,
                     shape: BoxShape.circle,
                     border: isSelected
                         ? Border.all(
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: MpColors.text,
                             width: 3,
                           )
                         : null,
                     boxShadow: isSelected
-                        ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 8)]
+                        ? [BoxShadow(
+                            color: c.withValues(alpha: 0.4),
+                            blurRadius: 8)]
                         : null,
                   ),
                   child: isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
+                      ? const Icon(Icons.check, color: Colors.white, size: 18)
                       : null,
                 ),
               );
             }).toList(),
           ),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(_selected),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              backgroundColor: _hexColor(_selected),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(_selected),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: _hexColor(_selected),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text(
+                  'Xác nhận',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
-            child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -963,9 +1005,9 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
         .toList();
 
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -973,10 +1015,10 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
           const SizedBox(height: 12),
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 36,
+              height: 3,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: MpColors.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -985,18 +1027,20 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
-                Text(
+                const Text(
                   'Chọn thiết bị',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: MpColors.text,
+                  ),
                 ),
                 const Spacer(),
                 Text(
                   '${filtered.length} thiết bị',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade500,
+                    color: MpColors.text3,
                   ),
                 ),
               ],
@@ -1005,11 +1049,14 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: TextField(
+              style: const TextStyle(color: MpColors.text, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Tìm kiếm…',
-                prefixIcon: const Icon(Icons.search, size: 20),
+                hintStyle: const TextStyle(color: MpColors.text3),
+                prefixIcon: const Icon(Icons.search,
+                    size: 18, color: MpColors.text3),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: MpColors.surfaceAlt,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none,
@@ -1028,33 +1075,60 @@ class _DevicePickerSheetState extends State<_DevicePickerSheet> {
             child: filtered.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.all(32),
-                    child: Center(child: Text('Không tìm thấy thiết bị')),
+                    child: Center(
+                      child: Text(
+                        'Không tìm thấy thiết bị',
+                        style: TextStyle(color: MpColors.text3),
+                      ),
+                    ),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
                     itemCount: filtered.length,
                     itemBuilder: (ctx, i) {
                       final d = filtered[i];
-                      return ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            _deviceIconFor(d.effectiveUiType),
-                            size: 20,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        title: Text(d.displayName),
-                        subtitle: Text(
-                          d.effectiveUiType.replaceAll('_', ' '),
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                      return InkWell(
                         onTap: () => Navigator.of(context).pop(d),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: MpColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                child: Icon(
+                                  _deviceIconFor(d.effectiveUiType),
+                                  size: 18,
+                                  color: MpColors.text2,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(d.displayName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: MpColors.text,
+                                        )),
+                                    Text(
+                                      d.effectiveUiType.replaceAll('_', ' '),
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: MpColors.text3),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -1128,9 +1202,9 @@ class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.fromLTRB(
           20, 12, 20, 32 + MediaQuery.of(context).viewInsets.bottom),
@@ -1140,10 +1214,10 @@ class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: 36,
+              height: 3,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: MpColors.borderStrong,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1151,17 +1225,28 @@ class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(
-                _deviceIconFor(_uiType),
-                color: Theme.of(context).colorScheme.primary,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: MpColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  _deviceIconFor(_uiType),
+                  size: 18,
+                  color: MpColors.text2,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   _deviceName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: MpColors.text,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1172,20 +1257,32 @@ class _StateEditorSheetState extends ConsumerState<_StateEditorSheet> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: MpColors.text),
               ),
             )
           else
             _buildControls(),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(_state),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(_state),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: MpColors.text,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text(
+                  'Xác nhận',
+                  style: TextStyle(
+                    color: MpColors.bg,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
-            child: const Text('Xác nhận'),
           ),
         ],
       ),
@@ -1347,11 +1444,11 @@ class _AcControls extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
+        const Text(
           'Chế độ',
           style: TextStyle(
             fontSize: 13,
-            color: Colors.grey.shade600,
+            color: MpColors.text2,
           ),
         ),
         const SizedBox(height: 8),
@@ -1436,17 +1533,13 @@ class _StepButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: onTap != null
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey.shade300,
+            color: onTap != null ? MpColors.text : MpColors.border,
           ),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: onTap != null
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey.shade400,
+          color: onTap != null ? MpColors.text : MpColors.text3,
         ),
       ),
     );

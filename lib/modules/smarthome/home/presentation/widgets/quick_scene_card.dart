@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 
-/// Horizontal scroll strip of quick-run scene cards.
+/// mPipe-style horizontal scene strip: circular icon (52×52) + label below.
 class QuickScenesStrip extends ConsumerWidget {
   const QuickScenesStrip({super.key});
 
@@ -16,94 +17,114 @@ class QuickScenesStrip extends ConsumerWidget {
 
     return scenes.when(
       loading: () => const SizedBox(
-        height: 96,
-        child: Center(child: CircularProgressIndicator()),
+        height: 84,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: MpColors.text3,
+            ),
+          ),
+        ),
       ),
-      error: (e, s) => const SizedBox.shrink(),
-      data: (list) {
-        if (list.isEmpty) {
-          return SizedBox(
-            height: 96,
+      error: (_, _) => const SizedBox.shrink(),
+      data: (list) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Kịch bản',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _openCreate(context, ref),
+                  child: const Text(
+                    'Tạo mới',
+                    style: TextStyle(fontSize: 12, color: MpColors.blue),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 84,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
-              children: [_AddSceneChip()],
+              children: [
+                for (final scene in list) _SceneItem(scene: scene),
+                _AddSceneItem(onTap: () => _openCreate(context, ref)),
+              ],
             ),
-          );
-        }
-        return SizedBox(
-          height: 96,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            children: [
-              for (final scene in list) _SceneChip(scene: scene),
-              _AddSceneChip(),
-            ],
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  Future<void> _openCreate(BuildContext context, WidgetRef ref) async {
+    final home = ref.read(selectedHomeProvider).valueOrNull;
+    if (home == null) return;
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const SceneEditPage()),
+    );
+    if (saved == true) ref.invalidate(scenesProvider);
   }
 }
 
-// ─── Individual scene chip ───────────────────────────────────────────────────
+// ─── Scene item: circle + label ───────────────────────────────────────────────
 
-class _SceneChip extends ConsumerWidget {
-  const _SceneChip({required this.scene});
-
+class _SceneItem extends ConsumerWidget {
+  const _SceneItem({required this.scene});
   final SmarthomeScene scene;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = _parseColor(scene.color);
+    final color = _parseColor(scene.color);
+    final soft = color.withValues(alpha: 0.15);
 
     return Padding(
-      padding: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.only(right: 16),
       child: GestureDetector(
+        onTap: () => _execute(context),
         onLongPress: () => _openEdit(context, ref),
-        child: InkWell(
-          onTap: () => _execute(context),
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 90, maxWidth: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+        child: SizedBox(
+          width: 60,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: soft,
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(_iconData(scene.icon), color: accent, size: 20),
+                child: Icon(_iconData(scene.icon), color: color, size: 22),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                scene.name,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: MpColors.text,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  scene.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -115,7 +136,10 @@ class _SceneChip extends ConsumerWidget {
       await SceneService().executeScene(scene);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã kích hoạt: ${scene.name}')),
+          SnackBar(
+            content: Text('Đã kích hoạt: ${scene.name}'),
+            backgroundColor: MpColors.green,
+          ),
         );
       }
     } catch (_) {
@@ -139,7 +163,7 @@ class _SceneChip extends ConsumerWidget {
       final value = int.parse(hex.replaceFirst('#', 'FF'), radix: 16);
       return Color(value);
     } catch (_) {
-      return Colors.blue;
+      return MpColors.blue;
     }
   }
 
@@ -158,67 +182,47 @@ class _SceneChip extends ConsumerWidget {
   }
 }
 
-// ─── Add scene button chip ────────────────────────────────────────────────────
+// ─── Add scene button ─────────────────────────────────────────────────────────
 
-class _AddSceneChip extends ConsumerWidget {
+class _AddSceneItem extends StatelessWidget {
+  const _AddSceneItem({required this.onTap});
+  final VoidCallback onTap;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: InkWell(
-        onTap: () => _openCreate(context, ref),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.grey.shade200,
-              width: 1.5,
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 60,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: MpColors.surface,
+                border: Border.all(
+                  color: MpColors.borderStrong,
+                  width: 1,
+                  strokeAlign: BorderSide.strokeAlignInside,
+                ),
+              ),
+              child: const Icon(Icons.add, size: 20, color: MpColors.text3),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
+            const SizedBox(height: 6),
+            const Text(
+              'Thêm',
+              style: TextStyle(
+                fontSize: 11,
+                color: MpColors.text3,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.add, color: Colors.grey.shade500, size: 20),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Thêm',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  Future<void> _openCreate(BuildContext context, WidgetRef ref) async {
-    final home = ref.read(selectedHomeProvider).valueOrNull;
-    if (home == null) return;
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SceneEditPage()),
-    );
-    if (saved == true) ref.invalidate(scenesProvider);
   }
 }

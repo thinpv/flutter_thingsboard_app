@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/constants/app_constants.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_detail_page.dart';
@@ -14,8 +15,6 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.d
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-/// UI types that expose a single on/off relay and can be toggled from the
-/// device card without opening the detail page.
 const _switchableUiTypes = {
   'light',
   'smartPlug',
@@ -23,10 +22,8 @@ const _switchableUiTypes = {
   'electricalSwitch',
 };
 
-// ─── Device card ──────────────────────────────────────────────────────────────
+// ─── Device card (mPipe tile style) ──────────────────────────────────────────
 
-/// A card displaying a device's status. Receives the device object directly so
-/// live updates come from the parent grid (which watches the appropriate provider).
 class DeviceCard extends ConsumerWidget {
   const DeviceCard({
     required this.device,
@@ -36,17 +33,11 @@ class DeviceCard extends ConsumerWidget {
   });
 
   final SmarthomeDevice device;
-
-  /// Optional room label shown below the device name (Tuya style).
   final String? roomName;
-
-  /// If set, shows a long-press "Gán vào phòng" action.
   final VoidCallback? onAssignToRoom;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Load profile metadata — if available, delegate icon/toggle logic to
-    // CardComposer; otherwise fall back to the legacy hardcoded logic.
     final profileId = device.deviceProfileId ?? '';
     final metaAsync = profileId.isNotEmpty
         ? ref.watch(deviceProfileMetadataProvider(profileId))
@@ -69,7 +60,19 @@ class DeviceCard extends ConsumerWidget {
       fallbackIcon = _iconFor(device.effectiveUiType);
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = MpColors.deviceColors(device.effectiveUiType, isOn);
+    // Dark card variant — only for "on" switchable devices (matches design)
+    final dark = isOn && showToggle;
+
+    final bgColor = dark ? MpColors.text : MpColors.surface;
+    final textColor = dark ? MpColors.bg : MpColors.text;
+    final subColor = dark
+        ? const Color(0x8CFAFAF7) // ~55% white
+        : MpColors.text3;
+    final iconBgColor = dark
+        ? const Color(0x2EBA7517) // amber 18% on dark
+        : colors.tint;
+    final iconFgColor = dark ? MpColors.amber : colors.fg;
 
     Future<void> toggle() async {
       try {
@@ -84,105 +87,97 @@ class DeviceCard extends ConsumerWidget {
       }
     }
 
-    return Card(
-      elevation: isOn ? 2 : 0.5,
-      shadowColor: isOn
-          ? colorScheme.primary.withValues(alpha: 0.18)
-          : Colors.black.withValues(alpha: 0.06),
-      color: isOn ? colorScheme.primaryContainer : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(
-            builder: (_) => DeviceDetailPage(device: device),
-          ),
+    return GestureDetector(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => DeviceDetailPage(device: device)),
+      ),
+      onLongPress: onAssignToRoom == null
+          ? null
+          : () => showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (_) => _AssignSheet(onTap: onAssignToRoom!),
+              ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(14),
+          border: dark
+              ? null
+              : Border.all(color: MpColors.border, width: 0.5),
         ),
-        onLongPress: onAssignToRoom == null
-            ? null
-            : () => showModalBottomSheet(
-                  context: context,
-                  builder: (_) => SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.meeting_room_outlined),
-                          title: const Text('Gán vào phòng'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            onAssignToRoom!();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Top row: icon badge + toggle ────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _IconBadge(
+                  profileImage: device.profileImage,
+                  fallbackIcon: fallbackIcon,
+                  tint: iconBgColor,
+                  fg: iconFgColor,
                 ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _DeviceIcon(
-                    profileImage: device.profileImage,
-                    fallbackIcon: fallbackIcon,
-                    isOn: isOn,
-                    primaryColor: colorScheme.primary,
+                const Spacer(),
+                if (showToggle)
+                  _MiniSwitch(on: isOn, dark: dark, onTap: toggle)
+                else
+                  // Online dot for sensors
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: device.isOnline
+                          ? MpColors.green
+                          : MpColors.text3,
+                    ),
                   ),
-                  const Spacer(),
-                  if (showToggle)
-                    _PowerToggleButton(
-                      isOn: isOn,
-                      enabled: device.isOnline,
-                      onTap: toggle,
-                    )
-                  else
-                    // Online indicator dot (for sensors etc.)
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: device.isOnline
-                            ? Colors.green
-                            : Colors.grey.shade400,
-                      ),
-                    ),
-                ],
+              ],
+            ),
+
+            const Spacer(),
+
+            // ── Bottom: name + room/summary ──────────────────────────────
+            Text(
+              device.displayName,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+                height: 1.25,
               ),
-              const Spacer(),
-              Text(
-                device.displayName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (meta != null && CardComposer.canCompose(meta))
-                Builder(builder: (ctx) {
-                  final summary = CardComposer.buildSummaryRow(ctx, device, meta);
-                  if (summary == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            if (meta != null && CardComposer.canCompose(meta))
+              Builder(builder: (ctx) {
+                final summary = CardComposer.buildSummaryRow(ctx, device, meta);
+                if (summary == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(fontSize: 10.5, color: subColor),
                     child: summary,
-                  );
-                })
-              else if (roomName != null) ...[
-                const SizedBox(height: 2),
-                Text(
+                  ),
+                );
+              })
+            else if (roomName != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Text(
                   roomName!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey.shade500,
-                      ),
+                  style: TextStyle(fontSize: 10.5, color: subColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -212,97 +207,152 @@ class DeviceCard extends ConsumerWidget {
   }
 }
 
-/// Compact circular power toggle — Tuya-style card corner button.
-class _PowerToggleButton extends StatelessWidget {
-  const _PowerToggleButton({
-    required this.isOn,
-    required this.enabled,
+// ─── Icon badge (30×30, rounded 8) ───────────────────────────────────────────
+
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({
+    required this.profileImage,
+    required this.fallbackIcon,
+    required this.tint,
+    required this.fg,
+  });
+  final String? profileImage;
+  final IconData fallbackIcon;
+  final Color tint;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget icon;
+    if (profileImage != null && profileImage!.isNotEmpty) {
+      final url =
+          '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
+      final token = getIt<ITbClientService>().client.getJwtToken();
+      icon = CachedNetworkImage(
+        imageUrl: url,
+        width: 18,
+        height: 18,
+        fit: BoxFit.contain,
+        httpHeaders: {
+          if (token != null) 'X-Authorization': 'Bearer $token',
+        },
+        placeholder: (_, _) => const SizedBox(width: 18, height: 18),
+        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 16, color: fg),
+      );
+    } else {
+      icon = Icon(fallbackIcon, size: 16, color: fg);
+    }
+
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: tint,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: icon,
+    );
+  }
+}
+
+// ─── Mini switch (mPipe style) ────────────────────────────────────────────────
+
+class _MiniSwitch extends StatelessWidget {
+  const _MiniSwitch({
+    required this.on,
+    required this.dark,
     required this.onTap,
   });
-  final bool isOn;
-  final bool enabled;
+  final bool on;
+  final bool dark;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final color = !enabled
-        ? Colors.grey.shade400
-        : (isOn ? primary : Colors.grey.shade500);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isOn && enabled
-                ? primary.withValues(alpha: 0.18)
-                : Colors.grey.shade200,
-            border: Border.all(color: color, width: 1.5),
-          ),
-          child: Icon(Icons.power_settings_new, size: 18, color: color),
+    final trackOn = MpColors.green;
+    final trackOff = dark
+        ? const Color(0x40FFFFFF) // 25% white on dark bg
+        : const Color(0x1F000000); // 12% black on light bg
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 32,
+        height: 18,
+        decoration: BoxDecoration(
+          color: on ? trackOn : trackOff,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              top: 2,
+              left: on ? 14 : 2,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Shows device profile image from TB if available, otherwise falls back to icon.
-/// Wrapped in a circular background container (Tuya style).
-class _DeviceIcon extends StatelessWidget {
-  const _DeviceIcon({
-    required this.profileImage,
-    required this.fallbackIcon,
-    required this.isOn,
-    required this.primaryColor,
-  });
+// ─── Assign room sheet ────────────────────────────────────────────────────────
 
-  final String? profileImage;
-  final IconData fallbackIcon;
-  final bool isOn;
-  final Color primaryColor;
+class _AssignSheet extends StatelessWidget {
+  const _AssignSheet({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = isOn ? primaryColor : Colors.grey.shade500;
-
-    Widget inner;
-    if (profileImage != null && profileImage!.isNotEmpty) {
-      final url =
-          '${ThingsboardAppConstants.thingsBoardApiEndpoint}$profileImage';
-      final token = getIt<ITbClientService>().client.getJwtToken();
-      inner = CachedNetworkImage(
-        imageUrl: url,
-        width: 44,
-        height: 44,
-        fit: BoxFit.contain,
-        fadeInDuration: const Duration(milliseconds: 150),
-        fadeOutDuration: Duration.zero,
-        httpHeaders: {
-          if (token != null) 'X-Authorization': 'Bearer $token',
-        },
-        // Dùng placeholder trung tính thay vì fallbackIcon để tránh flash
-        // từ icon sai → icon đúng khi image vừa load xong.
-        placeholder: (_, _) => SizedBox(width: 44, height: 44),
-        errorWidget: (_, _, _) =>
-            Icon(fallbackIcon, size: 40, color: iconColor),
-      );
-    } else {
-      inner = Icon(fallbackIcon, size: 40, color: iconColor);
-    }
-
-    return inner;
+    return Container(
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: MpColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room_outlined,
+                  color: MpColors.text2),
+              title: const Text('Gán vào phòng',
+                  style: TextStyle(color: MpColors.text)),
+              onTap: () {
+                Navigator.pop(context);
+                onTap();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 // ─── Device grids ─────────────────────────────────────────────────────────────
 
-/// Grid of devices belonging to a room. Watches [devicesInRoomProvider] for
-/// live telemetry updates and passes each [SmarthomeDevice] to [DeviceCard].
 class RoomDeviceGrid extends ConsumerWidget {
   const RoomDeviceGrid({
     required this.roomId,
@@ -325,7 +375,8 @@ class RoomDeviceGrid extends ConsumerWidget {
         (context, i) {
           final dev = list.firstWhere(
             (d) => d.id == deviceIds[i],
-            orElse: () => SmarthomeDevice(id: deviceIds[i], name: '…', type: ''),
+            orElse: () =>
+                SmarthomeDevice(id: deviceIds[i], name: '…', type: ''),
           );
           return DeviceCard(device: dev, roomName: roomName);
         },
@@ -336,9 +387,6 @@ class RoomDeviceGrid extends ConsumerWidget {
   }
 }
 
-/// Grid of devices directly under a home asset (gateways + unassigned).
-/// Watches [devicesInHomeProvider] for live updates.
-/// Long-pressing a card offers "Gán vào phòng" to move it into a room.
 class HomeDeviceGrid extends ConsumerWidget {
   const HomeDeviceGrid({required this.homeId, super.key});
 
@@ -353,7 +401,9 @@ class HomeDeviceGrid extends ConsumerWidget {
       loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
       error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
       data: (list) {
-        if (list.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+        if (list.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
+        }
         return SliverGrid(
           delegate: SliverChildBuilderDelegate(
             (context, i) => DeviceCard(
@@ -379,12 +429,17 @@ class HomeDeviceGrid extends ConsumerWidget {
     final room = await showDialog<SmarthomeRoom>(
       context: context,
       builder: (_) => SimpleDialog(
-        title: Text('Gán "${device.name}" vào phòng'),
+        backgroundColor: MpColors.bg,
+        title: Text(
+          'Gán "${device.name}" vào phòng',
+          style: const TextStyle(color: MpColors.text),
+        ),
         children: rooms
             .map(
               (r) => SimpleDialogOption(
                 onPressed: () => Navigator.pop(context, r),
-                child: Text(r.name),
+                child: Text(r.name,
+                    style: const TextStyle(color: MpColors.text2)),
               ),
             )
             .toList(),
@@ -394,18 +449,17 @@ class HomeDeviceGrid extends ConsumerWidget {
 
     try {
       await HomeService().assignDeviceToRoom(device.id, room.id, homeId);
-      // Invalidate both providers so the UI refreshes
       ref.invalidate(devicesInHomeProvider(homeId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã gán "${device.name}" vào "${room.name}"')),
+          SnackBar(
+              content: Text('Đã gán "${device.name}" vào "${room.name}"')),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -418,7 +472,7 @@ const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   childAspectRatio: 1.15,
 );
 
-// ─── Legacy DeviceGrid kept for any remaining callers ─────────────────────────
+// ─── Legacy DeviceGrid ────────────────────────────────────────────────────────
 
 /// @deprecated Use [RoomDeviceGrid] or [HomeDeviceGrid].
 class DeviceGrid extends ConsumerWidget {

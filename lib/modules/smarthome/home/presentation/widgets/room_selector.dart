@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
@@ -7,7 +8,7 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.d
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-/// Tuya-style horizontal room tab bar with underline indicator.
+/// mPipe-style horizontal room tab bar with underline indicator.
 class RoomSelector extends ConsumerWidget {
   const RoomSelector({required this.rooms, super.key});
 
@@ -16,22 +17,20 @@ class RoomSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedRoomId = ref.watch(selectedRoomIdProvider);
-    final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
-      color: Theme.of(context).colorScheme.surface,
+      color: MpColors.bg,
       height: 44,
       child: Row(
         children: [
           Expanded(
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
                 _RoomTab(
                   label: 'Tất cả',
                   selected: selectedRoomId == null,
-                  primaryColor: primary,
                   onTap: () =>
                       ref.read(selectedRoomIdProvider.notifier).state = null,
                 ),
@@ -39,23 +38,17 @@ class RoomSelector extends ConsumerWidget {
                   (room) => _RoomTab(
                     label: room.name,
                     selected: selectedRoomId == room.id,
-                    primaryColor: primary,
-                    onTap: () => ref
-                        .read(selectedRoomIdProvider.notifier)
-                        .state = room.id,
+                    onTap: () =>
+                        ref.read(selectedRoomIdProvider.notifier).state =
+                            room.id,
                   ),
                 ),
               ],
             ),
           ),
-          // Room management
-          Container(
-            width: 1,
-            height: 20,
-            color: Colors.grey.shade200,
-          ),
+          Container(width: 0.5, height: 20, color: MpColors.border),
           IconButton(
-            icon: Icon(Icons.tune, size: 18, color: Colors.grey.shade500),
+            icon: const Icon(Icons.tune, size: 16, color: MpColors.text3),
             tooltip: 'Quản lý phòng',
             onPressed: () => showModalBottomSheet(
               context: context,
@@ -74,13 +67,11 @@ class _RoomTab extends StatelessWidget {
   const _RoomTab({
     required this.label,
     required this.selected,
-    required this.primaryColor,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
-  final Color primaryColor;
   final VoidCallback onTap;
 
   @override
@@ -89,12 +80,12 @@ class _RoomTab extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: selected ? primaryColor : Colors.transparent,
-              width: 2.5,
+              color: selected ? MpColors.text : Colors.transparent,
+              width: 1.5,
             ),
           ),
         ),
@@ -102,9 +93,9 @@ class _RoomTab extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-              color: selected ? primaryColor : Colors.grey.shade600,
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+              color: selected ? MpColors.text : MpColors.text3,
             ),
           ),
         ),
@@ -132,9 +123,9 @@ class _RoomManagementSheet extends ConsumerWidget {
       maxChildSize: 0.85,
       expand: false,
       builder: (context, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: const BoxDecoration(
+          color: MpColors.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -160,10 +151,11 @@ class _RoomManagementSheet extends ConsumerWidget {
                   if (unassigned.isNotEmpty) ...[
                     _SectionHeader(
                       title: 'Thiết bị chưa gán phòng (${unassigned.length})',
-                      color: Colors.orange.shade700,
+                      color: MpColors.amber,
                     ),
                     ...unassigned.map(
                       (dev) => _UnassignedDeviceTile(
+
                         device: dev,
                         rooms: rooms,
                         homeId: homeId,
@@ -171,9 +163,9 @@ class _RoomManagementSheet extends ConsumerWidget {
                     ),
                     const Divider(height: 1),
                   ],
-                  _SectionHeader(
+                  const _SectionHeader(
                     title: 'Phòng',
-                    color: Theme.of(context).colorScheme.primary,
+                    color: MpColors.text2,
                   ),
                   ...rooms.map((room) => _RoomRow(room: room)),
                   if (rooms.isEmpty)
@@ -193,11 +185,11 @@ class _RoomManagementSheet extends ConsumerWidget {
 
   static Widget _handle() => Center(
         child: Container(
-          width: 40,
+          width: 36,
           height: 4,
           margin: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: MpColors.border,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -215,10 +207,12 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       child: Text(
         title,
-        style: Theme.of(context)
-            .textTheme
-            .labelMedium
-            ?.copyWith(color: color, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }
@@ -309,14 +303,14 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: MpColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
+                child: const Text(
                   'Gán phòng',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: MpColors.text2,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

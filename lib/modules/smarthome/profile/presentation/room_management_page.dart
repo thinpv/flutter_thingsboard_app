@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
@@ -17,7 +18,21 @@ class RoomManagementPage extends ConsumerWidget {
     final roomsAsync = ref.watch(_roomsForHomeProvider(home.id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Quản lý phòng'), elevation: 0),
+      backgroundColor: MpColors.bg,
+      appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Quản lý phòng',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: MpColors.text),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -26,22 +41,25 @@ class RoomManagementPage extends ConsumerWidget {
               error: (e, _) => Center(child: Text('Lỗi: $e')),
               data: (rooms) {
                 if (rooms.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.meeting_room_outlined,
-                            size: 64, color: Colors.grey.shade300),
-                        const SizedBox(height: 16),
-                        const Text('Chưa có phòng nào'),
+                            size: 56, color: MpColors.text3),
+                        SizedBox(height: 12),
+                        Text(
+                          'Chưa có phòng nào',
+                          style: TextStyle(color: MpColors.text2, fontSize: 15),
+                        ),
                       ],
                     ),
                   );
                 }
-                return ListView.separated(
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   itemCount: rooms.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, indent: 16),
                   itemBuilder: (context, i) => _RoomTile(
                     room: rooms[i],
                     homeId: home.id,
@@ -51,16 +69,32 @@ class RoomManagementPage extends ConsumerWidget {
               },
             ),
           ),
-          // ── Add room button ─────────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _addRoom(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm phòng'),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: GestureDetector(
+                onTap: () => _addRoom(context, ref),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: MpColors.text,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, color: MpColors.bg, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Thêm phòng',
+                        style: TextStyle(
+                          color: MpColors.bg,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -75,13 +109,23 @@ class RoomManagementPage extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Thêm phòng'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Thêm phòng',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: MpColors.text),
+          decoration: InputDecoration(
             hintText: 'VD: Phòng khách',
-            border: OutlineInputBorder(),
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surfaceAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
           ),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
@@ -89,11 +133,12 @@ class RoomManagementPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Tạo'),
+            child: const Text('Tạo',
+                style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -133,10 +178,7 @@ class _RoomTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.meeting_room_outlined),
-      title: Text(room.name),
-      trailing: const Icon(Icons.chevron_right),
+    return InkWell(
       onTap: () async {
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -145,6 +187,41 @@ class _RoomTile extends StatelessWidget {
         );
         onRefresh();
       },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: MpColors.greenSoft,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.meeting_room_outlined,
+                  size: 18, color: MpColors.green),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                room.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: MpColors.text,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: MpColors.text3),
+          ],
+        ),
+      ),
     );
   }
 }

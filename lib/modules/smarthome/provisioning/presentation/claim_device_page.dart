@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/provisioning_service.dart';
@@ -107,7 +108,7 @@ class _ClaimDevicePageState extends ConsumerState<ClaimDevicePage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: MpColors.red,
             duration: const Duration(seconds: 6),
           ),
         );
@@ -127,20 +128,28 @@ class _ClaimDevicePageState extends ConsumerState<ClaimDevicePage>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Gateway đang ở nhà khác'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Gateway đang ở nhà khác',
+          style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600),
+        ),
         content: Text(
           'Gateway này đang thuộc nhà "${fromHome.name}".\n\n'
           'Chuyển gateway và toàn bộ thiết bị sang nhà "${toHome.name}" không?\n\n'
           'Các thiết bị sẽ được đặt ở mức nhà, bạn có thể gán phòng sau.',
+          style: const TextStyle(color: MpColors.text2, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Chuyển'),
+            child: const Text('Chuyển',
+                style: TextStyle(
+                    color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -154,10 +163,31 @@ class _ClaimDevicePageState extends ConsumerState<ClaimDevicePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MpColors.bg,
       appBar: AppBar(
-        title: const Text('Thêm thiết bị trực tiếp'),
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Thêm thiết bị trực tiếp',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: MpColors.text),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: MpColors.text,
+          unselectedLabelColor: MpColors.text3,
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+          indicatorColor: MpColors.text,
+          indicatorWeight: 2,
+          dividerColor: MpColors.border,
           tabs: const [
             Tab(icon: Icon(Icons.qr_code_scanner), text: 'Quét QR'),
             Tab(icon: Icon(Icons.keyboard), text: 'Nhập mã'),
@@ -233,7 +263,7 @@ class _QrScanTabState extends State<_QrScanTab> {
             'Nhấn giữ nút thiết bị 3-5 giây để bật chế độ claiming,\n'
             'rồi quét mã QR hiển thị trên thiết bị hoặc app cấu hình.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: MpColors.text3, fontSize: 13),
           ),
         ),
         Expanded(
@@ -264,37 +294,115 @@ class _ManualEntryTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Nhập tên thiết bị và mã claiming.\n'
-            'Mã claiming hiển thị khi thiết bị ở chế độ claiming (3-5s giữ nút).',
-            style: TextStyle(color: Colors.grey),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'Nhập tên thiết bị và mã claiming.\n'
+              'Mã claiming hiển thị khi thiết bị ở chế độ claiming (3-5s giữ nút).',
+              style: TextStyle(color: MpColors.text2, fontSize: 13),
+            ),
           ),
-          const SizedBox(height: 24),
-          TextField(
+          const SizedBox(height: 20),
+          _MpTextField(
             controller: nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Tên thiết bị (Device Name)',
-              hintText: 'dev_aabbccddeeff',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Tên thiết bị (Device Name)',
+            hint: 'dev_aabbccddeeff',
           ),
-          const SizedBox(height: 16),
-          TextField(
+          const SizedBox(height: 12),
+          _MpTextField(
             controller: keyCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Mã claiming (Secret Key)',
-              hintText: 'A3F9K2',
-              border: OutlineInputBorder(),
-            ),
+            label: 'Mã claiming (Secret Key)',
+            hint: 'A3F9K2',
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: onSubmit,
-            icon: const Icon(Icons.check),
-            label: const Text('Xác nhận claiming'),
+          GestureDetector(
+            onTap: onSubmit,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: MpColors.text,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check, color: MpColors.bg, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    'Xác nhận claiming',
+                    style: TextStyle(
+                      color: MpColors.bg,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MpTextField extends StatelessWidget {
+  const _MpTextField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: MpColors.text2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          style: const TextStyle(color: MpColors.text, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surface,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: MpColors.border, width: 0.5),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: MpColors.border, width: 0.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: MpColors.blue, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

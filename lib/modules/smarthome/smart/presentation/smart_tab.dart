@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -36,9 +37,7 @@ class _SmartTabState extends ConsumerState<SmartTab>
   void _onAdd(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (_) => _CreatePickerSheet(
         onTapScene: () {
           Navigator.pop(context);
@@ -68,48 +67,103 @@ class _SmartTabState extends ConsumerState<SmartTab>
 
   @override
   Widget build(BuildContext context) {
-    final home = ref.watch(selectedHomeProvider).valueOrNull;
-    final homeName = home?.name ?? 'Smart';
-
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        title: Row(
-          children: [
-            const Icon(Icons.home_outlined, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              homeName,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+      backgroundColor: MpColors.bg,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, _) => [
+          SliverToBoxAdapter(
+            child: Container(
+              color: MpColors.bg,
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 20,
+                right: 20,
+                bottom: 0,
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'Smart',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.3,
+                      color: MpColors.text,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => _onAdd(context),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: MpColors.surface,
+                        border: Border.all(color: MpColors.border),
+                      ),
+                      child: const Icon(Icons.add, size: 18, color: MpColors.text2),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Tạo mới',
-            onPressed: () => _onAdd(context),
+          ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabBarDelegate(
+              TabBar(
+                controller: _tabController,
+                indicatorColor: MpColors.text,
+                indicatorWeight: 1.5,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelColor: MpColors.text,
+                unselectedLabelColor: MpColors.text3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 13,
+                ),
+                tabs: const [
+                  Tab(text: 'Chạm để Chạy'),
+                  Tab(text: 'Tự động hóa'),
+                ],
+              ),
+            ),
           ),
         ],
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-          tabs: const [
-            Tab(text: 'Chạm để Chạy'),
-            Tab(text: 'Tự động hóa'),
+          children: const [
+            _ScenesView(),
+            _AutomationsView(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          _ScenesView(),
-          _AutomationsView(),
-        ],
       ),
     );
   }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  const _TabBarDelegate(this.tabBar);
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => 44;
+  @override
+  double get maxExtent => 44;
+
+  @override
+  Widget build(_, __, ___) => Container(
+        color: MpColors.bg,
+        child: tabBar,
+      );
+
+  @override
+  bool shouldRebuild(_TabBarDelegate old) => false;
 }
 
 // ─── Tab 1: Scenes ────────────────────────────────────────────────────────────
@@ -122,8 +176,12 @@ class _ScenesView extends ConsumerWidget {
     final scenesAsync = ref.watch(scenesProvider);
 
     return scenesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Lỗi: $e')),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
+      ),
+      error: (e, _) => Center(
+        child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
+      ),
       data: (scenes) {
         if (scenes.isEmpty) {
           return const _EmptyState(
@@ -136,8 +194,8 @@ class _ScenesView extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
             childAspectRatio: 1.1,
           ),
           itemCount: scenes.length,
@@ -150,20 +208,20 @@ class _ScenesView extends ConsumerWidget {
 
 class _SceneGridCard extends ConsumerWidget {
   const _SceneGridCard({required this.scene});
-
   final SmarthomeScene scene;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accent = _parseColor(scene.color);
+    final tint = Color.alphaBlend(accent.withValues(alpha: 0.08), MpColors.surface);
 
     return GestureDetector(
       onTap: () => _execute(context),
       child: Container(
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.08),
+          color: tint,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accent.withValues(alpha: 0.15)),
+          border: Border.all(color: accent.withValues(alpha: 0.12)),
         ),
         padding: const EdgeInsets.all(14),
         child: Stack(
@@ -172,32 +230,34 @@ class _SceneGridCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: accent,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(_iconData(scene.icon), color: Colors.white, size: 24),
+                  child: Icon(_iconData(scene.icon), color: Colors.white, size: 20),
                 ),
                 const Spacer(),
                 Text(
                   scene.name,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                    color: MpColors.text,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-            // Menu button top-right
             Positioned(
-              top: -8,
-              right: -8,
+              top: -6,
+              right: -6,
               child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_horiz, color: accent, size: 20),
+                icon: const Icon(Icons.more_horiz, color: MpColors.text3, size: 18),
+                color: MpColors.surface,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onSelected: (val) {
                   if (val == 'edit') _openEdit(context, ref);
                   if (val == 'delete') _confirmDelete(context, ref);
@@ -206,7 +266,7 @@ class _SceneGridCard extends ConsumerWidget {
                   PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
                   PopupMenuItem(
                     value: 'delete',
-                    child: Text('Xóa', style: TextStyle(color: Colors.red)),
+                    child: Text('Xóa', style: TextStyle(color: MpColors.red)),
                   ),
                 ],
               ),
@@ -222,7 +282,13 @@ class _SceneGridCard extends ConsumerWidget {
       await SceneService().executeScene(scene);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã kích hoạt: ${scene.name}')),
+          SnackBar(
+            backgroundColor: MpColors.green,
+            content: Text('Đã kích hoạt: ${scene.name}',
+                style: const TextStyle(color: Colors.white)),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
       }
     } catch (_) {
@@ -245,17 +311,19 @@ class _SceneGridCard extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Xóa kịch bản'),
-        content: Text('Xóa "${scene.name}"?'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xóa kịch bản', style: TextStyle(color: MpColors.text)),
+        content: Text('Xóa "${scene.name}"?',
+            style: const TextStyle(color: MpColors.text2, fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Xóa'),
+            child: const Text('Xóa', style: TextStyle(color: MpColors.red)),
           ),
         ],
       ),
@@ -273,7 +341,7 @@ class _SceneGridCard extends ConsumerWidget {
       final value = int.parse(hex.replaceFirst('#', 'FF'), radix: 16);
       return Color(value);
     } catch (_) {
-      return Colors.deepOrange;
+      return MpColors.amber;
     }
   }
 
@@ -302,8 +370,12 @@ class _AutomationsView extends ConsumerWidget {
     final allRules = ref.watch(allRulesProvider);
 
     return allRules.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Lỗi: $e')),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
+      ),
+      error: (e, _) => Center(
+        child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
+      ),
       data: (rules) {
         if (rules.isEmpty) {
           return const _EmptyState(
@@ -315,7 +387,7 @@ class _AutomationsView extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           itemCount: rules.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 10),
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, i) => AutomationCard(rule: rules[i]),
         );
       },
@@ -327,90 +399,78 @@ class _AutomationsView extends ConsumerWidget {
 
 class AutomationCard extends ConsumerWidget {
   const AutomationCard({required this.rule, super.key});
-
   final AutomationRule rule;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accent = _parseColor(rule.color);
+    final tint = Color.alphaBlend(accent.withValues(alpha: 0.1), MpColors.surface);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () async {
-          // For gateway rules created from rule_index (no conditions/actions),
-          // fetch the full rule detail before opening the editor.
-          var fullRule = rule;
-          final et = rule.executionTarget;
-          if (et != null &&
-              et.startsWith('gw:') &&
-              rule.conditions.isEmpty &&
-              rule.actions.isEmpty) {
-            final gwId = et.substring(3);
-            final indexEntry = RuleIndexEntry.fromRule(rule);
-            final detail = await AutomationService()
-                .fetchGatewayRule(gwId, indexEntry);
-            if (detail != null) fullRule = detail;
-          }
-          if (!context.mounted) return;
-          final saved = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(
-                builder: (_) => AutomationEditPage(rule: fullRule)),
-          );
-          if (saved == true) ref.invalidate(allRulesProvider);
-        },
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-          child: Row(
-            children: [
-              // Icon avatar
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(_iconData(rule.icon), color: accent, size: 22),
+    return GestureDetector(
+      onTap: () async {
+        var fullRule = rule;
+        final et = rule.executionTarget;
+        if (et != null &&
+            et.startsWith('gw:') &&
+            rule.conditions.isEmpty &&
+            rule.actions.isEmpty) {
+          final gwId = et.substring(3);
+          final indexEntry = RuleIndexEntry.fromRule(rule);
+          final detail = await AutomationService().fetchGatewayRule(gwId, indexEntry);
+          if (detail != null) fullRule = detail;
+        }
+        if (!context.mounted) return;
+        final saved = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => AutomationEditPage(rule: fullRule)),
+        );
+        if (saved == true) ref.invalidate(allRulesProvider);
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(width: 12),
-              // Name + badge
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      rule.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+              child: Icon(_iconData(rule.icon), color: accent, size: 20),
+            ),
+            const SizedBox(width: 12),
+            // Name + badge
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rule.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: MpColors.text,
                     ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        _Badge(
-                          label: rule.isGatewayRule ? '⚡ Gateway' : '☁️ Server',
-                          color: rule.isGatewayRule
-                              ? Colors.green.shade700
-                              : Colors.blue.shade700,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 3),
+                  _ExecutionBadge(isGateway: rule.isGatewayRule),
+                ],
               ),
-              // Toggle + chevron
-              Switch.adaptive(
-                value: rule.enabled,
-                onChanged: (val) => _toggleEnabled(ref, val),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
-          ),
+            ),
+            // Toggle
+            _MpSwitch(
+              value: rule.enabled,
+              onChanged: (val) => _toggleEnabled(ref, val),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, size: 16, color: MpColors.text3),
+          ],
         ),
       ),
     );
@@ -439,7 +499,7 @@ class AutomationCard extends ConsumerWidget {
       final value = int.parse(hex.replaceFirst('#', 'FF'), radix: 16);
       return Color(value);
     } catch (_) {
-      return Colors.blue;
+      return MpColors.blue;
     }
   }
 
@@ -456,6 +516,65 @@ class AutomationCard extends ConsumerWidget {
   }
 }
 
+class _ExecutionBadge extends StatelessWidget {
+  const _ExecutionBadge({required this.isGateway});
+  final bool isGateway;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: isGateway ? MpColors.greenSoft : MpColors.blueSoft,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        isGateway ? '⚡ Gateway' : '☁️ Server',
+        style: TextStyle(
+          fontSize: 11,
+          color: isGateway ? MpColors.green : MpColors.blue,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _MpSwitch extends StatelessWidget {
+  const _MpSwitch({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 36,
+        height: 20,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: value ? MpColors.green : MpColors.border,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: AnimatedAlign(
+          duration: const Duration(milliseconds: 150),
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 16,
+            height: 16,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Create type picker sheet ─────────────────────────────────────────────────
 
 class _CreatePickerSheet extends StatelessWidget {
@@ -469,35 +588,57 @@ class _CreatePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
+    return Container(
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: MpColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Text(
               'Tạo mới',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: MpColors.text,
+              ),
             ),
-            const SizedBox(height: 16),
-            _PickerTile(
-              icon: Icons.touch_app,
-              color: Colors.deepOrange,
-              title: 'Chạm để Chạy',
-              subtitle: 'Kịch bản chạy ngay khi bạn nhấn',
-              onTap: onTapScene,
-            ),
-            const SizedBox(height: 10),
-            _PickerTile(
-              icon: Icons.auto_awesome,
-              color: Colors.blue,
-              title: 'Tự động hóa',
-              subtitle: 'Chạy tự động theo điều kiện hoặc lịch trình',
-              onTap: onTapAutomation,
-            ),
-          ],
-        ),
+          ),
+          _PickerTile(
+            icon: Icons.touch_app_outlined,
+            iconTint: MpColors.amberSoft,
+            iconColor: MpColors.amber,
+            title: 'Chạm để Chạy',
+            subtitle: 'Kịch bản chạy ngay khi bạn nhấn',
+            onTap: onTapScene,
+          ),
+          _PickerTile(
+            icon: Icons.auto_awesome_outlined,
+            iconTint: MpColors.blueSoft,
+            iconColor: MpColors.blue,
+            title: 'Tự động hóa',
+            subtitle: 'Chạy tự động theo điều kiện hoặc lịch trình',
+            onTap: onTapAutomation,
+          ),
+        ],
       ),
     );
   }
@@ -506,14 +647,16 @@ class _CreatePickerSheet extends StatelessWidget {
 class _PickerTile extends StatelessWidget {
   const _PickerTile({
     required this.icon,
-    required this.color,
+    required this.iconTint,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final Color color;
+  final Color iconTint;
+  final Color iconColor;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -522,24 +665,18 @@ class _PickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(12),
+                color: iconTint,
+                shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, size: 22, color: iconColor),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -549,22 +686,19 @@ class _PickerTile extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.text,
                     ),
                   ),
-                  const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: MpColors.text3),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+            const Icon(Icons.chevron_right, size: 16, color: MpColors.text3),
           ],
         ),
       ),
@@ -572,7 +706,7 @@ class _PickerTile extends StatelessWidget {
   }
 }
 
-// ─── Shared widgets ───────────────────────────────────────────────────────────
+// ─── Shared empty state ───────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({
@@ -591,38 +725,30 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 64, color: Colors.grey.shade300),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: MpColors.surfaceAlt,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 30, color: MpColors.text3),
+          ),
           const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(subtitle, style: TextStyle(color: Colors.grey.shade500)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: MpColors.text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 13, color: MpColors.text3),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          color: color,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }

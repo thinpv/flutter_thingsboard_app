@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -192,7 +193,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Không tải được danh sách remote: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: MpColors.red,
           ),
         );
       }
@@ -303,7 +304,7 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Đã thêm thiết bị "$name"'),
-            backgroundColor: Colors.green,
+            backgroundColor: MpColors.green,
           ),
         );
         Navigator.pop(context);
@@ -321,9 +322,20 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MpColors.bg,
       appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: MpColors.text),
         title: Text(
-            'Thêm thiết bị ${kProtocolNames[_selectedProtocol]?['vi'] ?? _selectedProtocol.toUpperCase()}'),
+          'Thêm thiết bị ${kProtocolNames[_selectedProtocol]?['vi'] ?? _selectedProtocol.toUpperCase()}',
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _back,
@@ -371,19 +383,39 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: FilledButton(
-                    onPressed: _canProceed && !_adding && !_loadingModels
+                  child: GestureDetector(
+                    onTap: (_canProceed && !_adding && !_loadingModels)
                         ? _next
                         : null,
-                    style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48)),
-                    child: _adding
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : Text(_step == 2 ? 'Thêm thiết bị' : 'Tiếp tục'),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: (_canProceed && !_adding && !_loadingModels)
+                            ? MpColors.text
+                            : MpColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: _adding
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: MpColors.bg))
+                            : Text(
+                                _step == 2 ? 'Thêm thiết bị' : 'Tiếp tục',
+                                style: TextStyle(
+                                  color: (_canProceed &&
+                                          !_adding &&
+                                          !_loadingModels)
+                                      ? MpColors.bg
+                                      : MpColors.text3,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -392,20 +424,25 @@ class _AddIrRfDevicePageState extends ConsumerState<AddIrRfDevicePage> {
 
           // Loading overlay khi fetch models (giữa brand page và model page)
           if (_loadingModels)
-            const ColoredBox(
-              color: Colors.black26,
+            ColoredBox(
+              color: Colors.black.withValues(alpha: 0.3),
               child: Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 12),
-                        Text('Đang tải danh sách remote...'),
-                      ],
-                    ),
+                child: Container(
+                  margin: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: MpColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: MpColors.text),
+                      SizedBox(height: 12),
+                      Text('Đang tải danh sách remote...',
+                          style: TextStyle(
+                              color: MpColors.text2, fontSize: 13)),
+                    ],
                   ),
                 ),
               ),
@@ -425,7 +462,6 @@ class _StepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
@@ -434,10 +470,10 @@ class _StepIndicator extends StatelessWidget {
           final done = i < currentStep;
           return Expanded(
             child: Container(
-              height: 4,
+              height: 3,
               margin: EdgeInsets.only(right: i < totalSteps - 1 ? 4 : 0),
               decoration: BoxDecoration(
-                color: (active || done) ? color : Colors.grey.shade300,
+                color: (active || done) ? MpColors.text : MpColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -469,18 +505,15 @@ class _StepGateway extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Chọn Gateway',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const Text('Chọn Gateway',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text)),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             'Thiết bị IR/RF sẽ được quản lý bởi gateway này.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 13, color: MpColors.text3),
           ),
           const SizedBox(height: 16),
           if (loading)
@@ -491,8 +524,8 @@ class _StepGateway extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Icon(Icons.router_outlined,
-                        size: 48, color: Colors.grey.shade400),
+                    const Icon(Icons.router_outlined,
+                        size: 48, color: MpColors.text3),
                     const SizedBox(height: 12),
                     const Text(
                       'Không tìm thấy gateway trong nhà.',
@@ -504,15 +537,58 @@ class _StepGateway extends StatelessWidget {
             )
           else
             ...gateways.map(
-              (gw) => RadioListTile<SmarthomeDevice>(
-                value: gw,
-                groupValue: selected,
-                title: Text(gw.displayName),
-                subtitle: Text(gw.id, style: const TextStyle(fontSize: 11)),
-                secondary: const Icon(Icons.router_outlined),
-                onChanged: (v) {
-                  if (v != null) onSelect(v);
-                },
+              (gw) => InkWell(
+                onTap: () => onSelect(gw),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: selected?.id == gw.id
+                        ? MpColors.blueSoft
+                        : MpColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected?.id == gw.id
+                          ? MpColors.blue.withValues(alpha: 0.4)
+                          : MpColors.border,
+                      width: selected?.id == gw.id ? 1.5 : 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: MpColors.amberSoft,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(Icons.router_outlined,
+                            size: 18, color: MpColors.amber),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(gw.displayName,
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: MpColors.text)),
+                            Text(gw.id,
+                                style: const TextStyle(
+                                    fontSize: 11, color: MpColors.text3)),
+                          ],
+                        ),
+                      ),
+                      if (selected?.id == gw.id)
+                        const Icon(Icons.check_circle,
+                            size: 20, color: MpColors.blue),
+                    ],
+                  ),
+                ),
               ),
             ),
         ],
@@ -563,13 +639,32 @@ class _StepCatalog extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-          child: OutlinedButton.icon(
-            onPressed: onCustom,
-            icon: Icon(Icons.school_outlined, color: Colors.orange.shade700),
-            label: const Text('Tự học từ remote thật'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(44),
-              foregroundColor: Colors.orange.shade700,
+          child: GestureDetector(
+            onTap: onCustom,
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: MpColors.amberSoft,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: MpColors.amber.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.school_outlined,
+                      color: MpColors.amber, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    'Tự học từ remote thật',
+                    style: TextStyle(
+                      color: MpColors.amber,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -582,9 +677,10 @@ class _StepCatalog extends StatelessWidget {
     if (isLoadingCatalog) {
       return const Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          CircularProgressIndicator(),
+          CircularProgressIndicator(color: MpColors.text),
           SizedBox(height: 12),
-          Text('Đang tải catalog...', style: TextStyle(color: Colors.grey)),
+          Text('Đang tải catalog...',
+              style: TextStyle(color: MpColors.text3)),
         ]),
       );
     }
@@ -594,16 +690,30 @@ class _StepCatalog extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.error_outline,
-                size: 48, color: Colors.orange.shade400),
+            const Icon(Icons.error_outline,
+                size: 48, color: MpColors.amber),
             const SizedBox(height: 12),
-            const Text('Không tải được catalog', textAlign: TextAlign.center),
+            const Text('Không tải được catalog',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: MpColors.text)),
             const SizedBox(height: 4),
             Text(catalogError!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontSize: 12, color: MpColors.text3),
                 textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            OutlinedButton(onPressed: onRetry, child: const Text('Thử lại')),
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: MpColors.borderStrong),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('Thử lại',
+                    style: TextStyle(color: MpColors.text)),
+              ),
+            ),
           ]),
         ),
       );
@@ -614,7 +724,7 @@ class _StepCatalog extends StatelessWidget {
         child: Text(
           'Không có thiết bị ${protocol.toUpperCase()} nào trong catalog.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey),
+          style: const TextStyle(color: MpColors.text3),
         ),
       );
     }
@@ -660,24 +770,25 @@ class _CatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
+          color: MpColors.surface,
+          border: Border.all(color: MpColors.border, width: 0.5),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(_icon, size: 20, color: color),
+            Icon(_icon, size: 20, color: MpColors.text2),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 entry.name,
-                style: const TextStyle(fontSize: 13),
+                style: const TextStyle(
+                    fontSize: 13, color: MpColors.text),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -732,21 +843,18 @@ class _StepName extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Đặt tên thiết bị',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
+          const Text('Đặt tên thiết bị',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text)),
           const SizedBox(height: 16),
 
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
+              color: MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,11 +883,31 @@ class _StepName extends StatelessWidget {
           TextField(
             controller: controller,
             autofocus: true,
+            style: const TextStyle(color: MpColors.text, fontSize: 14),
             decoration: InputDecoration(
-              labelText: 'Tên thiết bị',
               hintText: _hint,
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.label_outline),
+              hintStyle: const TextStyle(color: MpColors.text3),
+              labelText: 'Tên thiết bị',
+              labelStyle: const TextStyle(color: MpColors.text2),
+              prefixIcon: const Icon(Icons.label_outline,
+                  size: 18, color: MpColors.text2),
+              filled: true,
+              fillColor: MpColors.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: MpColors.border, width: 0.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: MpColors.border, width: 0.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: MpColors.blue, width: 1.5),
+              ),
             ),
             onChanged: (_) => onChanged(),
             textInputAction: TextInputAction.done,
@@ -790,20 +918,21 @@ class _StepName extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.red.shade200),
+                color: MpColors.redSoft,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: MpColors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline,
-                      color: Colors.red.shade700, size: 18),
+                  const Icon(Icons.error_outline,
+                      color: MpColors.red, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       error!,
-                      style:
-                          TextStyle(color: Colors.red.shade700, fontSize: 13),
+                      style: const TextStyle(
+                          color: MpColors.red, fontSize: 13),
                     ),
                   ),
                 ],
@@ -816,20 +945,21 @@ class _StepName extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.orange.shade200),
+                color: MpColors.amberSoft,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: MpColors.amber.withValues(alpha: 0.3)),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  Icon(Icons.info_outline, color: MpColors.amber, size: 18),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Chế độ tự học: sau khi thêm, vào trang điều khiển '
                       'và ấn nút học lệnh để dạy từng phím từ remote thật.',
-                      style: TextStyle(fontSize: 13),
+                      style: TextStyle(fontSize: 13, color: MpColors.text2),
                     ),
                   ),
                 ],
@@ -869,12 +999,15 @@ class _SummaryRow extends StatelessWidget {
           SizedBox(
             width: 70,
             child: Text(label,
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                style: const TextStyle(
+                    fontSize: 12, color: MpColors.text3)),
           ),
           Expanded(
             child: Text(value,
                 style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w500)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text)),
           ),
         ],
       ),

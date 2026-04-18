@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
@@ -30,46 +31,100 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     final devicesAsync = ref.watch(devicesInRoomProvider(_room.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(_room.name), elevation: 0),
+      backgroundColor: MpColors.bg,
+      appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          _room.name,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: MpColors.text),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               children: [
                 // ── Tên phòng ─────────────────────────────────────────────
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Tên phòng'),
-                  subtitle: Text(_room.name),
-                  trailing: const Icon(Icons.chevron_right),
+                InkWell(
                   onTap: () => _renameRoom(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 13),
+                    decoration: BoxDecoration(
+                      color: MpColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: MpColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: MpColors.blueSoft,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(Icons.edit_outlined,
+                              size: 18, color: MpColors.blue),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Tên phòng',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: MpColors.text)),
+                              Text(_room.name,
+                                  style: const TextStyle(
+                                      fontSize: 12, color: MpColors.text3)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right,
+                            size: 18, color: MpColors.text3),
+                      ],
+                    ),
+                  ),
                 ),
-                const Divider(height: 1),
-
-                // ── Nhóm ─────────────────────────────────────────────────
-                const _SectionHeader(title: 'NHÓM'),
-                const ListTile(
-                  leading: Icon(Icons.group_outlined),
-                  title: Text('Chưa có nhóm nào'),
-                  subtitle: Text('Tính năng đang phát triển'),
-                ),
-                const Divider(height: 1),
+                const SizedBox(height: 20),
 
                 // ── Thiết bị ─────────────────────────────────────────────
                 const _SectionHeader(title: 'THIẾT BỊ'),
+                const SizedBox(height: 6),
                 devicesAsync.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(16),
                     child: Center(child: CircularProgressIndicator()),
                   ),
-                  error: (e, _) => ListTile(
-                    title: Text('Lỗi: $e'),
-                  ),
+                  error: (e, _) =>
+                      Text('Lỗi: $e',
+                          style: const TextStyle(color: MpColors.red)),
                   data: (devices) {
                     if (devices.isEmpty) {
-                      return const ListTile(
-                        leading: Icon(Icons.devices_outlined),
-                        title: Text('Chưa có thiết bị nào'),
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: MpColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: MpColors.border, width: 0.5),
+                        ),
+                        child: const Text(
+                          'Chưa có thiết bị nào',
+                          style: TextStyle(
+                              color: MpColors.text3, fontSize: 13),
+                        ),
                       );
                     }
                     return Column(
@@ -86,18 +141,32 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
           // ── Xóa phòng ────────────────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _deleteRoom(context),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  label: const Text(
-                    'Xóa phòng',
-                    style: TextStyle(color: Colors.red),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: GestureDetector(
+                onTap: () => _deleteRoom(context),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: MpColors.redSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: MpColors.red.withValues(alpha: 0.3)),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_outline,
+                          color: MpColors.red, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Xóa phòng',
+                        style: TextStyle(
+                          color: MpColors.red,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -113,22 +182,35 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Đổi tên phòng'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Đổi tên phòng',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+          style: const TextStyle(color: MpColors.text),
+          decoration: InputDecoration(
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surfaceAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Lưu'),
+            child: const Text('Lưu',
+                style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -164,17 +246,23 @@ class _RoomDetailPageState extends ConsumerState<RoomDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa phòng'),
-        content: Text('Xóa "${_room.name}"?'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xóa phòng',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Xóa "${_room.name}"?',
+          style: const TextStyle(color: MpColors.text2, fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Xóa'),
+            child: const Text('Xóa',
+                style: TextStyle(color: MpColors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -200,16 +288,13 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: Colors.grey.shade500,
-          letterSpacing: 0.6,
-        ),
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: MpColors.text3,
+        letterSpacing: 0.6,
       ),
     );
   }
@@ -221,18 +306,62 @@ class _DeviceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        Icons.devices_outlined,
-        color: device.isOnline ? Colors.green : Colors.grey,
+    final isOn = device.isOnline;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
       ),
-      title: Text(device.displayName),
-      subtitle: Text(
-        device.isOnline ? 'Trực tuyến' : 'Ngoại tuyến',
-        style: TextStyle(
-          color: device.isOnline ? Colors.green : Colors.grey,
-          fontSize: 12,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isOn ? MpColors.greenSoft : MpColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(
+              Icons.devices_outlined,
+              size: 18,
+              color: isOn ? MpColors.green : MpColors.text3,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  device.displayName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text,
+                  ),
+                ),
+                Text(
+                  isOn ? 'Trực tuyến' : 'Ngoại tuyến',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isOn ? MpColors.green : MpColors.text3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isOn ? MpColors.green : MpColors.text3,
+            ),
+          ),
+        ],
       ),
     );
   }

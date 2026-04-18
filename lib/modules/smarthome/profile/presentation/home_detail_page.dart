@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/location_page.dart';
@@ -27,40 +28,53 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_home.name), elevation: 0),
+      backgroundColor: MpColors.bg,
+      appBar: AppBar(
+        backgroundColor: MpColors.bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          _home.name,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: MpColors.text,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: MpColors.text),
+      ),
       body: Column(
         children: [
           Expanded(
             child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               children: [
-                // ── Tên nhà ────────────────────────────────────────────────
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Tên nhà'),
-                  subtitle: Text(_home.name),
-                  trailing: const Icon(Icons.chevron_right),
+                _DetailTile(
+                  icon: Icons.edit_outlined,
+                  iconColor: MpColors.blue,
+                  iconTint: MpColors.blueSoft,
+                  title: 'Tên nhà',
+                  subtitle: _home.name,
                   onTap: () => _renamHome(context),
                 ),
-                const Divider(height: 1, indent: 16),
-
-                // ── Quản lý phòng ──────────────────────────────────────────
-                ListTile(
-                  leading: const Icon(Icons.meeting_room_outlined),
-                  title: const Text('Quản lý phòng'),
-                  trailing: const Icon(Icons.chevron_right),
+                const SizedBox(height: 8),
+                _DetailTile(
+                  icon: Icons.meeting_room_outlined,
+                  iconColor: MpColors.green,
+                  iconTint: MpColors.greenSoft,
+                  title: 'Quản lý phòng',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => RoomManagementPage(home: _home),
                     ),
                   ),
                 ),
-                const Divider(height: 1, indent: 16),
-
-                // ── Vị trí ────────────────────────────────────────────────
-                ListTile(
-                  leading: const Icon(Icons.location_on_outlined),
-                  title: const Text('Vị trí'),
-                  trailing: const Icon(Icons.chevron_right),
+                const SizedBox(height: 8),
+                _DetailTile(
+                  icon: Icons.location_on_outlined,
+                  iconColor: MpColors.violet,
+                  iconTint: MpColors.violetSoft,
+                  title: 'Vị trí',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => LocationPage(homeId: _home.id),
@@ -71,21 +85,37 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
             ),
           ),
 
-          // ── Xóa nhà ──────────────────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _deleteHome(context),
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  label: const Text(
-                    'Xóa nhà',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
+                child: GestureDetector(
+                  onTap: () => _deleteHome(context),
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: MpColors.redSoft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: MpColors.red.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.delete_outline,
+                            color: MpColors.red, size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'Xóa nhà',
+                          style: TextStyle(
+                            color: MpColors.red,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -101,22 +131,35 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Đổi tên nhà'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Đổi tên nhà',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
+          style: const TextStyle(color: MpColors.text),
+          decoration: InputDecoration(
+            hintStyle: const TextStyle(color: MpColors.text3),
+            filled: true,
+            fillColor: MpColors.surfaceAlt,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
           textCapitalization: TextCapitalization.sentences,
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Lưu'),
+            child: const Text('Lưu',
+                style: TextStyle(color: MpColors.blue, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -139,18 +182,23 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa nhà'),
+        backgroundColor: MpColors.bg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xóa nhà',
+            style: TextStyle(color: MpColors.text, fontWeight: FontWeight.w600)),
         content: Text(
-            'Xóa "${_home.name}"? Tất cả phòng và thiết bị sẽ bị gỡ. Hành động không thể hoàn tác.'),
+          'Xóa "${_home.name}"? Tất cả phòng và thiết bị sẽ bị gỡ. Hành động không thể hoàn tác.',
+          style: const TextStyle(color: MpColors.text2, fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Xóa'),
+            child: const Text('Xóa',
+                style: TextStyle(color: MpColors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -167,5 +215,74 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
         );
       }
     }
+  }
+}
+
+class _DetailTile extends StatelessWidget {
+  const _DetailTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconTint,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconTint;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconTint,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.text,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                          fontSize: 12, color: MpColors.text3),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: MpColors.text3),
+          ],
+        ),
+      ),
+    );
   }
 }
