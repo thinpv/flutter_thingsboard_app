@@ -10,6 +10,7 @@ import 'package:thingsboard_app/core/logger/tb_logger.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/notification/service/i_notifications_local_service.dart';
 import 'package:thingsboard_app/modules/notification/service/notifications_local_service.dart';
+import 'package:thingsboard_app/modules/smarthome/notification_prefs/data/notification_preferences_service.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_app/utils/utils.dart';
@@ -212,6 +213,16 @@ class NotificationService {
     final notification = message.notification;
 
     if (notification != null) {
+      // Respect user category mute preferences (Phase 5).
+      // Background notifications can't be intercepted client-side; mute
+      // chỉ áp dụng cho foreground display + badge.
+      final category = message.data['category'] as String?;
+      if (category != null &&
+          !NotificationPreferencesService.instance.isEnabled(category)) {
+        _log.debug('Notification category "$category" is muted, skipping');
+        return;
+      }
+
       flutterLocalNotificationsPlugin.show(
         notification.hashCode,
         notification.title,

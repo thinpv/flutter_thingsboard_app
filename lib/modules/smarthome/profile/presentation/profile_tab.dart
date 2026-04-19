@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/core/auth/login/provider/login_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/notification_prefs/presentation/notification_preferences_page.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/home_management_page.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/profile_account_page.dart';
 
@@ -165,6 +166,18 @@ class ProfileTab extends ConsumerWidget {
             // ── Ứng dụng ─────────────────────────────────────────────────
             _SectionLabel('ỨNG DỤNG'),
             const SizedBox(height: 8),
+            _MpTile(
+              icon: Icons.notifications_outlined,
+              iconColor: MpColors.amber,
+              iconTint: MpColors.amberSoft,
+              title: 'Cài đặt thông báo',
+              subtitle: 'Bật/tắt category push notification',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const NotificationPreferencesPage()),
+              ),
+            ),
+            const SizedBox(height: 4),
             _MpTile(
               icon: Icons.language_outlined,
               iconColor: MpColors.blue,
