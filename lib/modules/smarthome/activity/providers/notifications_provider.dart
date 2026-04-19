@@ -41,3 +41,17 @@ Future<void> deleteNotification(String id) async {
   final client = getIt<ITbClientService>().client;
   await client.getNotificationService().deleteNotification(id);
 }
+
+/// Notification chưa đọc thuộc category `system_announcement` (UC3 admin
+/// broadcast). Identify qua `additionalConfig.category` hoặc rơi sang
+/// `type == GENERAL` cho TB version chưa cấu hình category.
+final systemAnnouncementsProvider =
+    Provider.autoDispose<List<PushNotification>>((ref) {
+  final list = ref.watch(notificationsProvider).valueOrNull ?? const [];
+  return list.where((n) {
+    if (n.status != PushNotificationStatus.SENT) return false;
+    final category = n.additionalConfig?['category'];
+    if (category == 'system_announcement') return true;
+    return category == null && n.type == PushNotificationType.GENERAL;
+  }).toList();
+});

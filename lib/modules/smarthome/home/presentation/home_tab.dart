@@ -6,6 +6,7 @@ import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/devi
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/home_header.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/quick_scene_card.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/room_selector.dart';
+import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/system_announcement_banner.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
@@ -29,6 +30,9 @@ class HomeTab extends ConsumerWidget {
           children: [
             // ── mPipe header: greeting + home name + avatar ───────────────
             const HomeHeader(),
+
+            // ── System announcement banner (UC3 admin broadcast) ──────────
+            const SystemAnnouncementBanner(),
 
             // ── Room tab bar ──────────────────────────────────────────────
             selectedHome.when(
