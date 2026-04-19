@@ -35,13 +35,13 @@ def flutterVersionName = localProperties.getProperty('flutter.versionName')
 if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
-def customScheme = getDartDefineValue('thingsboardOAuth2CallbackUrlScheme') ?: 'org.thingsboard.app.auth'
+def customScheme = getDartDefineValue('thingsboardOAuth2CallbackUrlScheme') ?: 'org.mpipe.mhome.auth'
 def customLabel = getDartDefineValue('androidApplicationName') ?: 'mHome'
 def appLinksUrlHost = getDartDefineValue('appLinksUrlHost') ?: 'demo.thingsboard.io'
 def webPathPrefix = getDartDefineValue('webPathPrefix') ?: '/api/noauth/qr'
 def appLinksUrlScheme = getDartDefineValue('appLinksUrlScheme') ?: 'https'
 android {
-namespace "org.thingsboard.app"
+namespace "org.mpipe.mhome"
     ndkVersion "29.0.13113456 rc1"
     compileSdkVersion 35
     sourceSets {
@@ -49,7 +49,7 @@ namespace "org.thingsboard.app"
     }
 
     defaultConfig {
-        applicationId getDartDefineValue('androidApplicationId')?: "org.thingsboard.app"
+        applicationId getDartDefineValue('androidApplicationId')?: "org.mpipe.mhome"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()

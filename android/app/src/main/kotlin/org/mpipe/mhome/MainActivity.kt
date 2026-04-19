@@ -1,4 +1,4 @@
-package org.thingsboard.app
+package org.mpipe.mhome
 
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
