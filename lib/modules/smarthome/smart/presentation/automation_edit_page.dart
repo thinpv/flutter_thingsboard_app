@@ -91,7 +91,13 @@ String _actionTitle(RuleAction a) {
     if (data == null || data.isEmpty) return 'Điều khiển thiết bị';
     return data.entries.map((e) => _formatKV(e.key as String, e.value)).join(' · ');
   }
-  if (a.type == 'notify') return 'Thông báo';
+  if (a.type == 'notify') {
+    final title = (a.raw['title'] as String?)?.trim() ?? '';
+    if (title.isNotEmpty) return title;
+    final msg = (a.raw['message'] as String?)?.trim() ?? '';
+    if (msg.isNotEmpty) return msg;
+    return 'Thông báo';
+  }
   return a.type;
 }
 
@@ -102,8 +108,28 @@ String _actionSubtitle(RuleAction a) {
     if (s >= 60) return '${s ~/ 60} phút ${s % 60 > 0 ? "${s % 60} giây" : ""}';
     return '$s giây';
   }
+  if (a.type == 'notify') {
+    final target = a.raw['target'] as String? ?? 'all';
+    final severity = a.raw['severity'] as String? ?? 'info';
+    return '${_notifyTargetLabel(target)} · ${_notifySeverityLabel(severity)}';
+  }
   return '';
 }
+
+String _notifyTargetLabel(String t) {
+  if (t == 'all') return 'Tất cả thành viên';
+  if (t == 'owner') return 'Chủ nhà';
+  if (t.startsWith('userId:')) return 'Người dùng cụ thể';
+  if (t.startsWith('role:')) return 'Vai trò ${t.substring(5)}';
+  return t;
+}
+
+String _notifySeverityLabel(String s) => switch (s) {
+      'critical' => 'Nghiêm trọng',
+      'warning' => 'Cảnh báo',
+      'info' => 'Thông tin',
+      _ => s,
+    };
 
 String _formatKV(String key, dynamic value) {
   if (key == 'onoff0' || key == 'onoff1' || key == 'onoff2') {
@@ -609,11 +635,16 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       context: context,
       builder: (ctx) => _TypePickerSheet(
         title: 'Thêm hành động',
-        options: const [
-          ('device', Icons.devices_other_outlined, 'Thiết bị',
+        options: [
+          const ('device', Icons.devices_other_outlined, 'Thiết bị',
               'Gửi lệnh điều khiển thiết bị'),
-          ('delay', Icons.hourglass_bottom_outlined, 'Chờ',
+          const ('delay', Icons.hourglass_bottom_outlined, 'Chờ',
               'Dừng N giây rồi tiếp tục'),
+          // Notify chỉ áp dụng cho server-side automation, scene tap-to-run
+          // bỏ qua action này khi save → ẩn để tránh hiểu nhầm.
+          if (!widget.isTapToRun)
+            const ('notify', Icons.notifications_outlined, 'Thông báo',
+                'Gửi push cho thành viên của nhà'),
         ],
       ),
     );
@@ -630,6 +661,12 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       result = await showModalBottomSheet<RuleAction>(
         context: context,
         builder: (ctx) => const _DelaySheet(),
+      );
+    } else if (type == 'notify') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => const _NotifyActionSheet(),
       );
     }
 
@@ -696,6 +733,12 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       result = await showModalBottomSheet<RuleAction>(
         context: context,
         builder: (ctx) => _DelaySheet(initial: existing),
+      );
+    } else if (existing.type == 'notify') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _NotifyActionSheet(initial: existing),
       );
     }
     if (result != null && mounted) {
@@ -1205,6 +1248,15 @@ class _ActionCard extends StatelessWidget {
                     if (action.type == 'device')
                       Text(
                         _actionTitle(action),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: MpColors.text3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (action.type == 'notify')
+                      Text(
+                        _actionSubtitle(action),
                         style: const TextStyle(
                           fontSize: 11,
                           color: MpColors.text3,
@@ -2325,6 +2377,317 @@ class _DelaySheetState extends State<_DelaySheet> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Notify action sheet ─────────────────────────────────────────────────────
+
+class _NotifyActionSheet extends StatefulWidget {
+  const _NotifyActionSheet({this.initial});
+  final RuleAction? initial;
+
+  @override
+  State<_NotifyActionSheet> createState() => _NotifyActionSheetState();
+}
+
+class _NotifyActionSheetState extends State<_NotifyActionSheet> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _msgCtrl;
+  late String _target;
+  late String _severity;
+
+  @override
+  void initState() {
+    super.initState();
+    final raw = widget.initial?.raw ?? const {};
+    _titleCtrl = TextEditingController(text: raw['title'] as String? ?? '');
+    _msgCtrl = TextEditingController(text: raw['message'] as String? ?? '');
+    _target = raw['target'] as String? ?? 'all';
+    _severity = raw['severity'] as String? ?? 'info';
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _msgCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final msg = _msgCtrl.text.trim();
+    if (msg.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nội dung thông báo không được để trống')),
+      );
+      return;
+    }
+    final raw = <String, dynamic>{
+      'type': 'notify',
+      'message': msg,
+      'target': _target,
+      'severity': _severity,
+    };
+    final title = _titleCtrl.text.trim();
+    if (title.isNotEmpty) raw['title'] = title;
+    Navigator.pop(context, RuleAction(raw: raw));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text(
+                  'Gửi thông báo',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Title
+              const Text(
+                'Tiêu đề (tùy chọn)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _titleCtrl,
+                maxLength: 80,
+                style: const TextStyle(color: MpColors.text, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'VD: Cảnh báo phòng khách',
+                  hintStyle: const TextStyle(color: MpColors.text3),
+                  filled: true,
+                  fillColor: MpColors.surfaceAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Message
+              const Text(
+                'Nội dung *',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _msgCtrl,
+                maxLines: 3,
+                maxLength: 200,
+                style: const TextStyle(color: MpColors.text, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'VD: Nhiệt độ phòng khách vượt 30°C',
+                  hintStyle: const TextStyle(color: MpColors.text3),
+                  filled: true,
+                  fillColor: MpColors.surfaceAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Target
+              const Text(
+                'Gửi cho',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ChoiceChip(
+                    label: 'Tất cả thành viên',
+                    selected: _target == 'all',
+                    onTap: () => setState(() => _target = 'all'),
+                  ),
+                  _ChoiceChip(
+                    label: 'Chủ nhà',
+                    selected: _target == 'owner',
+                    onTap: () => setState(() => _target = 'owner'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Severity
+              const Text(
+                'Mức độ',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _SeverityChip(
+                    label: 'Thông tin',
+                    color: MpColors.blue,
+                    selected: _severity == 'info',
+                    onTap: () => setState(() => _severity = 'info'),
+                  ),
+                  _SeverityChip(
+                    label: 'Cảnh báo',
+                    color: MpColors.amber,
+                    selected: _severity == 'warning',
+                    onTap: () => setState(() => _severity = 'warning'),
+                  ),
+                  _SeverityChip(
+                    label: 'Nghiêm trọng',
+                    color: MpColors.red,
+                    selected: _severity == 'critical',
+                    onTap: () => setState(() => _severity = 'critical'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Hủy'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: Text(widget.initial == null ? 'Thêm' : 'Lưu'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  const _ChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? MpColors.text : MpColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? Colors.transparent : MpColors.border,
+            width: 0.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: selected ? MpColors.bg : MpColors.text2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SeverityChip extends StatelessWidget {
+  const _SeverityChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? color : color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? Colors.white : color,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: selected ? Colors.white : color,
+              ),
             ),
           ],
         ),
