@@ -76,6 +76,14 @@ class TbClientService implements ITbClientService {
 
   void onClientError(ThingsboardError e) {
     log('client on error: $e');
+    debugPrint(
+      '[TbClientError] message: ${e.message}'
+      ' | errorCode: ${e.errorCode}'
+      ' | status: ${e.status}'
+      '\nSTACK: ${e.getStackTrace() ?? StackTrace.current}',
+    );
+    if (e.status == 409) return;
+    if (e.errorCode == ThingsBoardErrorCode.permissionDenied) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Utils.isConnectionError(e)) {
         _overlayService.showAlertDialog(

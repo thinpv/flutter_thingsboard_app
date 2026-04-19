@@ -19,6 +19,13 @@ class Error extends _$Error {
 
   void onError(ThingsboardError tbError) {
     _log.error('onError', tbError, tbError.getStackTrace());
+    debugPrint(
+      '[ErrorProvider] message: ${tbError.message}'
+      ' | errorCode: ${tbError.errorCode}'
+      ' | status: ${tbError.status}'
+      '\nSTACK: ${tbError.getStackTrace()}',
+    );
+    if (tbError.status == 409) return;
     _overlayService.showErrorNotification((_) => tbError.message!);
   }
 

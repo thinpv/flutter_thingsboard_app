@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
@@ -13,6 +15,7 @@ import 'package:thingsboard_app/modules/smarthome/smart/providers/automation_pro
 import 'package:thingsboard_app/utils/services/smarthome/automation_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/execution_target_resolver.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
+import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 import 'package:uuid/uuid.dart';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -137,6 +140,8 @@ class AutomationEditPage extends ConsumerStatefulWidget {
     this.prefillName,
     this.prefillConditions,
     this.prefillActions,
+    this.isTapToRun = false,
+    this.scene,
     super.key,
   });
 
@@ -144,6 +149,8 @@ class AutomationEditPage extends ConsumerStatefulWidget {
   final String? prefillName;
   final List<RuleCondition>? prefillConditions;
   final List<RuleAction>? prefillActions;
+  final bool isTapToRun;
+  final SmarthomeScene? scene;
 
   @override
   ConsumerState<AutomationEditPage> createState() => _AutomationEditPageState();
@@ -167,15 +174,26 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
   void initState() {
     super.initState();
     final r = widget.rule;
+    final sc = widget.scene;
     _nameCtrl = TextEditingController(
-        text: r?.name ?? widget.prefillName ?? '');
-    _icon = r?.icon ?? 'auto_awesome';
-    _color = r?.color ?? '#2196F3';
+        text: r?.name ?? sc?.name ?? widget.prefillName ?? '');
+    _icon = r?.icon ?? sc?.icon ?? 'auto_awesome';
+    _color = r?.color ?? sc?.color ?? '#FF9800';
     _conditions = r?.conditions.toList() ??
         widget.prefillConditions?.toList() ?? [];
     _conditionMatch = r?.conditionMatch ?? ConditionMatch.all;
-    _actions = r?.actions.toList() ??
-        widget.prefillActions?.toList() ?? [];
+    if (widget.isTapToRun && sc != null) {
+      _actions = sc.devices.entries
+          .map((e) => RuleAction(raw: {
+                'type': 'device',
+                'deviceId': e.key,
+                'data': Map<String, dynamic>.from(e.value),
+              }))
+          .toList();
+    } else {
+      _actions = r?.actions.toList() ??
+          widget.prefillActions?.toList() ?? [];
+    }
     _schedule = r?.schedule;
     _scheduleEnabled = r?.schedule != null;
     if (r != null) _resolveDeviceNamesFromRule(r);
@@ -217,8 +235,11 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
     } catch (_) {}
   }
 
-  String _deviceName(String id) =>
-      _deviceNames[id] ?? '${id.substring(0, 8)}…';
+  String _deviceName(String id) {
+    if (_deviceNames.containsKey(id)) return _deviceNames[id]!;
+    if (id.length <= 8) return id.isEmpty ? '—' : id;
+    return '${id.substring(0, 8)}…';
+  }
 
   Future<SmarthomeHome?> _awaitHome() async {
     try {
@@ -236,7 +257,57 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
   // ─── Save ────────────────────────────────────────────────────────────────────
 
+  Future<void> _saveTapToRun() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng đặt tên cho kịch bản')),
+      );
+      return;
+    }
+    if (_actions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cần ít nhất một hành động')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final home = await _awaitHome();
+      if (home == null) return;
+
+      final devices = <String, Map<String, dynamic>>{
+        for (final a in _actions.where((a) => a.type == 'device'))
+          a.raw['deviceId'] as String:
+              Map<String, dynamic>.from(a.raw['data'] as Map? ?? {}),
+      };
+
+      final scene = SmarthomeScene(
+        id: widget.scene?.id ?? const Uuid().v4(),
+        name: name,
+        icon: _icon,
+        color: _color,
+        devices: devices,
+      );
+
+      await SceneService().saveScene(home.id, scene);
+      ref.invalidate(scenesProvider);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi lưu: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _save() async {
+    if (widget.isTapToRun) {
+      await _saveTapToRun();
+      return;
+    }
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,7 +402,8 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isNew = widget.rule == null;
+    final isNew = widget.rule == null && widget.scene == null;
+    final isTtr = widget.isTapToRun;
 
     return Scaffold(
       backgroundColor: MpColors.bg,
@@ -347,7 +419,9 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
           ),
         ),
         title: Text(
-          isNew ? 'Tạo automation' : 'Sửa automation',
+          isTtr
+              ? (isNew ? 'Tạo kịch bản' : 'Sửa kịch bản')
+              : (isNew ? 'Tạo automation' : 'Sửa automation'),
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -396,36 +470,39 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
           ),
           const SizedBox(height: 16),
 
-          // ── NẾU (Conditions) ─────────────────────────────────────────────
-          _SectionBlock(
-            label: 'NẾU',
-            color: const Color(0xFF1976D2),
-            trailing: _ConditionMatchPill(
-              value: _conditionMatch,
-              onChanged: (v) => setState(() => _conditionMatch = v),
-            ),
-            children: [
-              if (_conditions.isEmpty)
-                _EmptyHint(
-                  'Không có điều kiện → automation chạy thủ công',
-                  Icons.touch_app_outlined,
-                ),
-              for (int i = 0; i < _conditions.length; i++)
-                _ConditionCard(
-                  condition: _conditions[i],
-                  deviceName: _conditions[i].type == 'device'
-                      ? _deviceName(_conditions[i].raw['deviceId'] as String? ?? '')
-                      : null,
-                  onTap: () => _editCondition(i),
-                  onDelete: () =>
-                      setState(() => _conditions.removeAt(i)),
-                ),
-              _AddButton(
-                label: '+ Thêm điều kiện',
-                onTap: () => _showAddConditionSheet(),
+          // ── NẾU ─────────────────────────────────────────────────────────
+          if (isTtr)
+            _TapToRunTriggerCard()
+          else
+            _SectionBlock(
+              label: 'NẾU',
+              color: const Color(0xFF1976D2),
+              trailing: _ConditionMatchPill(
+                value: _conditionMatch,
+                onChanged: (v) => setState(() => _conditionMatch = v),
               ),
-            ],
-          ),
+              children: [
+                if (_conditions.isEmpty)
+                  _EmptyHint(
+                    'Không có điều kiện → automation chạy thủ công',
+                    Icons.touch_app_outlined,
+                  ),
+                for (int i = 0; i < _conditions.length; i++)
+                  _ConditionCard(
+                    condition: _conditions[i],
+                    deviceName: _conditions[i].type == 'device'
+                        ? _deviceName(_conditions[i].raw['deviceId'] as String? ?? '')
+                        : null,
+                    onTap: () => _editCondition(i),
+                    onDelete: () =>
+                        setState(() => _conditions.removeAt(i)),
+                  ),
+                _AddButton(
+                  label: '+ Thêm điều kiện',
+                  onTap: () => _showAddConditionSheet(),
+                ),
+              ],
+            ),
           const SizedBox(height: 8),
 
           // ── THÌ (Actions) ────────────────────────────────────────────────
@@ -456,23 +533,25 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
           ),
           const SizedBox(height: 8),
 
-          // ── Lịch ─────────────────────────────────────────────────────────
-          _ScheduleCard(
-            enabled: _scheduleEnabled,
-            schedule: _schedule,
-            onToggle: (v) => setState(() {
-              _scheduleEnabled = v;
-              if (v) _schedule ??= const RuleSchedule(days: 127);
-            }),
-            onChanged: (s) => setState(() => _schedule = s),
-          ),
-          const SizedBox(height: 8),
+          // ── Lịch (hidden for tap-to-run) ──────────────────────────────
+          if (!isTtr) ...[
+            _ScheduleCard(
+              enabled: _scheduleEnabled,
+              schedule: _schedule,
+              onToggle: (v) => setState(() {
+                _scheduleEnabled = v;
+                if (v) _schedule ??= const RuleSchedule(days: 127);
+              }),
+              onChanged: (s) => setState(() => _schedule = s),
+            ),
+            const SizedBox(height: 8),
 
-          // ── Execution target preview ─────────────────────────────────────
-          _ExecutionTargetCard(
-            conditions: _conditions,
-            actions: _actions,
-          ),
+            // ── Execution target preview ─────────────────────────────────
+            _ExecutionTargetCard(
+              conditions: _conditions,
+              actions: _actions,
+            ),
+          ],
         ],
       ),
     );
@@ -755,6 +834,77 @@ class _StyleCard extends StatelessWidget {
                 ),
               );
             }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Tap-to-run trigger card ──────────────────────────────────────────────────
+
+class _TapToRunTriggerCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: MpColors.amberSoft,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.touch_app_outlined,
+                      size: 13, color: MpColors.amber),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'NẾU',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: MpColors.amber,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: MpColors.amberSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.touch_app, size: 18, color: MpColors.amber),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Chạm để chạy',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.amber,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -3,7 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
-import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/home_stats_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
@@ -14,6 +15,7 @@ import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/clai
 ///   "Chào buổi sáng"  (greeting, muted)
 ///   "Nhà của Minh ▾"  (home name + dropdown caret)
 ///   [avatar circle]   (right side)
+///   Stats bar: Nhiệt độ · Độ ẩm · Điện
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
 
@@ -30,88 +32,99 @@ class HomeHeader extends ConsumerWidget {
         right: 20,
         bottom: 14,
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Left: greeting + home name ─────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _greeting(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: MpColors.text3,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                homes.when(
-                  loading: () => const Text(
-                    'SmartHome',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.3,
-                      color: MpColors.text,
-                    ),
-                  ),
-                  error: (_, _) => const Text('SmartHome',
-                      style: TextStyle(fontSize: 22, color: MpColors.text)),
-                  data: (list) {
-                    final current = selectedHome.valueOrNull;
-                    final name = current?.name ?? 'SmartHome';
-                    final hasMany = list.length > 1;
-
-                    return GestureDetector(
-                      onTap: hasMany
-                          ? () => _showHomePicker(context, ref, list, current?.id ?? '')
-                          : null,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: -0.3,
-                                color: MpColors.text,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (hasMany) ...[
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 18,
-                              color: MpColors.text3,
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // ── Right: add button + avatar ──────────────────────────────
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AddButton(onTap: () => _showAddMenu(context, ref)),
-              const SizedBox(width: 10),
-              _AvatarCircle(
-                name: (selectedHome.valueOrNull?.name ?? 'S').toString(),
+              // ── Left: greeting + home name ───────────────────────────
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _greeting(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: MpColors.text3,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    homes.when(
+                      loading: () => const Text(
+                        'SmartHome',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -0.3,
+                          color: MpColors.text,
+                        ),
+                      ),
+                      error: (_, _) => const Text('SmartHome',
+                          style:
+                              TextStyle(fontSize: 22, color: MpColors.text)),
+                      data: (list) {
+                        final current = selectedHome.valueOrNull;
+                        final name = current?.name ?? 'SmartHome';
+                        final hasMany = list.length > 1;
+
+                        return GestureDetector(
+                          onTap: hasMany
+                              ? () => _showHomePicker(
+                                  context, ref, list, current?.id ?? '')
+                              : null,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: -0.3,
+                                    color: MpColors.text,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (hasMany) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 18,
+                                  color: MpColors.text3,
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // ── Right: add button + avatar ────────────────────────────
+              Row(
+                children: [
+                  _AddButton(onTap: () => _showAddMenu(context, ref)),
+                  const SizedBox(width: 10),
+                  _AvatarCircle(
+                    name: (selectedHome.valueOrNull?.name ?? 'S').toString(),
+                  ),
+                ],
               ),
             ],
           ),
+
+          // ── Stats bar ─────────────────────────────────────────────────
+          const SizedBox(height: 12),
+          const _StatsBar(),
         ],
       ),
     );
@@ -207,12 +220,135 @@ class HomeHeader extends ConsumerWidget {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const SceneEditPage()),
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const AutomationEditPage(isTapToRun: true)),
               );
             },
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Stats bar ────────────────────────────────────────────────────────────────
+
+class _StatsBar extends ConsumerWidget {
+  const _StatsBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(homeStatsProvider);
+
+    final tempStr = stats.temp != null
+        ? '${stats.temp!.toStringAsFixed(1)}°C'
+        : '—';
+    final humStr = stats.hum != null
+        ? '${stats.hum!.toStringAsFixed(0)}%'
+        : '—';
+    final powerStr = stats.totalPowerKw != null
+        ? '${stats.totalPowerKw!.toStringAsFixed(1)}kW'
+        : '—';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MpColors.border, width: 0.5),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatCell(
+                label: 'Nhiệt độ',
+                value: tempStr,
+                icon: stats.fromWeather && stats.temp != null
+                    ? Icons.cloud_outlined
+                    : Icons.thermostat_outlined,
+              ),
+            ),
+            _Divider(),
+            Expanded(
+              child: _StatCell(
+                label: 'Độ ẩm',
+                value: humStr,
+                icon: stats.fromWeather && stats.hum != null
+                    ? Icons.cloud_outlined
+                    : Icons.water_drop_outlined,
+              ),
+            ),
+            _Divider(),
+            Expanded(
+              child: _StatCell(
+                label: 'Điện',
+                value: powerStr,
+                icon: Icons.bolt_outlined,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 11, color: MpColors.text3),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: MpColors.text,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 0.5,
+      color: MpColors.border,
     );
   }
 }

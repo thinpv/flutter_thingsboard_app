@@ -23,16 +23,17 @@ part 'login_provider.g.dart';
 class Login extends _$Login {
   final _tbClient = getIt<ITbClientService>().client;
   final _deviceInfoService = getIt<IDeviceInfoService>();
-  late final StreamSubscription<UserLoadedEvent> _listener;
+  StreamSubscription<UserLoadedEvent>? _listener;
   final _overlayService = getIt<IOverlayService>();
   @override
   LoginState build() {
+    _listener?.cancel();
     _listener = getIt<ICommunicationService>().on<UserLoadedEvent>().listen((
       _,
     ) async {
       await handleUserLoaded();
     });
-    ref.onDispose(() => _listener.cancel());
+    ref.onDispose(() => _listener?.cancel());
     Future(() => handleUserLoaded());
     return const LoginState(isUserLoaded: false);
   }

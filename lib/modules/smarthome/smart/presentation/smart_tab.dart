@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
-import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
@@ -53,7 +52,8 @@ class _SmartTabState extends ConsumerState<SmartTab>
 
   Future<void> _createScene(BuildContext context) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SceneEditPage()),
+      MaterialPageRoute(
+          builder: (_) => const AutomationEditPage(isTapToRun: true)),
     );
     if (saved == true) ref.invalidate(scenesProvider);
   }
@@ -175,33 +175,54 @@ class _ScenesView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scenesAsync = ref.watch(scenesProvider);
 
-    return scenesAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
-      ),
-      error: (e, _) => Center(
-        child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
-      ),
-      data: (scenes) {
-        if (scenes.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.touch_app_outlined,
-            title: 'Chưa có kịch bản nào',
-            subtitle: 'Nhấn + để tạo kịch bản đầu tiên',
-          );
-        }
-        return GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.1,
-          ),
-          itemCount: scenes.length,
-          itemBuilder: (context, i) => _SceneGridCard(scene: scenes[i]),
-        );
+    return RefreshIndicator(
+      color: MpColors.text,
+      backgroundColor: MpColors.surface,
+      onRefresh: () async {
+        ref.invalidate(scenesProvider);
+        await ref.read(scenesProvider.future).catchError((_) => <dynamic>[]);
       },
+      child: scenesAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
+        ),
+        error: (e, _) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: 300,
+            child: Center(
+              child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
+            ),
+          ),
+        ),
+        data: (scenes) {
+          if (scenes.isEmpty) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: const SizedBox(
+                height: 400,
+                child: _EmptyState(
+                  icon: Icons.touch_app_outlined,
+                  title: 'Chưa có kịch bản nào',
+                  subtitle: 'Nhấn + để tạo kịch bản đầu tiên',
+                ),
+              ),
+            );
+          }
+          return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: scenes.length,
+            itemBuilder: (context, i) => _SceneGridCard(scene: scenes[i]),
+          );
+        },
+      ),
     );
   }
 }
@@ -302,7 +323,9 @@ class _SceneGridCard extends ConsumerWidget {
 
   Future<void> _openEdit(BuildContext context, WidgetRef ref) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => SceneEditPage(scene: scene)),
+      MaterialPageRoute(
+          builder: (_) =>
+              AutomationEditPage(isTapToRun: true, scene: scene)),
     );
     if (saved == true) ref.invalidate(scenesProvider);
   }
@@ -369,28 +392,49 @@ class _AutomationsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final allRules = ref.watch(allRulesProvider);
 
-    return allRules.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
-      ),
-      error: (e, _) => Center(
-        child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
-      ),
-      data: (rules) {
-        if (rules.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.auto_awesome_outlined,
-            title: 'Chưa có tự động hóa nào',
-            subtitle: 'Nhấn + để tạo automation đầu tiên',
-          );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          itemCount: rules.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, i) => AutomationCard(rule: rules[i]),
-        );
+    return RefreshIndicator(
+      color: MpColors.text,
+      backgroundColor: MpColors.surface,
+      onRefresh: () async {
+        ref.invalidate(allRulesProvider);
+        await ref.read(allRulesProvider.future).catchError((_) => <dynamic>[]);
       },
+      child: allRules.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: MpColors.text3, strokeWidth: 1.5),
+        ),
+        error: (e, _) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: 300,
+            child: Center(
+              child: Text('Lỗi: $e', style: const TextStyle(color: MpColors.text3)),
+            ),
+          ),
+        ),
+        data: (rules) {
+          if (rules.isEmpty) {
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: const SizedBox(
+                height: 400,
+                child: _EmptyState(
+                  icon: Icons.auto_awesome_outlined,
+                  title: 'Chưa có tự động hóa nào',
+                  subtitle: 'Nhấn + để tạo automation đầu tiên',
+                ),
+              ),
+            );
+          }
+          return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            itemCount: rules.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, i) => AutomationCard(rule: rules[i]),
+          );
+        },
+      ),
     );
   }
 }

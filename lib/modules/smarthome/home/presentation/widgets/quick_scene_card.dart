@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/scene.dart';
-import 'package:thingsboard_app/modules/smarthome/home/presentation/scene_edit_page.dart';
+import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
@@ -76,7 +76,8 @@ class QuickScenesStrip extends ConsumerWidget {
     final home = ref.read(selectedHomeProvider).valueOrNull;
     if (home == null) return;
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SceneEditPage()),
+      MaterialPageRoute(
+          builder: (_) => const AutomationEditPage(isTapToRun: true)),
     );
     if (saved == true) ref.invalidate(scenesProvider);
   }
@@ -153,7 +154,9 @@ class _SceneItem extends ConsumerWidget {
 
   Future<void> _openEdit(BuildContext context, WidgetRef ref) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => SceneEditPage(scene: scene)),
+      MaterialPageRoute(
+          builder: (_) =>
+              AutomationEditPage(isTapToRun: true, scene: scene)),
     );
     if (saved == true) ref.invalidate(scenesProvider);
   }

@@ -19,9 +19,9 @@ class AutomationRule {
   /// ts) are stored in the rule body itself.
   factory AutomationRule.fromJson(Map<String, dynamic> json) {
     return AutomationRule(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      executionTarget: json['executionTarget'] as String,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      executionTarget: json['executionTarget'] as String? ?? 'server',
       icon: json['icon'] as String? ?? 'auto_awesome',
       color: json['color'] as String? ?? '#2196F3',
       enabled: json['enabled'] as bool? ?? true,
@@ -216,12 +216,12 @@ class RuleIndexEntry {
 
   factory RuleIndexEntry.fromJson(Map<String, dynamic> json) {
     return RuleIndexEntry(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
       icon: json['icon'] as String? ?? 'auto_awesome',
       color: json['color'] as String? ?? '#2196F3',
       enabled: json['enabled'] as bool? ?? true,
-      ts: json['ts'] as int,
+      ts: json['ts'] as int? ?? 0,
       status: json['status'] as String? ?? 'active',
     );
   }

@@ -1,18 +1,74 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/thingsboard_client.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
-class ActivityTab extends StatefulWidget {
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+class _AlarmTimeRange {
+  const _AlarmTimeRange(this.startTime, this.endTime);
+  final int startTime;
+  final int endTime;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _AlarmTimeRange &&
+      other.startTime == startTime &&
+      other.endTime == endTime;
+
+  @override
+  int get hashCode => Object.hash(startTime, endTime);
+}
+
+final _alarmsProvider = FutureProvider.autoDispose
+    .family<List<AlarmInfo>, _AlarmTimeRange>((ref, range) async {
+  final client = getIt<ITbClientService>().client;
+  final query = AlarmQueryV2(
+    TimePageLink(
+      100,
+      0,
+      null,
+      SortOrder('createdTime', Direction.DESC),
+      range.startTime,
+      range.endTime,
+    ),
+  );
+  final page = await client.getAlarmService().getAllAlarmsV2(query);
+  return page.data;
+});
+
+// ─── Main widget ──────────────────────────────────────────────────────────────
+
+class ActivityTab extends ConsumerStatefulWidget {
   const ActivityTab({super.key});
 
   @override
-  State<ActivityTab> createState() => _ActivityTabState();
+  ConsumerState<ActivityTab> createState() => _ActivityTabState();
 }
 
-class _ActivityTabState extends State<ActivityTab> {
+class _ActivityTabState extends ConsumerState<ActivityTab> {
   _Period _period = _Period.today;
+
+  _AlarmTimeRange get _range {
+    final now = DateTime.now();
+    final end = now.millisecondsSinceEpoch;
+    final start = switch (_period) {
+      _Period.today =>
+        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch,
+      _Period.week =>
+        now.subtract(const Duration(days: 7)).millisecondsSinceEpoch,
+      _Period.month =>
+        now.subtract(const Duration(days: 30)).millisecondsSinceEpoch,
+    };
+    return _AlarmTimeRange(start, end);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final alarmsAsync = ref.watch(_alarmsProvider(_range));
+
     return Scaffold(
       backgroundColor: MpColors.bg,
       body: SafeArea(
@@ -20,43 +76,20 @@ class _ActivityTabState extends State<ActivityTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Hoạt động',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: -0.01 * 22,
-                        color: MpColors.text,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _showFilterSheet,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: MpColors.surface,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: MpColors.border, width: 0.5),
-                      ),
-                      child: const Icon(
-                        Icons.filter_list_rounded,
-                        size: 16,
-                        color: MpColors.text,
-                      ),
-                    ),
-                  ),
-                ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 10, 20, 14),
+              child: Text(
+                'Hoạt động',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.22,
+                  color: MpColors.text,
+                ),
               ),
             ),
 
-            // ── Filter chips ──
+            // ── Period chips ──
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -79,52 +112,106 @@ class _ActivityTabState extends State<ActivityTab> {
                     active: _period == _Period.month,
                     onTap: () => setState(() => _period = _Period.month),
                   ),
-                  const SizedBox(width: 6),
-                  _FilterChip(
-                    label: 'Tuỳ chỉnh',
-                    active: _period == _Period.custom,
-                    onTap: _pickCustomRange,
-                  ),
                 ],
               ),
             ),
 
-            // ── Timeline ──
+            // ── Content ──
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: const [
-                  _ActEvent(
-                    time: '08:15',
-                    dotColor: MpColors.green,
-                    title: 'Kịch bản Buổi sáng đã chạy',
-                    meta: '3 thiết bị thay đổi trạng thái',
-                  ),
-                  _ActEvent(
-                    time: '08:14',
-                    dotColor: MpColors.amber,
-                    title: 'Đèn phòng ngủ tắt tự động',
-                  ),
-                  _ActEvent(
-                    time: '07:42',
-                    dotColor: MpColors.amber,
-                    title: 'Cảm biến chuyển động phát hiện hoạt động tại cửa chính',
-                  ),
-                  _ActEvent(
-                    time: '07:30',
-                    dotColor: MpColors.amber,
-                    title: 'Điều hòa tự bật',
-                    meta: 'Nhiệt độ phòng vượt 28°C',
-                  ),
-                  _ActEvent(
-                    time: '00:03',
-                    dotColor: MpColors.red,
-                    title: 'Camera cửa ghi lại chuyển động',
-                    meta: 'Xem lại · 12 giây',
-                    showThumb: true,
-                    isLast: true,
-                  ),
-                ],
+              child: RefreshIndicator(
+                color: MpColors.text,
+                backgroundColor: MpColors.surface,
+                onRefresh: () async => ref.invalidate(_alarmsProvider(_range)),
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (alarmsAsync.isLoading && !alarmsAsync.hasValue)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: MpColors.text3,
+                            strokeWidth: 1.5,
+                          ),
+                        ),
+                      )
+                    else if (alarmsAsync.hasError)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.error_outline,
+                                    color: MpColors.text3, size: 36),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Không thể tải lịch sử',
+                                  style: TextStyle(
+                                      color: MpColors.text,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${alarmsAsync.error}',
+                                  style: const TextStyle(
+                                      color: MpColors.text3, fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Vuốt xuống để thử lại',
+                                  style: TextStyle(
+                                      color: MpColors.text3, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (alarmsAsync.value?.isEmpty ?? false)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.notifications_none_outlined,
+                                  size: 40, color: MpColors.text3),
+                              SizedBox(height: 12),
+                              Text(
+                                'Không có cảnh báo nào',
+                                style: TextStyle(
+                                    color: MpColors.text,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Trong khoảng thời gian đã chọn',
+                                style: TextStyle(
+                                    color: MpColors.text3, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              final alarms = alarmsAsync.value!;
+                              return _AlarmItem(
+                                alarm: alarms[i],
+                                isLast: i == alarms.length - 1,
+                              );
+                            },
+                            childCount: alarmsAsync.value?.length ?? 0,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -132,18 +219,153 @@ class _ActivityTabState extends State<ActivityTab> {
       ),
     );
   }
-
-  void _showFilterSheet() {}
-
-  void _pickCustomRange() {}
 }
 
-enum _Period { today, week, month, custom }
+enum _Period { today, week, month }
+
+// ─── Alarm item (timeline row) ────────────────────────────────────────────────
+
+class _AlarmItem extends StatelessWidget {
+  const _AlarmItem({required this.alarm, required this.isLast});
+  final AlarmInfo alarm;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final ts = alarm.startTs ?? alarm.createdTime ?? 0;
+    final dt = DateTime.fromMillisecondsSinceEpoch(ts);
+    final dotColor = _severityColor(alarm.severity);
+    final timeStr = _timeStr(dt);
+    final title = _title();
+    final sub = _subtitle();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Time
+          SizedBox(
+            width: 46,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                timeStr,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 11, color: MpColors.text3),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Dot + connector
+          SizedBox(
+            width: 10,
+            child: Stack(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.only(top: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                    border: Border.all(color: MpColors.bg, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: dotColor.withValues(alpha: 0.18),
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isLast)
+                  Positioned(
+                    top: 18,
+                    left: 4,
+                    bottom: -20,
+                    child: Container(width: 1, color: MpColors.border),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  sub,
+                  style: const TextStyle(fontSize: 11, color: MpColors.text3),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _timeStr(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String _title() {
+    final device = alarm.originatorDisplayName ??
+        alarm.originatorName ??
+        alarm.originator.id ?? '';
+    if (device.isEmpty) return alarm.type;
+    return '$device — ${alarm.type}';
+  }
+
+  String _subtitle() {
+    final parts = <String>[_severityLabel(alarm.severity)];
+    if (alarm.cleared) {
+      parts.add('Đã xóa');
+    } else if (alarm.acknowledged) {
+      parts.add('Đã xác nhận');
+    } else {
+      parts.add('Chưa xác nhận');
+    }
+    return parts.join(' · ');
+  }
+
+  Color _severityColor(AlarmSeverity s) => switch (s) {
+        AlarmSeverity.CRITICAL => MpColors.red,
+        AlarmSeverity.MAJOR => MpColors.red,
+        AlarmSeverity.MINOR => MpColors.amber,
+        AlarmSeverity.WARNING => MpColors.amber,
+        AlarmSeverity.INDETERMINATE => MpColors.text3,
+      };
+
+  String _severityLabel(AlarmSeverity s) => switch (s) {
+        AlarmSeverity.CRITICAL => 'Nghiêm trọng',
+        AlarmSeverity.MAJOR => 'Cao',
+        AlarmSeverity.MINOR => 'Trung bình',
+        AlarmSeverity.WARNING => 'Cảnh báo',
+        AlarmSeverity.INDETERMINATE => 'Không xác định',
+      };
+}
 
 // ─── Filter chip ──────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.active, required this.onTap});
+  const _FilterChip(
+      {required this.label, required this.active, required this.onTap});
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -171,142 +393,6 @@ class _FilterChip extends StatelessWidget {
             color: active ? MpColors.bg : MpColors.text2,
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Timeline event ───────────────────────────────────────────────────────────
-
-class _ActEvent extends StatelessWidget {
-  const _ActEvent({
-    required this.time,
-    required this.dotColor,
-    required this.title,
-    this.meta,
-    this.showThumb = false,
-    this.isLast = false,
-  });
-
-  final String time;
-  final Color dotColor;
-  final String title;
-  final String? meta;
-  final bool showThumb;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Time column
-          SizedBox(
-            width: 46,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                time,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: MpColors.text3,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Dot + connector line
-          SizedBox(
-            width: 10,
-            child: Stack(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(top: 4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: dotColor,
-                    border: Border.all(color: MpColors.bg, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: dotColor.withValues(alpha: 0.2),
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isLast)
-                  Positioned(
-                    top: 18,
-                    left: 4,
-                    bottom: -20,
-                    child: Container(
-                      width: 1,
-                      color: MpColors.border,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: MpColors.text,
-                    height: 1.35,
-                  ),
-                ),
-                if (meta != null) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      if (showThumb) ...[
-                        Container(
-                          width: 40,
-                          height: 40,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A18),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: MpColors.border, width: 0.5),
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            size: 14,
-                            color: Color(0x80FFFFFF),
-                          ),
-                        ),
-                      ],
-                      Flexible(
-                        child: Text(
-                          meta!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: MpColors.text3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_history_view.dart';
+import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/device_info_page.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/ac_control.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/air_quality_view.dart';
 import 'package:thingsboard_app/modules/smarthome/device_detail/presentation/types/camera_view.dart';
@@ -32,7 +33,6 @@ import 'package:thingsboard_app/modules/smarthome/profile_metadata/presentation/
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
-import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -143,51 +143,6 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
   }) =>
       _control.sendTwoWayRpc(widget.device.id, method, params, timeout: timeout);
 
-  Future<void> _deleteDevice() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MpColors.bg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Xóa khỏi nhà',
-            style: TextStyle(
-                color: MpColors.text, fontWeight: FontWeight.w600)),
-        content: Text(
-          'Bỏ "${widget.device.displayName}" khỏi nhà của bạn?\n'
-          'Thiết bị sẽ ngừng hiển thị nhưng dữ liệu không bị xóa khỏi máy chủ.',
-          style: const TextStyle(color: MpColors.text2, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa',
-                style: TextStyle(
-                    color: MpColors.red, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    try {
-      final svc = HomeService();
-      final gatewayId = await svc.findGatewayForDevice(widget.device.id);
-      await svc.deleteDevice(widget.device.id, gatewayId: gatewayId);
-      ref.invalidate(devicesInRoomProvider);
-      ref.invalidate(devicesInHomeProvider);
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi xóa thiết bị: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _reloadProfile() async {
     final profileId = widget.device.deviceProfileId ?? '';
     if (profileId.isEmpty) return;
@@ -289,24 +244,13 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage>
         centerTitle: true,
         actions: [
           _OnlineBadge(isOnline: _isOnline),
-          PopupMenuButton<String>(
-            color: MpColors.surface,
-            onSelected: (v) {
-              if (v == 'delete') _deleteDevice();
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_outline, color: MpColors.red, size: 20),
-                    SizedBox(width: 10),
-                    Text('Xóa khỏi nhà',
-                        style: TextStyle(color: MpColors.red)),
-                  ],
-                ),
+          IconButton(
+            icon: const Icon(Icons.more_horiz, color: MpColors.text),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DeviceInfoPage(device: widget.device),
               ),
-            ],
+            ),
           ),
         ],
         bottom: TabBar(
