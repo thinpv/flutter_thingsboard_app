@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/action_def.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/alert_template.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/automation_caps.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/ui_hints.dart';
@@ -20,6 +21,7 @@ class ProfileMetadata {
     this.automation,
     this.uiHints,
     this.i18n,
+    this.alertTemplates = const [],
   });
 
   /// Phiên bản schema. Hiện tại = 1.
@@ -49,6 +51,10 @@ class ProfileMetadata {
 
   /// Bản dịch theo locale: {'vi': {'name': '...'}, 'en': {...}}.
   final Map<String, Map<String, String>>? i18n;
+
+  /// Danh sách cảnh báo khả dụng cho thiết bị (UC1).
+  /// Spec: NOTIFICATION_SYSTEM.md §4.1.1.
+  final List<AlertTemplate> alertTemplates;
 
   /// Trả về true nếu metadata này là rỗng (fallback, chưa có description từ backend).
   bool get isEmpty => states.isEmpty && uiType == 'auto' && icon == null;
@@ -88,6 +94,10 @@ class ProfileMetadata {
               .map((k, v) => MapEntry(k, v as String)),
         ),
       ),
+      alertTemplates: (json['alertTemplates'] as List<dynamic>?)
+              ?.map((e) => AlertTemplate.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -122,6 +132,8 @@ class ProfileMetadata {
         if (uiHints != null) 'uiHints': uiHints!.toJson(),
         if (i18n != null)
           'i18n': i18n!.map((locale, t) => MapEntry(locale, t)),
+        if (alertTemplates.isNotEmpty)
+          'alertTemplates': alertTemplates.map((t) => t.toJson()).toList(),
       };
 
   // ─── i18n helpers ─────────────────────────────────────────────────────────

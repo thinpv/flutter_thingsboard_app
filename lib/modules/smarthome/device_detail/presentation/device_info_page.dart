@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/device_alert/presentation/device_alert_settings_page.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -251,6 +252,13 @@ class _DeviceInfoPageState extends ConsumerState<DeviceInfoPage> {
                     value: _displayName,
                     onTap: _renameDevice,
                   ),
+                  _NavRow(
+                    icon: Icons.notifications_outlined,
+                    label: 'Cảnh báo',
+                    subtitle: 'Bật/tắt cảnh báo cho thiết bị này',
+                    last: true,
+                    onTap: _openAlertSettings,
+                  ),
                 ]),
                 const SizedBox(height: 20),
 
@@ -297,6 +305,28 @@ class _DeviceInfoPageState extends ConsumerState<DeviceInfoPage> {
       const SnackBar(
         content: Text('Đã sao chép'),
         duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  void _openAlertSettings() {
+    final profileId = widget.device.deviceProfileId;
+    if (profileId == null || profileId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không tìm thấy profile cho thiết bị này'),
+        ),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DeviceAlertSettingsPage(
+          deviceId: widget.device.id,
+          deviceName: _displayName,
+          profileId: profileId,
+        ),
       ),
     );
   }
@@ -412,6 +442,65 @@ class _InfoRow extends StatelessWidget {
               const SizedBox(width: 6),
               const Icon(Icons.chevron_right, size: 16, color: MpColors.text3),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavRow extends StatelessWidget {
+  const _NavRow({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    this.last = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          border: last
+              ? null
+              : const Border(
+                  bottom: BorderSide(color: MpColors.border, width: 0.5),
+                ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: MpColors.text2),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: MpColors.text,
+                      )),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: MpColors.text3,
+                      )),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 16, color: MpColors.text3),
           ],
         ),
       ),
