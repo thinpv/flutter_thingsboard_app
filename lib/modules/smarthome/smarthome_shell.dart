@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
 
 class SmartHomeShell extends StatelessWidget {
   const SmartHomeShell({required this.navigationShell, super.key});
@@ -23,14 +26,18 @@ class SmartHomeShell extends StatelessWidget {
   }
 }
 
-class _MpBottomNav extends StatelessWidget {
+class _MpBottomNav extends ConsumerWidget {
   const _MpBottomNav({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
+    final unackAlarms = ref.watch(activeUnackAlarmsCountProvider).valueOrNull ?? 0;
+    final activityBadge = unreadCount + unackAlarms;
+
     return Container(
       decoration: const BoxDecoration(
         color: MpColors.bg,
@@ -62,6 +69,7 @@ class _MpBottomNav extends StatelessWidget {
                 label: 'Hoạt động',
                 selected: currentIndex == 2,
                 onTap: () => onTap(2),
+                badge: activityBadge,
               ),
               _NavItem(
                 icon: Icons.person_outline,
@@ -85,6 +93,7 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badge = 0,
   });
 
   final IconData icon;
@@ -92,6 +101,7 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -102,10 +112,39 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              selected ? activeIcon : icon,
-              size: 22,
-              color: selected ? MpColors.text : MpColors.text3,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  selected ? activeIcon : icon,
+                  size: 22,
+                  color: selected ? MpColors.text : MpColors.text3,
+                ),
+                if (badge > 0)
+                  Positioned(
+                    top: -4,
+                    right: -8,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: MpColors.red,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: MpColors.bg, width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      alignment: Alignment.center,
+                      child: Text(
+                        badge > 99 ? '99+' : '$badge',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 3),
             Text(
