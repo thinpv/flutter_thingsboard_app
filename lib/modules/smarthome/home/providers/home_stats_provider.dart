@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
@@ -15,6 +16,7 @@ class HomeStats {
     this.hum,
     this.totalPowerKw,
     this.fromWeather = false,
+    this.weatherLoading = false,
   });
 
   static const empty = HomeStats();
@@ -23,6 +25,8 @@ class HomeStats {
   final double? hum;
   final double? totalPowerKw;
   final bool fromWeather;
+  /// True while the weather API call is in-flight (no local sensor data).
+  final bool weatherLoading;
 }
 
 // ─── Weather API (Open-Meteo — free, no key needed) ──────────────────────────
@@ -38,12 +42,18 @@ final _weatherProvider =
   Map<String, dynamic>? location;
   try {
     location = await HomeService().fetchHomeLocation(homeId);
-  } catch (_) {
+    debugPrint('[Weather] homeId=$homeId location=$location');
+  } catch (e) {
+    debugPrint('[Weather] fetchHomeLocation error: $e');
     return null;
   }
-  if (location == null) return null;
+  if (location == null) {
+    debugPrint('[Weather] location is null → skip weather');
+    return null;
+  }
   final lat = _toDouble(location['lat']);
   final lng = _toDouble(location['lng']);
+  debugPrint('[Weather] lat=$lat lng=$lng');
   if (lat == null || lng == null) return null;
 
   try {
@@ -53,16 +63,20 @@ final _weatherProvider =
       '&current=temperature_2m,relative_humidity_2m'
       '&forecast_days=1',
     );
+    debugPrint('[Weather] GET $uri');
     final resp = await http.get(uri).timeout(const Duration(seconds: 8));
+    debugPrint('[Weather] status=${resp.statusCode} body=${resp.body.substring(0, resp.body.length.clamp(0, 200))}');
     if (resp.statusCode != 200) return null;
     final json = jsonDecode(resp.body) as Map<String, dynamic>;
     final current = json['current'] as Map<String, dynamic>?;
     if (current == null) return null;
     final t = _toDouble(current['temperature_2m']);
     final h = _toDouble(current['relative_humidity_2m']);
+    debugPrint('[Weather] temp=$t hum=$h');
     if (t == null || h == null) return null;
     return _WeatherData(temp: t, hum: h);
-  } catch (_) {
+  } catch (e) {
+    debugPrint('[Weather] HTTP error: $e');
     return null;
   }
 });
@@ -96,20 +110,29 @@ final homeStatsProvider = Provider.autoDispose<HomeStats>((ref) {
   double? temp, hum;
   double totalPowerW = 0;
 
+  debugPrint('[HomeStats] allDevices=${allDevices.length} types=${allDevices.map((d) => d.effectiveUiType).toList()}');
   for (final d in allDevices) {
     if (_envSensorTypes.contains(d.effectiveUiType)) {
-      temp ??= _toDouble(d.telemetry['temp']);
-      hum ??= _toDouble(d.telemetry['hum']);
+      final t = _toDouble(d.telemetry['temp']);
+      final h = _toDouble(d.telemetry['hum']);
+      debugPrint('[HomeStats] env sensor ${d.name} (${d.effectiveUiType}) temp=$t hum=$h tele=${d.telemetry}');
+      temp ??= t;
+      hum ??= h;
     }
     final p = _toDouble(d.telemetry['power']);
     if (p != null) totalPowerW += p;
   }
+  debugPrint('[HomeStats] aggregated temp=$temp hum=$hum power=$totalPowerW');
 
   // If no sensor → use weather API
   bool fromWeather = false;
+  bool weatherLoading = false;
   if (temp == null || hum == null) {
+    debugPrint('[HomeStats] no sensor data → fetching weather for homeId=$homeId');
     final weather = ref.watch(_weatherProvider(homeId));
-    if (weather.hasValue && weather.value != null) {
+    if (weather.isLoading) {
+      weatherLoading = true;
+    } else if (weather.hasValue && weather.value != null) {
       final w = weather.value!;
       temp ??= w.temp;
       hum ??= w.hum;
@@ -122,6 +145,7 @@ final homeStatsProvider = Provider.autoDispose<HomeStats>((ref) {
     hum: hum,
     totalPowerKw: totalPowerW > 0 ? totalPowerW / 1000 : null,
     fromWeather: fromWeather,
+    weatherLoading: weatherLoading,
   );
 });
 

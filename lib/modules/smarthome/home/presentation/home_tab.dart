@@ -10,6 +10,7 @@ import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/syst
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/profile/presentation/location_page.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
@@ -206,8 +207,15 @@ class _NoHomeView extends ConsumerWidget {
     );
     if (name == null || name.isEmpty) return;
     try {
-      await HomeService().createHome(name);
+      final home = await HomeService().createHome(name);
       ref.invalidate(homesProvider);
+      if (context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LocationPage(homeId: home.id, isSetup: true),
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

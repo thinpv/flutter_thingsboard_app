@@ -30,6 +30,7 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
       children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: Row(
             children: [

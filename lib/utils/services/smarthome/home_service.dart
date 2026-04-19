@@ -124,7 +124,16 @@ class HomeService {
 
   Future<Map<String, dynamic>?> fetchHomeLocation(String homeId) async {
     final attrs = await getServerAttributes(AssetId(homeId), ['location']);
-    return attrs['location'] as Map<String, dynamic>?;
+    final raw = attrs['location'];
+    if (raw == null) return null;
+    if (raw is Map<String, dynamic>) return raw;
+    // TB sometimes returns JSON-object attributes as an encoded String
+    if (raw is String) {
+      try {
+        return jsonDecode(raw) as Map<String, dynamic>?;
+      } catch (_) {}
+    }
+    return null;
   }
 
   // ─── Room ───────────────────────────────────────────────────────────────────

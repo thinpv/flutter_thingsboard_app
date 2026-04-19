@@ -59,7 +59,7 @@ class _MpBottomNav extends ConsumerWidget {
               _NavItem(
                 icon: Icons.auto_awesome_outlined,
                 activeIcon: Icons.auto_awesome,
-                label: 'Kịch bản',
+                label: 'Thông minh',
                 selected: currentIndex == 1,
                 onTap: () => onTap(1),
               ),

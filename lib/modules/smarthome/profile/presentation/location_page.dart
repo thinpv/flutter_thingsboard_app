@@ -4,9 +4,11 @@ import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 class LocationPage extends StatefulWidget {
-  const LocationPage({required this.homeId, super.key});
+  const LocationPage({required this.homeId, this.isSetup = false, super.key});
 
   final String homeId;
+  /// True khi được mở ngay sau khi tạo nhà — hiển thị hint + nút Bỏ qua.
+  final bool isSetup;
 
   @override
   State<LocationPage> createState() => _LocationPageState();
@@ -94,7 +96,18 @@ class _LocationPageState extends State<LocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Vị trí nhà'), elevation: 0),
+      appBar: AppBar(
+        title: Text(widget.isSetup ? 'Xác định vị trí nhà' : 'Vị trí nhà'),
+        elevation: 0,
+        actions: widget.isSetup
+            ? [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Bỏ qua'),
+                ),
+              ]
+            : null,
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -105,6 +118,15 @@ class _LocationPageState extends State<LocationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ── Setup hint ───────────────────────────────────
+                        if (widget.isSetup) ...[
+                          const Text(
+                            'Vị trí nhà dùng để hiển thị thời tiết (nhiệt độ, độ ẩm) khi chưa có cảm biến nào trong nhà.',
+                            style: TextStyle(fontSize: 13, color: MpColors.text2),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
                         // ── Location display ─────────────────────────────
                         Container(
                           width: double.infinity,

@@ -7,6 +7,7 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/providers/automation_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/add_popup_button.dart';
 import 'package:thingsboard_app/utils/services/smarthome/automation_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 
@@ -92,19 +93,7 @@ class _SmartTabState extends ConsumerState<SmartTab>
                     ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: () => _onAdd(context),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: MpColors.surface,
-                        border: Border.all(color: MpColors.border),
-                      ),
-                      child: const Icon(Icons.add, size: 18, color: MpColors.text2),
-                    ),
-                  ),
+                  const SmarthomeAddButton(),
                 ],
               ),
             ),
@@ -299,6 +288,91 @@ class _SceneGridCard extends ConsumerWidget {
   }
 
   Future<void> _execute(BuildContext context) async {
+    final accent = _parseColor(scene.color);
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: MpColors.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: MpColors.text3,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(_iconData(scene.icon), color: Colors.white, size: 26),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                scene.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: MpColors.text,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Xác nhận kích hoạt kịch bản này?',
+                style: TextStyle(fontSize: 13, color: MpColors.text2),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        side: const BorderSide(color: MpColors.border),
+                      ),
+                      child: const Text('Hủy',
+                          style: TextStyle(color: MpColors.text2)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: accent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Thực hiện',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await SceneService().executeScene(scene);
       if (context.mounted) {

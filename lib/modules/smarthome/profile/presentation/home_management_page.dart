@@ -4,6 +4,7 @@ import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/home_detail_page.dart';
+import 'package:thingsboard_app/modules/smarthome/profile/presentation/location_page.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
 class HomeManagementPage extends ConsumerWidget {
@@ -141,8 +142,15 @@ class HomeManagementPage extends ConsumerWidget {
     );
     if (name == null || name.isEmpty) return;
     try {
-      await HomeService().createHome(name);
+      final home = await HomeService().createHome(name);
       ref.invalidate(homesProvider);
+      if (context.mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LocationPage(homeId: home.id, isSetup: true),
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
