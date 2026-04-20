@@ -14,14 +14,77 @@ import 'package:thingsboard_app/modules/smarthome/profile/presentation/location_
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-class HomeTab extends ConsumerWidget {
+class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends ConsumerState<HomeTab> {
+  late final PageController _pageCtrl;
+  bool _pageChanging = false; // tránh vòng lặp sync
+
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  int _indexFor(String? roomId, List<SmarthomeRoom> rooms) {
+    if (roomId == null) return 0;
+    final i = rooms.indexWhere((r) => r.id == roomId);
+    return i < 0 ? 0 : i + 1;
+  }
+
+  void _onPageChanged(int index, List<SmarthomeRoom> rooms) {
+    _pageChanging = true;
+    final newRoomId = index == 0 ? null : rooms[index - 1].id;
+    ref.read(selectedRoomIdProvider.notifier).state = newRoomId;
+    Future.microtask(() => _pageChanging = false);
+  }
+
+  void _animateToIndex(int index) {
+    if (_pageChanging) return;
+    if (!_pageCtrl.hasClients) return;
+    if (_pageCtrl.page?.round() == index) return;
+    _pageCtrl.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  Future<void> _refresh(String homeId, List<SmarthomeRoom> rooms) async {
+    ref.invalidate(roomsProvider);
+    ref.invalidate(devicesInHomeProvider(homeId));
+    for (final r in rooms) {
+      ref.invalidate(devicesInRoomProvider(r.id));
+    }
+    await ref.read(profileMetadataServiceProvider).invalidateAll();
+    ref.invalidate(profileMetadataProvider);
+    ref.invalidate(deviceProfileMetadataProvider);
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedHome = ref.watch(selectedHomeProvider);
-    final rooms = ref.watch(roomsProvider);
+    final roomsAsync = ref.watch(roomsProvider);
     final selectedRoomId = ref.watch(selectedRoomIdProvider);
+    final roomList = roomsAsync.valueOrNull ?? [];
+
+    // Sync PageController khi tab được nhấn
+    final targetIndex = _indexFor(selectedRoomId, roomList);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animateToIndex(targetIndex);
+    });
 
     return Scaffold(
       backgroundColor: MpColors.bg,
@@ -29,10 +92,7 @@ class HomeTab extends ConsumerWidget {
         bottom: false,
         child: Column(
           children: [
-            // ── mPipe header: greeting + home name + avatar ───────────────
             const HomeHeader(),
-
-            // ── System announcement banner (UC3 admin broadcast) ──────────
             const SystemAnnouncementBanner(),
 
             // ── Room tab bar ──────────────────────────────────────────────
@@ -41,7 +101,7 @@ class HomeTab extends ConsumerWidget {
               error: (_, _) => const SizedBox.shrink(),
               data: (home) {
                 if (home == null) return const SizedBox.shrink();
-                return rooms.when(
+                return roomsAsync.when(
                   loading: () => const SizedBox(
                     height: 44,
                     child: Center(
@@ -61,10 +121,9 @@ class HomeTab extends ConsumerWidget {
               },
             ),
 
-            // ── Thin separator ────────────────────────────────────────────
             const Divider(height: 1, color: MpColors.border),
 
-            // ── Main content ──────────────────────────────────────────────
+            // ── PageView content ──────────────────────────────────────────
             Expanded(
               child: selectedHome.when(
                 loading: () => const Center(
@@ -73,33 +132,23 @@ class HomeTab extends ConsumerWidget {
                 error: (e, _) => Center(child: Text('Lỗi: $e')),
                 data: (home) {
                   if (home == null) return const _NoHomeView();
-                  final roomList = rooms.valueOrNull ?? [];
-                  return RefreshIndicator(
-                    color: MpColors.text,
-                    backgroundColor: MpColors.surface,
-                    onRefresh: () async {
-                      ref.invalidate(roomsProvider);
-                      ref.invalidate(devicesInHomeProvider(home.id));
-                      for (final r in roomList) {
-                        ref.invalidate(devicesInRoomProvider(r.id));
-                      }
-                      await ref
-                          .read(profileMetadataServiceProvider)
-                          .invalidateAll();
-                      ref.invalidate(profileMetadataProvider);
-                      ref.invalidate(deviceProfileMetadataProvider);
-                      await Future.delayed(const Duration(milliseconds: 500));
-                    },
-                    child: selectedRoomId == null
-                        ? _AllDevicesView(homeId: home.id)
-                        : _SingleRoomView(
-                            roomId: selectedRoomId,
-                            roomName: roomList
-                                    .where((r) => r.id == selectedRoomId)
-                                    .firstOrNull
-                                    ?.name ??
-                                '',
-                          ),
+                  return PageView(
+                    controller: _pageCtrl,
+                    onPageChanged: (i) => _onPageChanged(i, roomList),
+                    children: [
+                      _AllDevicesView(
+                        homeId: home.id,
+                        rooms: roomList,
+                        onRefresh: () => _refresh(home.id, roomList),
+                      ),
+                      ...roomList.map(
+                        (r) => _SingleRoomView(
+                          roomId: r.id,
+                          roomName: r.name,
+                          onRefresh: () => _refresh(home.id, roomList),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -129,20 +178,12 @@ class _NoHomeView extends ConsumerWidget {
               shape: BoxShape.circle,
               color: MpColors.surfaceAlt,
             ),
-            child: const Icon(
-              Icons.home_outlined,
-              size: 36,
-              color: MpColors.text3,
-            ),
+            child: const Icon(Icons.home_outlined, size: 36, color: MpColors.text3),
           ),
           const SizedBox(height: 20),
           const Text(
             'Chưa có nhà nào',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: MpColors.text,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: MpColors.text),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -160,11 +201,7 @@ class _NoHomeView extends ConsumerWidget {
               ),
               child: const Text(
                 'Thêm nhà mới',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: MpColors.bg,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: MpColors.bg),
               ),
             ),
           ),
@@ -179,8 +216,7 @@ class _NoHomeView extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: MpColors.bg,
-        title: const Text('Thêm nhà mới',
-            style: TextStyle(color: MpColors.text)),
+        title: const Text('Thêm nhà mới', style: TextStyle(color: MpColors.text)),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -194,8 +230,7 @@ class _NoHomeView extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy',
-                style: TextStyle(color: MpColors.text2)),
+            child: const Text('Hủy', style: TextStyle(color: MpColors.text2)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: MpColors.text),
@@ -211,9 +246,7 @@ class _NoHomeView extends ConsumerWidget {
       ref.invalidate(homesProvider);
       if (context.mounted) {
         await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => LocationPage(homeId: home.id, isSetup: true),
-          ),
+          MaterialPageRoute(builder: (_) => LocationPage(homeId: home.id, isSetup: true)),
         );
       }
     } catch (e) {
@@ -226,120 +259,116 @@ class _NoHomeView extends ConsumerWidget {
   }
 }
 
-// ─── "Tất cả" — scene strip + metrics + all room device sections ──────────────
+// ─── "Tất cả" page ────────────────────────────────────────────────────────────
 
 class _AllDevicesView extends ConsumerWidget {
-  const _AllDevicesView({required this.homeId});
+  const _AllDevicesView({
+    required this.homeId,
+    required this.rooms,
+    required this.onRefresh,
+  });
 
   final String homeId;
+  final List<SmarthomeRoom> rooms;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roomsAsync = ref.watch(roomsProvider);
     final homeDevices = ref.watch(devicesInHomeProvider(homeId));
-
-    final rooms = roomsAsync.valueOrNull ?? [];
-    final homeList = homeDevices.valueOrNull ?? [];
-
     final loading = roomsAsync.isLoading || homeDevices.isLoading;
+    final homeList = homeDevices.valueOrNull ?? [];
     final empty = !loading && rooms.isEmpty && homeList.isEmpty;
 
-    if (empty) return const _EmptyDevicesView();
+    if (empty) return _EmptyDevicesView(onRefresh: onRefresh);
 
-    return CustomScrollView(
-      slivers: [
-        // Scene strip
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: QuickScenesStrip(),
-          ),
-        ),
-
-        // Loading spinner
-        if (loading)
+    return RefreshIndicator(
+      color: MpColors.text,
+      backgroundColor: MpColors.surface,
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        slivers: [
           const SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: CircularProgressIndicator(color: MpColors.text3),
-              ),
+              padding: EdgeInsets.only(top: 16),
+              child: QuickScenesStrip(),
             ),
           ),
-
-        // Home-direct devices (gateways + unassigned)
-        if (homeList.isNotEmpty) ...[
-          const _SectionHeader(title: 'THIẾT BỊ'),
+          if (loading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: CircularProgressIndicator(color: MpColors.text3)),
+              ),
+            ),
+          if (homeList.isNotEmpty) ...[
+            const _SectionHeader(title: 'THIẾT BỊ'),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: HomeDeviceGrid(homeId: homeId),
+            ),
+          ],
+          ...rooms.map((room) => _RoomSliver(room: room)),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: HomeDeviceGrid(homeId: homeId),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + 24,
+            ),
           ),
         ],
-
-        // Per-room sections
-        ...rooms.map((room) => _RoomSliver(room: room)),
-
-        SliverPadding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).padding.bottom + 24,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
 class _EmptyDevicesView extends StatelessWidget {
-  const _EmptyDevicesView();
+  const _EmptyDevicesView({required this.onRefresh});
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: QuickScenesStrip(),
-          ),
-        ),
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: MpColors.surfaceAlt,
-                  ),
-                  child: const Icon(
-                    Icons.devices_outlined,
-                    size: 28,
-                    color: MpColors.text3,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Chưa có thiết bị nào',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: MpColors.text,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Nhấn + để thêm thiết bị',
-                  style: TextStyle(fontSize: 13, color: MpColors.text3),
-                ),
-              ],
+    return RefreshIndicator(
+      color: MpColors.text,
+      backgroundColor: MpColors.surface,
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: QuickScenesStrip(),
             ),
           ),
-        ),
-      ],
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: MpColors.surfaceAlt,
+                    ),
+                    child: const Icon(Icons.devices_outlined, size: 28, color: MpColors.text3),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Chưa có thiết bị nào',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: MpColors.text),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Nhấn + để thêm thiết bị',
+                    style: TextStyle(fontSize: 13, color: MpColors.text3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -369,7 +398,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Room sliver ──────────────────────────────────────────────────────────────
+// ─── Room sliver (dùng trong "Tất cả") ───────────────────────────────────────
 
 class _RoomSliver extends ConsumerWidget {
   const _RoomSliver({required this.room});
@@ -383,16 +412,12 @@ class _RoomSliver extends ConsumerWidget {
       error: (err, _) => SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Text(
-            '${room.name}: lỗi tải thiết bị',
-            style: const TextStyle(color: MpColors.red, fontSize: 12),
-          ),
+          child: Text('${room.name}: lỗi tải thiết bị',
+              style: const TextStyle(color: MpColors.red, fontSize: 12)),
         ),
       ),
       data: (list) {
-        if (list.isEmpty) {
-          return const SliverToBoxAdapter(child: SizedBox.shrink());
-        }
+        if (list.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
         return SliverMainAxisGroup(
           slivers: [
             _SectionHeader(title: room.name.toUpperCase()),
@@ -411,57 +436,69 @@ class _RoomSliver extends ConsumerWidget {
   }
 }
 
-// ─── Single room view ─────────────────────────────────────────────────────────
+// ─── Single room page ─────────────────────────────────────────────────────────
 
 class _SingleRoomView extends ConsumerWidget {
-  const _SingleRoomView({required this.roomId, required this.roomName});
+  const _SingleRoomView({
+    required this.roomId,
+    required this.roomName,
+    required this.onRefresh,
+  });
+
   final String roomId;
   final String roomName;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final devices = ref.watch(devicesInRoomProvider(roomId));
     return devices.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: MpColors.text3),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator(color: MpColors.text3)),
       error: (e, _) => Center(child: Text('Lỗi: $e')),
       data: (list) {
         if (list.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.devices_outlined,
-                  size: 48,
-                  color: MpColors.text3,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '$roomName chưa có thiết bị',
-                  style: const TextStyle(color: MpColors.text2),
+          return RefreshIndicator(
+            color: MpColors.text,
+            backgroundColor: MpColors.surface,
+            onRefresh: onRefresh,
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.devices_outlined, size: 48, color: MpColors.text3),
+                        const SizedBox(height: 12),
+                        Text('$roomName chưa có thiết bị',
+                            style: const TextStyle(color: MpColors.text2)),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           );
         }
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                MediaQuery.of(context).padding.bottom + 24,
+        return RefreshIndicator(
+          color: MpColors.text,
+          backgroundColor: MpColors.surface,
+          onRefresh: onRefresh,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  16, 16, 16, MediaQuery.of(context).padding.bottom + 24,
+                ),
+                sliver: RoomDeviceGrid(
+                  roomId: roomId,
+                  roomName: roomName,
+                  deviceIds: list.map((d) => d.id).toList(),
+                ),
               ),
-              sliver: RoomDeviceGrid(
-                roomId: roomId,
-                roomName: roomName,
-                deviceIds: list.map((d) => d.id).toList(),
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

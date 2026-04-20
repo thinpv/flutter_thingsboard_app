@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
-import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_provider.dart';
-import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
 
 class SmartHomeShell extends StatelessWidget {
   const SmartHomeShell({required this.navigationShell, super.key});
@@ -26,18 +23,14 @@ class SmartHomeShell extends StatelessWidget {
   }
 }
 
-class _MpBottomNav extends ConsumerWidget {
+class _MpBottomNav extends StatelessWidget {
   const _MpBottomNav({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unreadCount = ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
-    final unackAlarms = ref.watch(activeUnackAlarmsCountProvider).valueOrNull ?? 0;
-    final activityBadge = unreadCount + unackAlarms;
-
+  Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         color: MpColors.bg,
@@ -64,19 +57,11 @@ class _MpBottomNav extends ConsumerWidget {
                 onTap: () => onTap(1),
               ),
               _NavItem(
-                icon: Icons.show_chart_outlined,
-                activeIcon: Icons.show_chart,
-                label: 'Hoạt động',
-                selected: currentIndex == 2,
-                onTap: () => onTap(2),
-                badge: activityBadge,
-              ),
-              _NavItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Cá nhân',
-                selected: currentIndex == 3,
-                onTap: () => onTap(3),
+                selected: currentIndex == 2,
+                onTap: () => onTap(2),
               ),
             ],
           ),

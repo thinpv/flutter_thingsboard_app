@@ -8,44 +8,90 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.d
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-/// mPipe-style horizontal room tab bar with underline indicator.
-class RoomSelector extends ConsumerWidget {
+/// Thanh chọn phòng:
+///   - "Tất cả" cố định bên trái (không cuộn)
+///   - Danh sách phòng cuộn ngang độc lập
+///   - Khi phòng được chọn, tự scroll vào vùng nhìn thấy
+class RoomSelector extends ConsumerStatefulWidget {
   const RoomSelector({required this.rooms, super.key});
 
   final List<SmarthomeRoom> rooms;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoomSelector> createState() => _RoomSelectorState();
+}
+
+class _RoomSelectorState extends ConsumerState<RoomSelector> {
+  final _scrollCtrl = ScrollController();
+  final _roomKeys = <String, GlobalKey>{};
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _ensureVisible(String? roomId) {
+    if (roomId == null) return;
+    final key = _roomKeys[roomId];
+    if (key?.currentContext == null) return;
+    Scrollable.ensureVisible(
+      key!.currentContext!,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedRoomId = ref.watch(selectedRoomIdProvider);
+
+    // Ensure keys exist for all rooms
+    for (final room in widget.rooms) {
+      _roomKeys.putIfAbsent(room.id, GlobalKey.new);
+    }
+
+    // Auto-scroll selected room into view after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureVisible(selectedRoomId));
 
     return Container(
       color: MpColors.bg,
       height: 44,
       child: Row(
         children: [
+          // ── "Tất cả" — cố định bên trái ─────────────────────────────
+          _RoomTab(
+            label: 'Tất cả',
+            selected: selectedRoomId == null,
+            onTap: () => ref.read(selectedRoomIdProvider.notifier).state = null,
+            leftPad: 20,
+          ),
+
+          // Divider ngăn cách phần cố định và phần cuộn
+          Container(width: 0.5, height: 20, color: MpColors.border),
+
+          // ── Danh sách phòng cuộn ngang ──────────────────────────────
           Expanded(
-            child: ListView(
+            child: ListView.builder(
+              controller: _scrollCtrl,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                _RoomTab(
-                  label: 'Tất cả',
-                  selected: selectedRoomId == null,
+              padding: const EdgeInsets.only(left: 4, right: 8),
+              itemCount: widget.rooms.length,
+              itemBuilder: (_, i) {
+                final room = widget.rooms[i];
+                return _RoomTab(
+                  key: _roomKeys[room.id],
+                  label: room.name,
+                  selected: selectedRoomId == room.id,
                   onTap: () =>
-                      ref.read(selectedRoomIdProvider.notifier).state = null,
-                ),
-                ...rooms.map(
-                  (room) => _RoomTab(
-                    label: room.name,
-                    selected: selectedRoomId == room.id,
-                    onTap: () =>
-                        ref.read(selectedRoomIdProvider.notifier).state =
-                            room.id,
-                  ),
-                ),
-              ],
+                      ref.read(selectedRoomIdProvider.notifier).state = room.id,
+                );
+              },
             ),
           ),
+
+          // ── Nút quản lý phòng ────────────────────────────────────────
           Container(width: 0.5, height: 20, color: MpColors.border),
           IconButton(
             icon: const Icon(Icons.tune, size: 16, color: MpColors.text3),
@@ -54,7 +100,7 @@ class RoomSelector extends ConsumerWidget {
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
-              builder: (_) => _RoomManagementSheet(rooms: rooms),
+              builder: (_) => _RoomManagementSheet(rooms: widget.rooms),
             ),
           ),
         ],
@@ -68,18 +114,21 @@ class _RoomTab extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.leftPad = 0,
+    super.key,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final double leftPad;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(right: 4),
+        margin: EdgeInsets.only(left: leftPad, right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border(
@@ -153,7 +202,6 @@ class _RoomManagementSheet extends ConsumerWidget {
                     ),
                     ...unassigned.map(
                       (dev) => _UnassignedDeviceTile(
-
                         device: dev,
                         rooms: rooms,
                         homeId: homeId,

@@ -81,6 +81,11 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                _ColorTile(
+                  currentHex: _home.accentColor,
+                  onPick: (hex) => _saveAccentColor(hex),
+                ),
               ],
             ),
           ),
@@ -124,6 +129,19 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveAccentColor(String? hex) async {
+    try {
+      await HomeService().saveHomeAccentColor(_home.id, hex);
+      setState(() => _home = _home.copyWith(accentColor: hex ?? ''));
+      ref.invalidate(homesProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Không thể lưu màu: $e')));
+      }
+    }
   }
 
   Future<void> _renamHome(BuildContext context) async {
@@ -217,6 +235,234 @@ class _HomeDetailPageState extends ConsumerState<HomeDetailPage> {
     }
   }
 }
+
+// ─── Preset accent colors ─────────────────────────────────────────────────────
+
+const _kPresets = [
+  null,      // mặc định (reset)
+  '#E53935', // đỏ
+  '#F4511E', // cam đỏ
+  '#D81B60', // hồng đậm
+  '#8E24AA', // tím
+  '#3949AB', // chàm
+  '#1E88E5', // xanh dương
+  '#00897B', // xanh ngọc
+  '#43A047', // xanh lá
+  '#FB8C00', // cam
+  '#6D4C41', // nâu
+  '#546E7A', // xám xanh
+];
+
+class _ColorTile extends StatelessWidget {
+  const _ColorTile({required this.currentHex, required this.onPick});
+  final String? currentHex;
+  final void Function(String? hex) onPick;
+
+  Color? get _current {
+    if (currentHex == null || currentHex!.isEmpty) return null;
+    try {
+      return Color(int.parse(currentHex!.replaceFirst('#', 'FF'), radix: 16));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _current;
+    return InkWell(
+      onTap: () => _showPicker(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: MpColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MpColors.border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: MpColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.palette_outlined,
+                  size: 18, color: MpColors.violet),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Tông màu',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text),
+              ),
+            ),
+            // Dot hiển thị màu hiện tại
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color ?? MpColors.border,
+                border: Border.all(color: MpColors.border, width: 1.5),
+              ),
+              child: color == null
+                  ? const Icon(Icons.close, size: 12, color: MpColors.text3)
+                  : null,
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, size: 18, color: MpColors.text3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ColorPickerSheet(
+        currentHex: currentHex,
+        onPick: (hex) {
+          Navigator.pop(context);
+          onPick(hex);
+        },
+      ),
+    );
+  }
+}
+
+class _ColorPickerSheet extends StatefulWidget {
+  const _ColorPickerSheet({required this.currentHex, required this.onPick});
+  final String? currentHex;
+  final void Function(String? hex) onPick;
+
+  @override
+  State<_ColorPickerSheet> createState() => _ColorPickerSheetState();
+}
+
+class _ColorPickerSheetState extends State<_ColorPickerSheet> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.currentHex;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+        left: 20,
+        right: 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: MpColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Text(
+            'Chọn tông màu',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: MpColors.text),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Áp dụng cho header, thanh tiến trình và trạng thái bật',
+            style: TextStyle(fontSize: 12, color: MpColors.text3),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: _kPresets.map((hex) {
+              final isSelected = hex == _selected ||
+                  (hex == null &&
+                      (_selected == null || _selected!.isEmpty));
+              Color dotColor;
+              if (hex == null) {
+                dotColor = MpColors.surfaceAlt;
+              } else {
+                try {
+                  dotColor = Color(
+                      int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
+                } catch (_) {
+                  dotColor = MpColors.border;
+                }
+              }
+              return GestureDetector(
+                onTap: () => setState(() => _selected = hex),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                    border: Border.all(
+                      color: isSelected ? MpColors.text : MpColors.border,
+                      width: isSelected ? 3 : 1.5,
+                    ),
+                  ),
+                  child: hex == null
+                      ? const Icon(Icons.block,
+                          size: 20, color: MpColors.text3)
+                      : isSelected
+                          ? const Icon(Icons.check,
+                              size: 20, color: Colors.white)
+                          : null,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => widget.onPick(_selected),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MpColors.text,
+                foregroundColor: MpColors.bg,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Áp dụng',
+                  style: TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Detail tile ──────────────────────────────────────────────────────────────
 
 class _DetailTile extends StatelessWidget {
   const _DetailTile({

@@ -93,6 +93,8 @@ class _SmartTabState extends ConsumerState<SmartTab>
                     ),
                   ),
                   const Spacer(),
+                  const SmarthomeBellButton(),
+                  const SizedBox(width: 8),
                   const SmarthomeAddButton(),
                 ],
               ),

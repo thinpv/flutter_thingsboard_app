@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
-import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_stats_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/add_popup_button.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -21,9 +20,10 @@ class HomeHeader extends ConsumerWidget {
     final homes = ref.watch(homesProvider);
     final selectedHome = ref.watch(selectedHomeProvider);
     final stats = ref.watch(homeStatsProvider);
+    final accent = ref.watch(homeAccentColorProvider);
 
     final hour = DateTime.now().hour;
-    final gradient = _skyGradient(hour, stats.weatherCode);
+    final gradient = _skyGradient(hour, stats.weatherCode, accent);
 
     return Container(
       decoration: BoxDecoration(gradient: gradient),
@@ -53,29 +53,20 @@ class HomeHeader extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    homes.when(
-                      loading: () => Text(
-                        'SmartHome',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -0.3,
-                          color: _textColor(hour),
-                        ),
-                      ),
-                      error: (_, _) => Text('SmartHome',
-                          style: TextStyle(fontSize: 22, color: _textColor(hour))),
-                      data: (list) {
-                        final current = selectedHome.valueOrNull;
-                        final name = current?.name ?? 'SmartHome';
-                        final hasMany = list.length > 1;
+                    Builder(builder: (ctx) {
+                      final list = homes.valueOrNull ?? [];
+                      final current = selectedHome.valueOrNull;
+                      final name = current?.name ?? 'SmartHome';
+                      final showPicker = list.length > 1;
 
-                        return GestureDetector(
-                          onTap: hasMany
-                              ? () => _showHomePicker(
-                                  context, ref, list, current?.id ?? '')
-                              : null,
+                      return GestureDetector(
+                        onTap: showPicker
+                            ? () => _showHomePicker(ctx, ref, list, current?.id ?? '')
+                            : null,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
                           child: Row(
+                            key: ValueKey(current?.id ?? ''),
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Flexible(
@@ -90,7 +81,7 @@ class HomeHeader extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (hasMany) ...[
+                              if (showPicker) ...[
                                 const SizedBox(width: 4),
                                 Icon(
                                   Icons.keyboard_arrow_down_rounded,
@@ -100,14 +91,18 @@ class HomeHeader extends ConsumerWidget {
                               ],
                             ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+
+              const SmarthomeBellButton(),
+
+              const SizedBox(width: 8),
 
               const SmarthomeAddButton(),
             ],
@@ -137,44 +132,36 @@ class HomeHeader extends ConsumerWidget {
     return const Color(0xFFB0B8D0);
   }
 
-  LinearGradient _skyGradient(int hour, int? code) {
-    // Mưa / mây dày → xám xanh
+  LinearGradient _skyGradient(int hour, int? code, Color? accent) {
+    Color top;
+    Color bottom;
+
     if (code != null && code >= 51) {
-      return const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFCDD3DE), Color(0xFFF5F5F7)],
-      );
+      top = const Color(0xFFCDD3DE);
+      bottom = const Color(0xFFF5F5F7);
+    } else if (hour >= 6 && hour < 11) {
+      top = const Color(0xFFFFF0C8);
+      bottom = const Color(0xFFF5F5F7);
+    } else if (hour >= 11 && hour < 17) {
+      top = const Color(0xFFCCE8F8);
+      bottom = const Color(0xFFF5F5F7);
+    } else if (hour >= 17 && hour < 20) {
+      top = const Color(0xFFFFD0A0);
+      bottom = const Color(0xFFF5F5F7);
+    } else {
+      top = const Color(0xFF1E2A48);
+      bottom = const Color(0xFF2A2A3A);
     }
-    if (hour >= 6 && hour < 11) {
-      // Buổi sáng — vàng nhạt ấm áp
-      return const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFF0C8), Color(0xFFF5F5F7)],
-      );
+
+    // Blend accent vào top color ở 30% opacity
+    if (accent != null) {
+      top = Color.lerp(top, accent.withOpacity(1), 0.18) ?? top;
     }
-    if (hour >= 11 && hour < 17) {
-      // Buổi trưa / chiều — xanh trời
-      return const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFCCE8F8), Color(0xFFF5F5F7)],
-      );
-    }
-    if (hour >= 17 && hour < 20) {
-      // Hoàng hôn — cam hồng
-      return const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFD0A0), Color(0xFFF5F5F7)],
-      );
-    }
-    // Ban đêm — xanh tím tối
-    return const LinearGradient(
+
+    return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color(0xFF1E2A48), Color(0xFF2A2A3A)],
+      colors: [top, bottom],
     );
   }
 
@@ -219,6 +206,7 @@ class _StatsBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(homeStatsProvider);
+    final accent = ref.watch(homeAccentColorProvider);
     final cells = <Widget>[];
 
     if (stats.temp != null) {
@@ -235,6 +223,7 @@ class _StatsBar extends ConsumerWidget {
                 : t < 32
                     ? const Color(0xFFFFA726)
                     : const Color(0xFFEF5350),
+        barAccent: accent,
         fraction: (t.clamp(0, 50) / 50),
         pulse: t > 38,
       ));
@@ -260,6 +249,7 @@ class _StatsBar extends ConsumerWidget {
             : h < 70
                 ? const Color(0xFF42A5F5)
                 : const Color(0xFF1565C0),
+        barAccent: accent,
         fraction: h / 100,
         pulse: false,
       ));
@@ -285,6 +275,7 @@ class _StatsBar extends ConsumerWidget {
             : p < 2
                 ? const Color(0xFFFFA726)
                 : const Color(0xFFEF5350),
+        barAccent: accent,
         fraction: (p.clamp(0, 5) / 5),
         pulse: p > 3,
       ));
@@ -324,6 +315,7 @@ class _StatCell extends StatefulWidget {
     required this.value,
     required this.icon,
     this.accentColor,
+    this.barAccent,
     this.fraction,
     this.pulse = false,
     this.muted = false,
@@ -333,7 +325,8 @@ class _StatCell extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
-  final Color? accentColor;
+  final Color? accentColor;  // icon/visual color (data-driven)
+  final Color? barAccent;    // level bar color override (from home accent)
   final double? fraction;
   final bool pulse;
   final bool muted;
@@ -437,7 +430,7 @@ class _StatCellState extends State<_StatCell>
           ),
         ),
         if (widget.fraction != null && !widget.muted)
-          _LevelBar(fraction: widget.fraction!, color: color),
+          _LevelBar(fraction: widget.fraction!, color: widget.barAccent ?? color),
       ],
     );
   }

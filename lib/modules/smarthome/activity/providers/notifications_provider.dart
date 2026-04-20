@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -8,12 +9,20 @@ const _kDeliveryMethod = 'MOBILE_APP';
 /// Latest 100 push notifications for the current user.
 final notificationsProvider =
     FutureProvider.autoDispose<List<PushNotification>>((ref) async {
+  debugPrint('[Notifications] Fetching...');
   final client = getIt<ITbClientService>().client;
-  final query = PushNotificationQuery(
-    TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC)),
-  );
-  final page = await client.getNotificationService().getNotifications(query);
-  return page.data;
+  try {
+    final query = PushNotificationQuery(
+      TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC)),
+    );
+    final page = await client.getNotificationService().getNotifications(query);
+    debugPrint('[Notifications] OK — count=${page.data.length}, '
+        'unread=${page.data.where((n) => n.status == PushNotificationStatus.SENT).length}');
+    return page.data;
+  } catch (e, st) {
+    debugPrint('[Notifications] ERROR: $e\n$st');
+    rethrow;
+  }
 });
 
 /// Unread count for bottom-nav badge.

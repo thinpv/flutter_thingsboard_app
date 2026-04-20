@@ -1,6 +1,12 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/presentation/activity_tab.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
@@ -8,6 +14,88 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.d
 import 'package:thingsboard_app/modules/smarthome/smart/presentation/automation_edit_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/add_device_page.dart';
 import 'package:thingsboard_app/modules/smarthome/provisioning/presentation/claim_device_page.dart';
+
+/// Nút chuông dùng chung ở Home tab và Smart tab.
+/// Lắng nghe FCM foreground để cập nhật badge tức thì.
+class SmarthomeBellButton extends ConsumerStatefulWidget {
+  const SmarthomeBellButton({super.key});
+
+  @override
+  ConsumerState<SmarthomeBellButton> createState() => _SmarthomeBellButtonState();
+}
+
+class _SmarthomeBellButtonState extends ConsumerState<SmarthomeBellButton> {
+  StreamSubscription<RemoteMessage>? _fcmSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Khi có push foreground → cập nhật badge và danh sách ngay lập tức
+    _fcmSub = FirebaseMessaging.onMessage.listen((_) {
+      ref.invalidate(unreadNotificationsCountProvider);
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(activeUnackAlarmsCountProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _fcmSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = ref.watch(unreadNotificationsCountProvider).valueOrNull ?? 0;
+    final unack = ref.watch(activeUnackAlarmsCountProvider).valueOrNull ?? 0;
+    final badge = unread + unack;
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => const ActivityTab()),
+      ),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: MpColors.surface,
+          border: Border.all(color: MpColors.border),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.notifications_outlined, size: 18, color: MpColors.text2),
+            if (badge > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: MpColors.red,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: MpColors.bg, width: 1.5),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 14),
+                  alignment: Alignment.center,
+                  child: Text(
+                    badge > 99 ? '99+' : '$badge',
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Nút + dùng chung ở Home tab và Smart tab.
 /// Hiện dropdown ngay bên dưới nút với 3 lựa chọn:

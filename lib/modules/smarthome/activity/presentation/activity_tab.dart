@@ -14,7 +14,7 @@ class ActivityTab extends ConsumerStatefulWidget {
 }
 
 class _ActivityTabState extends ConsumerState<ActivityTab>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   bool _initialTabResolved = false;
 
@@ -22,12 +22,32 @@ class _ActivityTabState extends ConsumerState<ActivityTab>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+    // Đảm bảo dữ liệu mới nhất khi mở màn hình (từ shell tab → push nav)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Khi app từ background về foreground → refresh
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  void _refresh() {
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadNotificationsCountProvider);
+    ref.invalidate(activeUnackAlarmsCountProvider);
+    // Invalidate tất cả variants của family
+    for (final p in AlarmPeriod.values) {
+      ref.invalidate(alarmsProvider(p));
+    }
   }
 
   /// Default tab logic: tab Cảnh báo nếu có alarm ACTIVE chưa ack, ngược lại
@@ -56,16 +76,29 @@ class _ActivityTabState extends ConsumerState<ActivityTab>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
-              child: Text(
-                'Hoạt động',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: -0.22,
-                  color: MpColors.text,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 20, 6),
+              child: Row(
+                children: [
+                  // Back button khi được push từ bell icon
+                  if (Navigator.of(context).canPop())
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18, color: MpColors.text),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    ),
+                  const Text(
+                    'Hoạt động',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.22,
+                      color: MpColors.text,
+                    ),
+                  ),
+                ],
               ),
             ),
             Container(

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:thingsboard_app/config/routes/v2/routes_config/routes/smarthome_routes.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/modules/smarthome/activity/presentation/activity_tab.dart';
 import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
 
 /// Banner cho UC3 — admin broadcast (firmware update, bảo trì, khuyến mãi).
@@ -27,9 +26,9 @@ class SystemAnnouncementBanner extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            context.go(SmarthomeRoutes.activity);
-          },
+          onTap: () => Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(builder: (_) => const ActivityTab()),
+          ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
             decoration: BoxDecoration(

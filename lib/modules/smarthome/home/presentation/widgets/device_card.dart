@@ -11,6 +11,7 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_room.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/device_control_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
@@ -61,6 +62,7 @@ class DeviceCard extends ConsumerWidget {
     }
 
     final colors = MpColors.deviceColors(device.effectiveUiType, isOn);
+    final accent = ref.watch(homeAccentColorProvider);
     // Dark card variant — only for "on" switchable devices (matches design)
     final dark = isOn && showToggle;
 
@@ -69,10 +71,12 @@ class DeviceCard extends ConsumerWidget {
     final subColor = dark
         ? const Color(0x8CFAFAF7) // ~55% white
         : MpColors.text3;
+    // Accent color thay amber khi bật (nếu home có tông màu)
+    final onColor = accent ?? MpColors.amber;
     final iconBgColor = dark
-        ? const Color(0x2EBA7517) // amber 18% on dark
+        ? onColor.withOpacity(0.18)
         : colors.tint;
-    final iconFgColor = dark ? MpColors.amber : colors.fg;
+    final iconFgColor = dark ? onColor : colors.fg;
 
     Future<void> toggle() async {
       try {

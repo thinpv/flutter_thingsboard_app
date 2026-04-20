@@ -13,17 +13,15 @@ class AlarmsSubTab extends ConsumerStatefulWidget {
 
 class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
     with AutomaticKeepAliveClientMixin {
-  AlarmPeriod _period = AlarmPeriod.today;
+  AlarmPeriod _period = AlarmPeriod.all;
 
   @override
   bool get wantKeepAlive => true;
 
-  AlarmTimeRange get _range => alarmRangeForPeriod(_period);
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final alarmsAsync = ref.watch(alarmsProvider(_range));
+    final alarmsAsync = ref.watch(alarmsProvider(_period));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,9 +33,9 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
           child: Row(
             children: [
               _Chip(
-                label: 'Hôm nay',
-                active: _period == AlarmPeriod.today,
-                onTap: () => setState(() => _period = AlarmPeriod.today),
+                label: 'Tất cả',
+                active: _period == AlarmPeriod.all,
+                onTap: () => setState(() => _period = AlarmPeriod.all),
               ),
               const SizedBox(width: 6),
               _Chip(
@@ -58,7 +56,7 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
           child: RefreshIndicator(
             color: MpColors.text,
             backgroundColor: MpColors.surface,
-            onRefresh: () async => ref.invalidate(alarmsProvider(_range)),
+            onRefresh: () async => ref.invalidate(alarmsProvider(_period)),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [

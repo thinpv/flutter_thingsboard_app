@@ -95,7 +95,15 @@ class HomeService {
           PageLink(100),
           type: _homeType,
         );
-    return pageData.data.map(SmarthomeHome.fromAsset).toList();
+    final homes = pageData.data.map(SmarthomeHome.fromAsset).toList();
+    final colors = await Future.wait(
+      homes.map((h) => fetchHomeAccentColor(h.id).catchError((_) => null)),
+    );
+    return List.generate(
+      homes.length,
+      (i) => SmarthomeHome(
+          id: homes[i].id, name: homes[i].name, accentColor: colors[i]),
+    );
   }
 
   Future<SmarthomeHome> createHome(String name) async {
@@ -114,6 +122,18 @@ class HomeService {
 
   Future<void> deleteHome(String homeId) async {
     await _mw('DELETE', '/assets/$homeId');
+  }
+
+  Future<void> saveHomeAccentColor(String homeId, String? hexColor) async {
+    await saveServerAttributes(
+        AssetId(homeId), {'accentColor': hexColor ?? ''});
+  }
+
+  Future<String?> fetchHomeAccentColor(String homeId) async {
+    final attrs = await getServerAttributes(AssetId(homeId), ['accentColor']);
+    final v = attrs['accentColor'];
+    if (v == null || v == '') return null;
+    return v as String?;
   }
 
   Future<void> saveHomeLocation(String homeId, double lat, double lng) async {
