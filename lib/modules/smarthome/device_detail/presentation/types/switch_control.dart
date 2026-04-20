@@ -76,6 +76,22 @@ class SwitchControl extends StatelessWidget {
               ),
           ],
         ),
+        const SizedBox(height: 16),
+
+        // ── Đảo trạng thái ──
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final updates = <String, dynamic>{};
+              for (final g in gangs) {
+                updates[g.key] = _gangOn(g.key) ? 0 : 1;
+              }
+              onRpc('setValue', updates);
+            },
+            icon: const Icon(Icons.swap_vert_rounded),
+            label: const Text('Đảo trạng thái'),
+          ),
+        ),
 
         // ── Power info ──
         if (telemetry['power'] != null || telemetry['energy'] != null) ...[

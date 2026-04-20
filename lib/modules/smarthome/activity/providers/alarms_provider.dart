@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
@@ -34,10 +35,13 @@ AlarmTimeRange alarmRangeForPeriod(AlarmPeriod period) {
   return AlarmTimeRange(start, end);
 }
 
+// GET /api/alarm/ASSET/{id} — accessible to CUSTOMER_USER.
 final alarmsProvider = FutureProvider.autoDispose
     .family<List<AlarmInfo>, AlarmTimeRange>((ref, range) async {
+  final home = ref.watch(selectedHomeProvider).valueOrNull;
+  if (home == null) return [];
   final client = getIt<ITbClientService>().client;
-  final query = AlarmQueryV2(
+  final query = AlarmQuery(
     TimePageLink(
       100,
       0,
@@ -46,18 +50,22 @@ final alarmsProvider = FutureProvider.autoDispose
       range.startTime,
       range.endTime,
     ),
+    affectedEntityId: AssetId(home.id),
   );
-  final page = await client.getAlarmService().getAllAlarmsV2(query);
+  final page = await client.getAlarmService().getAlarms(query);
   return page.data;
 });
 
-/// Count of ACTIVE alarms not yet acknowledged — used for bottom-nav badge.
+/// Count of ACTIVE unacked alarms — used for bottom-nav badge.
 final activeUnackAlarmsCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final home = ref.watch(selectedHomeProvider).valueOrNull;
+  if (home == null) return 0;
   final client = getIt<ITbClientService>().client;
-  final query = AlarmQueryV2(
+  final query = AlarmQuery(
     TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC)),
-    statusList: [AlarmSearchStatus.UNACK],
+    affectedEntityId: AssetId(home.id),
+    searchStatus: AlarmSearchStatus.UNACK,
   );
-  final page = await client.getAlarmService().getAllAlarmsV2(query);
+  final page = await client.getAlarmService().getAlarms(query);
   return page.data.where((a) => !a.cleared).length;
 });

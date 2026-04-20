@@ -10,7 +10,7 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.d
 /// mPipe-style home header:
 ///   "Chào buổi sáng"  (greeting, muted)
 ///   "Nhà của Minh ▾"  (home name + dropdown caret)
-///   [avatar circle]   (right side)
+///   [weather icon]    (right side, decorative)
 ///   Stats bar: Nhiệt độ · Độ ẩm · Điện
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -19,9 +19,13 @@ class HomeHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homes = ref.watch(homesProvider);
     final selectedHome = ref.watch(selectedHomeProvider);
+    final stats = ref.watch(homeStatsProvider);
+
+    final hour = DateTime.now().hour;
+    final gradient = _skyGradient(hour, stats.weatherCode);
 
     return Container(
-      color: MpColors.bg,
+      decoration: BoxDecoration(gradient: gradient),
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 8,
         left: 20,
@@ -41,26 +45,25 @@ class HomeHeader extends ConsumerWidget {
                   children: [
                     Text(
                       _greeting(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: MpColors.text3,
+                        color: _greetingColor(hour),
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     const SizedBox(height: 2),
                     homes.when(
-                      loading: () => const Text(
+                      loading: () => Text(
                         'SmartHome',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w500,
                           letterSpacing: -0.3,
-                          color: MpColors.text,
+                          color: _textColor(hour),
                         ),
                       ),
-                      error: (_, _) => const Text('SmartHome',
-                          style:
-                              TextStyle(fontSize: 22, color: MpColors.text)),
+                      error: (_, _) => Text('SmartHome',
+                          style: TextStyle(fontSize: 22, color: _textColor(hour))),
                       data: (list) {
                         final current = selectedHome.valueOrNull;
                         final name = current?.name ?? 'SmartHome';
@@ -77,21 +80,21 @@ class HomeHeader extends ConsumerWidget {
                               Flexible(
                                 child: Text(
                                   name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w500,
                                     letterSpacing: -0.3,
-                                    color: MpColors.text,
+                                    color: _textColor(hour),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (hasMany) ...[
                                 const SizedBox(width: 4),
-                                const Icon(
+                                Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   size: 18,
-                                  color: MpColors.text3,
+                                  color: _greetingColor(hour),
                                 ),
                               ],
                             ],
@@ -105,8 +108,21 @@ class HomeHeader extends ConsumerWidget {
 
               const SizedBox(width: 12),
 
-              // ── Right: add popup button ───────────────────────────────
-              const SmarthomeAddButton(),
+              // ── Right: weather icon + add button ─────────────────────
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const SmarthomeAddButton(),
+                  if (stats.fromWeather || stats.weatherLoading) ...[
+                    const SizedBox(height: 6),
+                    Icon(
+                      _weatherIcon(stats.weatherCode),
+                      size: 28,
+                      color: _weatherIconColor(hour, stats.weatherCode),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
 
@@ -122,6 +138,75 @@ class HomeHeader extends ConsumerWidget {
     if (h < 12) return 'Chào buổi sáng';
     if (h < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
+  }
+
+  Color _textColor(int hour) {
+    if (hour >= 6 && hour < 21) return MpColors.text;
+    return const Color(0xFFF0F0F8); // sáng hơn ban đêm
+  }
+
+  Color _greetingColor(int hour) {
+    if (hour >= 6 && hour < 21) return MpColors.text3;
+    return const Color(0xFFB0B8D0);
+  }
+
+  LinearGradient _skyGradient(int hour, int? code) {
+    // Mưa / mây dày → xám xanh
+    if (code != null && code >= 51) {
+      return const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFCDD3DE), Color(0xFFF5F5F7)],
+      );
+    }
+    if (hour >= 6 && hour < 11) {
+      // Buổi sáng — vàng nhạt ấm áp
+      return const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFF0C8), Color(0xFFF5F5F7)],
+      );
+    }
+    if (hour >= 11 && hour < 17) {
+      // Buổi trưa / chiều — xanh trời
+      return const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFCCE8F8), Color(0xFFF5F5F7)],
+      );
+    }
+    if (hour >= 17 && hour < 20) {
+      // Hoàng hôn — cam hồng
+      return const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFD0A0), Color(0xFFF5F5F7)],
+      );
+    }
+    // Ban đêm — xanh tím tối
+    return const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF1E2A48), Color(0xFF2A2A3A)],
+    );
+  }
+
+  IconData _weatherIcon(int? code) {
+    if (code == null) return Icons.wb_sunny_outlined;
+    if (code == 0) return Icons.wb_sunny_outlined;
+    if (code <= 3) return Icons.wb_cloudy_outlined;
+    if (code <= 48) return Icons.cloud_outlined;
+    if (code <= 67) return Icons.grain_outlined; // drizzle/rain
+    if (code <= 77) return Icons.ac_unit_outlined; // snow
+    if (code <= 82) return Icons.umbrella_outlined; // showers
+    return Icons.thunderstorm_outlined; // storm
+  }
+
+  Color _weatherIconColor(int hour, int? code) {
+    if (code != null && code >= 51) return const Color(0xFF7A90B0);
+    if (hour >= 17 && hour < 20) return const Color(0xFFE87020);
+    if (hour >= 6 && hour < 17) return const Color(0xFFF0A020);
+    return const Color(0xFF8899CC); // night stars
   }
 
   void _showHomePicker(

@@ -97,7 +97,7 @@ class _SceneItem extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
       child: GestureDetector(
-        onTap: () => _execute(context),
+        onTap: () => _execute(context, ref),
         onLongPress: () => _openEdit(context, ref),
         child: SizedBox(
           width: 60,
@@ -132,7 +132,7 @@ class _SceneItem extends ConsumerWidget {
     );
   }
 
-  Future<void> _execute(BuildContext context) async {
+  Future<void> _execute(BuildContext context, WidgetRef ref) async {
     final color = _parseColor(scene.color);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -218,8 +218,10 @@ class _SceneItem extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    final homeId = ref.read(selectedHomeProvider).valueOrNull?.id;
+    if (homeId == null) return;
     try {
-      await SceneService().executeScene(scene);
+      await SceneService().executeScene(scene, homeId: homeId);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

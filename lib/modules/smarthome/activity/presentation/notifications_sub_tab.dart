@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
@@ -15,9 +18,25 @@ class NotificationsSubTab extends ConsumerStatefulWidget {
 class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
     with AutomaticKeepAliveClientMixin {
   bool _unreadOnly = false;
+  StreamSubscription<RemoteMessage>? _fcmSub;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fcmSub = FirebaseMessaging.onMessage.listen((_) {
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(unreadNotificationsCountProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _fcmSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -97,6 +97,7 @@ class _ActionButtonState extends State<_ActionButton> {
         'lock' || 'lock_outline' => Icons.lock_outline,
         'lock_open' || 'unlock' => Icons.lock_open_outlined,
         'power' || 'power_settings_new' => Icons.power_settings_new,
+        'toggle' || 'swap_vert' || 'swap_horiz' => Icons.swap_vert_rounded,
         'refresh' => Icons.refresh,
         'settings' => Icons.settings_outlined,
         _ => Icons.touch_app_outlined,

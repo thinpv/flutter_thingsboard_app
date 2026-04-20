@@ -375,7 +375,9 @@ class _SceneGridCard extends ConsumerWidget {
     if (confirmed != true) return;
     try {
       final home = ref.read(selectedHomeProvider).valueOrNull;
-      await SceneService().executeScene(scene, homeId: home?.id);
+      final hid = home?.id;
+      if (hid == null) return;
+      await SceneService().executeScene(scene, homeId: hid);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

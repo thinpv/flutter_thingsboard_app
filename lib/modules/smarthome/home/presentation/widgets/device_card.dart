@@ -230,25 +230,25 @@ class _IconBadge extends StatelessWidget {
       final token = getIt<ITbClientService>().client.getJwtToken();
       icon = CachedNetworkImage(
         imageUrl: url,
-        width: 18,
-        height: 18,
+        width: 24,
+        height: 24,
         fit: BoxFit.contain,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
-        placeholder: (_, _) => const SizedBox(width: 18, height: 18),
-        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 16, color: fg),
+        placeholder: (_, _) => const SizedBox(width: 24, height: 24),
+        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 20, color: fg),
       );
     } else {
-      icon = Icon(fallbackIcon, size: 16, color: fg);
+      icon = Icon(fallbackIcon, size: 20, color: fg);
     }
 
     return Container(
-      width: 30,
-      height: 30,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: tint,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       alignment: Alignment.center,
       child: icon,

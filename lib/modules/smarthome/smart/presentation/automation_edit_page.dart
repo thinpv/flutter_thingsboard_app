@@ -132,11 +132,10 @@ String _notifyTargetLabel(String t) {
   return t;
 }
 
-String _notifySeverityLabel(String s) => switch (s) {
-      'critical' => 'Nghiêm trọng',
-      'warning' => 'Cảnh báo',
-      'info' => 'Thông tin',
-      _ => s,
+String _notifySeverityLabel(String s) => switch (s.toUpperCase()) {
+      'CRITICAL' => 'Nghiêm trọng',
+      'WARNING' || 'MAJOR' || 'MINOR' => 'Cảnh báo',
+      _ => 'Thông tin',
     };
 
 String _formatKV(String key, dynamic value) {
@@ -2439,7 +2438,7 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
     _titleCtrl = TextEditingController(text: raw['title'] as String? ?? '');
     _msgCtrl = TextEditingController(text: raw['message'] as String? ?? '');
     _target = raw['target'] as String? ?? 'all';
-    _severity = raw['severity'] as String? ?? 'info';
+    _severity = (raw['severity'] as String? ?? 'INDETERMINATE').toUpperCase();
   }
 
   @override
@@ -2595,20 +2594,20 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
                   _SeverityChip(
                     label: 'Thông tin',
                     color: MpColors.blue,
-                    selected: _severity == 'info',
-                    onTap: () => setState(() => _severity = 'info'),
+                    selected: _severity == 'INDETERMINATE',
+                    onTap: () => setState(() => _severity = 'INDETERMINATE'),
                   ),
                   _SeverityChip(
                     label: 'Cảnh báo',
                     color: MpColors.amber,
-                    selected: _severity == 'warning',
-                    onTap: () => setState(() => _severity = 'warning'),
+                    selected: _severity == 'WARNING',
+                    onTap: () => setState(() => _severity = 'WARNING'),
                   ),
                   _SeverityChip(
                     label: 'Nghiêm trọng',
                     color: MpColors.red,
-                    selected: _severity == 'critical',
-                    onTap: () => setState(() => _severity = 'critical'),
+                    selected: _severity == 'CRITICAL',
+                    onTap: () => setState(() => _severity = 'CRITICAL'),
                   ),
                 ],
               ),

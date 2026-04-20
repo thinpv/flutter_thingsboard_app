@@ -17,6 +17,7 @@ class HomeStats {
     this.totalPowerKw,
     this.fromWeather = false,
     this.weatherLoading = false,
+    this.weatherCode,
   });
 
   static const empty = HomeStats();
@@ -27,14 +28,17 @@ class HomeStats {
   final bool fromWeather;
   /// True while the weather API call is in-flight (no local sensor data).
   final bool weatherLoading;
+  /// WMO weather code (0=clear, 1-3=cloudy, 45-48=fog, 51-77=rain/snow, 80-99=storm).
+  final int? weatherCode;
 }
 
 // ─── Weather API (Open-Meteo — free, no key needed) ──────────────────────────
 
 class _WeatherData {
-  const _WeatherData({required this.temp, required this.hum});
+  const _WeatherData({required this.temp, required this.hum, this.code});
   final double temp;
   final double hum;
+  final int? code;
 }
 
 final _weatherProvider =
@@ -60,7 +64,7 @@ final _weatherProvider =
     final uri = Uri.parse(
       'https://api.open-meteo.com/v1/forecast'
       '?latitude=$lat&longitude=$lng'
-      '&current=temperature_2m,relative_humidity_2m'
+      '&current=temperature_2m,relative_humidity_2m,weather_code'
       '&forecast_days=1',
     );
     debugPrint('[Weather] GET $uri');
@@ -72,9 +76,10 @@ final _weatherProvider =
     if (current == null) return null;
     final t = _toDouble(current['temperature_2m']);
     final h = _toDouble(current['relative_humidity_2m']);
-    debugPrint('[Weather] temp=$t hum=$h');
+    final code = current['weather_code'] as int?;
+    debugPrint('[Weather] temp=$t hum=$h code=$code');
     if (t == null || h == null) return null;
-    return _WeatherData(temp: t, hum: h);
+    return _WeatherData(temp: t, hum: h, code: code);
   } catch (e) {
     debugPrint('[Weather] HTTP error: $e');
     return null;
@@ -127,6 +132,7 @@ final homeStatsProvider = Provider.autoDispose<HomeStats>((ref) {
   // If no sensor → use weather API
   bool fromWeather = false;
   bool weatherLoading = false;
+  int? weatherCode;
   if (temp == null || hum == null) {
     debugPrint('[HomeStats] no sensor data → fetching weather for homeId=$homeId');
     final weather = ref.watch(_weatherProvider(homeId));
@@ -136,6 +142,7 @@ final homeStatsProvider = Provider.autoDispose<HomeStats>((ref) {
       final w = weather.value!;
       temp ??= w.temp;
       hum ??= w.hum;
+      weatherCode = w.code;
       fromWeather = true;
     }
   }
@@ -146,6 +153,7 @@ final homeStatsProvider = Provider.autoDispose<HomeStats>((ref) {
     totalPowerKw: totalPowerW > 0 ? totalPowerW / 1000 : null,
     fromWeather: fromWeather,
     weatherLoading: weatherLoading,
+    weatherCode: weatherCode,
   );
 });
 
