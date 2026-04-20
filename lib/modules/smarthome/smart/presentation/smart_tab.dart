@@ -226,7 +226,7 @@ class _SceneGridCard extends ConsumerWidget {
     final tint = Color.alphaBlend(accent.withValues(alpha: 0.08), MpColors.surface);
 
     return GestureDetector(
-      onTap: () => _execute(context),
+      onTap: () => _execute(context, ref),
       child: Container(
         decoration: BoxDecoration(
           color: tint,
@@ -287,7 +287,7 @@ class _SceneGridCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _execute(BuildContext context) async {
+  Future<void> _execute(BuildContext context, WidgetRef ref) async {
     final accent = _parseColor(scene.color);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
@@ -374,7 +374,8 @@ class _SceneGridCard extends ConsumerWidget {
     );
     if (confirmed != true) return;
     try {
-      await SceneService().executeScene(scene);
+      final home = ref.read(selectedHomeProvider).valueOrNull;
+      await SceneService().executeScene(scene, homeId: home?.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

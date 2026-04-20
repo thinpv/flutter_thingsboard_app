@@ -89,12 +89,23 @@ class _SmarthomeAddButtonState extends ConsumerState<SmarthomeAddButton> {
           MaterialPageRoute(builder: (_) => const ClaimDevicePage()),
         );
       case 'scene':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => const AutomationEditPage(isTapToRun: true)),
-        );
+        _pickSceneType();
     }
+  }
+
+  Future<void> _pickSceneType() async {
+    final type = await showDialog<String>(
+      context: context,
+      builder: (_) => const _SceneTypeDialog(),
+    );
+    if (type == null || !mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            AutomationEditPage(isTapToRun: type == 'tapToRun'),
+      ),
+    );
   }
 
   @override
@@ -211,6 +222,120 @@ class _AddMenu extends StatelessWidget {
                     style: const TextStyle(fontSize: 11, color: MpColors.text3)),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Scene type picker dialog ─────────────────────────────────────────────────
+
+class _SceneTypeDialog extends StatelessWidget {
+  const _SceneTypeDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: MpColors.bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Text(
+              'Chọn loại kịch bản',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: MpColors.text,
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: MpColors.border),
+          _TypeTile(
+            val: 'tapToRun',
+            icon: Icons.touch_app_outlined,
+            tint: MpColors.amberSoft,
+            iconColor: MpColors.amber,
+            title: 'Kịch bản',
+            subtitle: 'Kích hoạt thủ công bằng một lần nhấn',
+          ),
+          const Divider(height: 1, color: MpColors.border),
+          _TypeTile(
+            val: 'automation',
+            icon: Icons.bolt_outlined,
+            tint: MpColors.blueSoft,
+            iconColor: MpColors.blue,
+            title: 'Tự động hóa',
+            subtitle: 'Tự chạy khi điều kiện hoặc hẹn giờ thỏa',
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypeTile extends StatelessWidget {
+  const _TypeTile({
+    required this.val,
+    required this.icon,
+    required this.tint,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String val;
+  final IconData icon;
+  final Color tint;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, val),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 12, color: MpColors.text3),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: MpColors.text3),
           ],
         ),
       ),

@@ -209,6 +209,19 @@ class NotificationService {
     );
   }
 
+  Future<void> showLocalNotification(String title, String body) async {
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        title.hashCode ^ body.hashCode,
+        title,
+        body,
+        _notificationDetails,
+      );
+    } catch (_) {
+      // Notification permission not granted or plugin not initialised.
+    }
+  }
+
   Future<void> showNotification(RemoteMessage message) async {
     final notification = message.notification;
 

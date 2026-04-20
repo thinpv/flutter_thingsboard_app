@@ -19,7 +19,7 @@ import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 import 'package:uuid/uuid.dart';
 
 /// Action types that require server-side execution and cannot run on a gateway.
-const _serverOnlyActionTypes = {'notify', 'offline'};
+const _serverOnlyActionTypes = {'notify', 'offline', 'scene'};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -101,6 +101,10 @@ String _actionTitle(RuleAction a) {
     if (msg.isNotEmpty) return msg;
     return 'Thông báo';
   }
+  if (a.type == 'scene') {
+    final name = (a.raw['_scene_name'] as String?)?.trim() ?? '';
+    return name.isNotEmpty ? name : 'Kịch bản';
+  }
   return a.type;
 }
 
@@ -116,6 +120,7 @@ String _actionSubtitle(RuleAction a) {
     final severity = a.raw['severity'] as String? ?? 'info';
     return '${_notifyTargetLabel(target)} · ${_notifySeverityLabel(severity)}';
   }
+  if (a.type == 'scene') return 'Kích hoạt kịch bản';
   return '';
 }
 
@@ -212,12 +217,8 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
         widget.prefillConditions?.toList() ?? [];
     _conditionMatch = r?.conditionMatch ?? ConditionMatch.all;
     if (widget.isTapToRun && sc != null) {
-      _actions = sc.devices.entries
-          .map((e) => RuleAction(raw: {
-                'type': 'device',
-                'deviceId': e.key,
-                'data': Map<String, dynamic>.from(e.value),
-              }))
+      _actions = sc.actions
+          .map((raw) => RuleAction(raw: Map<String, dynamic>.from(raw)))
           .toList();
     } else {
       _actions = r?.actions.toList() ??
@@ -305,18 +306,19 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       final home = await _awaitHome();
       if (home == null) return;
 
-      final devices = <String, Map<String, dynamic>>{
-        for (final a in _actions.where((a) => a.type == 'device'))
-          a.raw['deviceId'] as String:
-              Map<String, dynamic>.from(a.raw['data'] as Map? ?? {}),
-      };
+      final actions = _actions.map((a) {
+        final raw = Map<String, dynamic>.from(a.raw);
+        raw.remove('_device_name');
+        raw.remove('_scene_name');
+        return raw;
+      }).toList();
 
       final scene = SmarthomeScene(
         id: widget.scene?.id ?? const Uuid().v4(),
         name: name,
         icon: _icon,
         color: _color,
-        devices: devices,
+        actions: actions,
       );
 
       await SceneService().saveScene(home.id, scene);
@@ -444,6 +446,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
         backgroundColor: MpColors.bg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        leadingWidth: 72,
         leading: TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text(
@@ -454,7 +457,7 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
         title: Text(
           isTtr
               ? (isNew ? 'Tạo kịch bản' : 'Sửa kịch bản')
-              : (isNew ? 'Tạo automation' : 'Sửa automation'),
+              : (isNew ? 'Tạo tự động hóa' : 'Sửa tự động hóa'),
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
@@ -645,13 +648,16 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
         options: [
           const ('device', Icons.devices_other_outlined, 'Thiết bị',
               'Gửi lệnh điều khiển thiết bị'),
+          const ('scene', Icons.auto_awesome_outlined, 'Kịch bản',
+              'Kích hoạt một kịch bản chạm để chạy khác'),
           const ('delay', Icons.hourglass_bottom_outlined, 'Chờ',
               'Dừng N giây rồi tiếp tục'),
-          // Notify chỉ áp dụng cho server-side automation, scene tap-to-run
-          // bỏ qua action này khi save → ẩn để tránh hiểu nhầm.
-          if (!widget.isTapToRun)
+          if (widget.isTapToRun)
             const ('notify', Icons.notifications_outlined, 'Thông báo',
-                'Gửi push cho thành viên của nhà'),
+                'Hiển thị thông báo trên thiết bị khi chạy')
+          else
+            const ('notify', Icons.notifications_outlined, 'Thông báo',
+                'Gửi push notification cho thành viên của nhà'),
         ],
       ),
     );
@@ -663,6 +669,12 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
         context: context,
         isScrollControlled: true,
         builder: (ctx) => _DeviceActionSheet(parentRef: ref),
+      );
+    } else if (type == 'scene') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _ScenePickerSheet(parentRef: ref),
       );
     } else if (type == 'delay') {
       result = await showModalBottomSheet<RuleAction>(
@@ -735,6 +747,12 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
           parentRef: ref,
           initial: existing,
         ),
+      );
+    } else if (existing.type == 'scene') {
+      result = await showModalBottomSheet<RuleAction>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _ScenePickerSheet(parentRef: ref, initial: existing),
       );
     } else if (existing.type == 'delay') {
       result = await showModalBottomSheet<RuleAction>(
@@ -945,7 +963,7 @@ class _TapToRunTriggerCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'Chạm để chạy',
+                    'Kịch bản',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -3011,6 +3029,148 @@ class _ActionKeyEditorState extends State<_ActionKeyEditor> {
         _current = num.tryParse(v) ?? v;
         widget.onChanged(_current);
       },
+    );
+  }
+}
+
+// ─── Scene picker sheet ───────────────────────────────────────────────────────
+
+class _ScenePickerSheet extends ConsumerWidget {
+  const _ScenePickerSheet({required this.parentRef, this.initial});
+  final WidgetRef parentRef;
+  final RuleAction? initial;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scenesAsync = ref.watch(scenesProvider);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: MpColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: MpColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Chọn kịch bản',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: MpColors.text,
+                ),
+              ),
+            ),
+          ),
+          scenesAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(
+                  strokeWidth: 1.5, color: MpColors.text3),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Lỗi: $e',
+                  style: const TextStyle(color: MpColors.text3)),
+            ),
+            data: (scenes) {
+              if (scenes.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Text(
+                    'Chưa có kịch bản nào',
+                    style: TextStyle(color: MpColors.text3),
+                  ),
+                );
+              }
+              final selectedId = initial?.raw['sceneId'] as String?;
+              return ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.45,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: scenes.length,
+                  itemBuilder: (ctx, i) {
+                    final scene = scenes[i];
+                    final isSelected = scene.id == selectedId;
+                    return InkWell(
+                      onTap: () => Navigator.pop(
+                        context,
+                        RuleAction(raw: {
+                          'type': 'scene',
+                          'sceneId': scene.id,
+                          '_scene_name': scene.name,
+                        }),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? MpColors.amber
+                                    : MpColors.surfaceAlt,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 18,
+                                color: isSelected
+                                    ? Colors.white
+                                    : MpColors.text3,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                scene.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: MpColors.text,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(Icons.check_rounded,
+                                  size: 16, color: MpColors.amber),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 }
