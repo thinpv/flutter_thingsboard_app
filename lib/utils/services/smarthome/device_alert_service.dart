@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/device_alert/domain/device_alert_config.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -25,17 +28,24 @@ class DeviceAlertService {
         if (raw is Map<String, dynamic>) {
           return DeviceAlertConfig.fromJson(raw);
         }
+        if (raw is String && raw.isNotEmpty) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            return DeviceAlertConfig.fromJson(decoded);
+          }
+        }
       }
     }
     return DeviceAlertConfig.empty;
   }
 
   Future<void> saveConfig(String deviceId, DeviceAlertConfig config) async {
-    await _client.getAttributeService().saveEntityAttributesV2(
+    final ok = await _client.getAttributeService().saveEntityAttributesV2(
           DeviceId(deviceId),
           'SERVER_SCOPE',
           {_kAlertConfigKey: config.toJson()},
         );
+    if (!ok) throw Exception('Lưu alertConfig thất bại (HTTP error)');
   }
 
   /// Lấy timestamp mute hiện tại (millisecondsSinceEpoch) hoặc null nếu
@@ -57,11 +67,12 @@ class DeviceAlertService {
   }
 
   Future<void> setMuteUntil(String deviceId, int? untilMs) async {
-    await _client.getAttributeService().saveEntityAttributesV2(
+    final ok = await _client.getAttributeService().saveEntityAttributesV2(
           DeviceId(deviceId),
           'SERVER_SCOPE',
           {_kMuteUntilKey: untilMs},
         );
+    if (!ok) throw Exception('Lưu muteUntilTs thất bại (HTTP error)');
   }
 
   /// Convenience: tắt mute (set null).

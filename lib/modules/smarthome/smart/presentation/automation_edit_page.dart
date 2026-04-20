@@ -18,6 +18,9 @@ import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/smarthome/scene_service.dart';
 import 'package:uuid/uuid.dart';
 
+/// Action types that require server-side execution and cannot run on a gateway.
+const _serverOnlyActionTypes = {'notify', 'offline'};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const _kIcons = [
@@ -352,6 +355,8 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
       final home = await _awaitHome();
       if (home == null) return;
 
+      final hasServerOnlyAction =
+          _actions.any((a) => _serverOnlyActionTypes.contains(a.type));
       final deviceIds = [
         ..._conditions
             .where((c) => c.type == 'device' && c.raw['deviceId'] != null)
@@ -360,8 +365,10 @@ class _AutomationEditPageState extends ConsumerState<AutomationEditPage> {
             .where((a) => a.type == 'device' && a.raw['deviceId'] != null)
             .map((a) => a.raw['deviceId'] as String),
       ];
-      final target = await ExecutionTargetResolver()
-          .resolve(deviceIds, homeId: home.id);
+      final target = hasServerOnlyAction
+          ? 'server'
+          : await ExecutionTargetResolver()
+              .resolve(deviceIds, homeId: home.id);
 
       final id = widget.rule?.id ?? const Uuid().v4();
       final rule = AutomationRule(
@@ -1532,6 +1539,12 @@ class _ExecutionTargetCardState extends State<_ExecutionTargetCard> {
   }
 
   Future<void> _resolve() async {
+    final hasServerOnlyAction =
+        widget.actions.any((a) => _serverOnlyActionTypes.contains(a.type));
+    if (hasServerOnlyAction) {
+      if (mounted) setState(() => _target = 'server');
+      return;
+    }
     final deviceIds = [
       ...widget.conditions
           .where((c) => c.type == 'device' && c.raw['deviceId'] != null)
