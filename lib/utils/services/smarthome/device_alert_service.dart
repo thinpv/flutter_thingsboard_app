@@ -3,13 +3,13 @@ import 'package:thingsboard_app/modules/smarthome/device_alert/domain/device_ale
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
-/// Read/write `alert_config` và `mute_until_ts` SERVER_SCOPE attributes
+/// Read/write `alertConfig` và `muteUntilTs` SERVER_SCOPE attributes
 /// trên Device. Tuân thủ NOTIFICATION_SYSTEM.md §4.1.
 class DeviceAlertService {
   DeviceAlertService();
 
-  static const _kAlertConfigKey = 'alert_config';
-  static const _kMuteUntilKey = 'mute_until_ts';
+  static const _kAlertConfigKey = 'alertConfig';
+  static const _kMuteUntilKey = 'muteUntilTs';
 
   ThingsboardClient get _client => getIt<ITbClientService>().client;
 

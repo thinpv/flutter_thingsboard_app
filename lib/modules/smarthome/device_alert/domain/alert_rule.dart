@@ -1,5 +1,5 @@
 /// Một alert rule cụ thể trên device (instance), lưu ở SERVER_SCOPE attr
-/// `alert_config.rules[]`. Tham chiếu đến template trong profile qua [key].
+/// `alertConfig.rules[]`. Tham chiếu đến template trong profile qua [key].
 ///
 /// Spec: NOTIFICATION_SYSTEM.md §4.1.2.
 class AlertRule {

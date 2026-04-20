@@ -1,6 +1,6 @@
 import 'package:thingsboard_app/modules/smarthome/device_alert/domain/alert_rule.dart';
 
-/// Cấu hình cảnh báo lưu ở SERVER_SCOPE attr `alert_config` của Device.
+/// Cấu hình cảnh báo lưu ở SERVER_SCOPE attr `alertConfig` của Device.
 ///
 /// Spec: NOTIFICATION_SYSTEM.md §4.1.2.
 class DeviceAlertConfig {

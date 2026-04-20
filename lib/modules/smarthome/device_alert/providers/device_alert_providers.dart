@@ -6,13 +6,13 @@ final deviceAlertServiceProvider = Provider<DeviceAlertService>((ref) {
   return DeviceAlertService();
 });
 
-/// Đọc `alert_config` SERVER_SCOPE của device.
+/// Đọc `alertConfig` SERVER_SCOPE của device.
 final deviceAlertConfigProvider = FutureProvider.autoDispose
     .family<DeviceAlertConfig, String>((ref, deviceId) {
   return ref.read(deviceAlertServiceProvider).fetchConfig(deviceId);
 });
 
-/// Đọc `mute_until_ts` SERVER_SCOPE. Trả về null nếu không có hoặc đã quá hạn.
+/// Đọc `muteUntilTs` SERVER_SCOPE. Trả về null nếu không có hoặc đã quá hạn.
 final deviceMuteUntilProvider =
     FutureProvider.autoDispose.family<int?, String>((ref, deviceId) async {
   final ts = await ref.read(deviceAlertServiceProvider).fetchMuteUntil(deviceId);

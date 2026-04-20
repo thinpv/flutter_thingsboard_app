@@ -8,7 +8,7 @@ import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/alert_
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
 
 /// Cấu hình cảnh báo per-device. Render động từ
-/// `profile.alertTemplates` × `device.alert_config.rules`.
+/// `profile.alertTemplates` × `device.alertConfig.rules`.
 ///
 /// Spec: NOTIFICATION_SYSTEM.md §4.1.3 + §6.6.
 class DeviceAlertSettingsPage extends ConsumerStatefulWidget {
