@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/shared/smarthome_icons.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 class NotificationsSubTab extends ConsumerStatefulWidget {
@@ -325,6 +326,11 @@ class _NotificationCard extends StatelessWidget {
   }
 
   IconData _iconFor(PushNotification n) {
+    final raw = n.additionalConfig?['icon'];
+    if (raw is String && raw.isNotEmpty) {
+      final resolved = kSmarthomeIcons[raw];
+      if (resolved != null) return resolved;
+    }
     return switch (n.type) {
       PushNotificationType.ALARM ||
       PushNotificationType.ALARM_ASSIGNMENT ||
@@ -337,6 +343,10 @@ class _NotificationCard extends StatelessWidget {
   }
 
   Color _iconColorFor(PushNotification n) {
+    final raw = n.additionalConfig?['color'];
+    if (raw is String && raw.isNotEmpty) {
+      return colorByHex(raw, fallback: MpColors.text2);
+    }
     return switch (n.type) {
       PushNotificationType.ALARM ||
       PushNotificationType.ALARM_ASSIGNMENT ||

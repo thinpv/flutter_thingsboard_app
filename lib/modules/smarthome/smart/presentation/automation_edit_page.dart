@@ -10,6 +10,7 @@ import 'package:thingsboard_app/modules/smarthome/home/providers/scene_provider.
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/providers/profile_metadata_providers.dart';
+import 'package:thingsboard_app/modules/smarthome/shared/smarthome_icons.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/domain/entities/automation_rule.dart';
 import 'package:thingsboard_app/modules/smarthome/smart/providers/automation_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/automation_service.dart';
@@ -23,21 +24,9 @@ const _serverOnlyActionTypes = {'notify', 'offline', 'scene'};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const _kIcons = [
-  ('auto_awesome', Icons.auto_awesome),
-  ('wb_sunny', Icons.wb_sunny),
-  ('nights_stay', Icons.nights_stay),
-  ('thermostat', Icons.thermostat),
-  ('schedule', Icons.schedule),
-  ('lightbulb', Icons.lightbulb_outline),
-  ('security', Icons.security),
-  ('home', Icons.home_outlined),
-];
-
-const _kColors = [
-  '#2196F3', '#FF9800', '#4CAF50', '#E91E63',
-  '#9C27B0', '#FF5722', '#607D8B', '#00BCD4',
-];
+// Icons + colors pulled from shared registry ([smarthome_icons.dart]) so the
+// notify action picker, automation/scene picker, and the Notifications tab
+// renderer stay in sync.
 
 const _kKeyLabel = <String, String>{
   'onoff0': 'Bật/Tắt', 'onoff1': 'Kênh 2', 'onoff2': 'Kênh 3',
@@ -134,7 +123,7 @@ String _notifyTargetLabel(String t) {
 
 String _notifySeverityLabel(String s) => switch (s.toUpperCase()) {
       'CRITICAL' => 'Nghiêm trọng',
-      'WARNING' || 'MAJOR' || 'MINOR' => 'Cảnh báo',
+      'WARNING' => 'Cảnh báo',
       _ => 'Thông tin',
     };
 
@@ -845,8 +834,7 @@ class _StyleCard extends StatelessWidget {
             height: 56,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              children: _kIcons.map((entry) {
-                final (key, icon) = entry;
+              children: kAutomationIconKeys.map((key) {
                 final selected = selectedIcon == key;
                 final accent = _hexColor(selectedColor);
                 return GestureDetector(
@@ -866,7 +854,7 @@ class _StyleCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      icon,
+                      iconByName(key),
                       color: selected ? accent : MpColors.text3,
                       size: 20,
                     ),
@@ -878,7 +866,7 @@ class _StyleCard extends StatelessWidget {
           const SizedBox(height: 10),
           // Color row
           Row(
-            children: _kColors.map((hex) {
+            children: kSmarthomeColors.map((hex) {
               final selected = selectedColor == hex;
               final c = _hexColor(hex);
               return GestureDetector(
@@ -2428,8 +2416,10 @@ class _NotifyActionSheet extends StatefulWidget {
 class _NotifyActionSheetState extends State<_NotifyActionSheet> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _msgCtrl;
-  late String _target;
   late String _severity;
+  late String _icon;
+  late String _color;
+  // Target fixed = 'all' trong đợt này. owner/userId/role hoãn cùng member management.
 
   @override
   void initState() {
@@ -2437,8 +2427,9 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
     final raw = widget.initial?.raw ?? const {};
     _titleCtrl = TextEditingController(text: raw['title'] as String? ?? '');
     _msgCtrl = TextEditingController(text: raw['message'] as String? ?? '');
-    _target = raw['target'] as String? ?? 'all';
     _severity = (raw['severity'] as String? ?? 'INDETERMINATE').toUpperCase();
+    _icon = raw['icon'] as String? ?? 'notifications';
+    _color = raw['color'] as String? ?? '#2196F3';
   }
 
   @override
@@ -2459,8 +2450,10 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
     final raw = <String, dynamic>{
       'type': 'notify',
       'message': msg,
-      'target': _target,
+      'target': 'all',
       'severity': _severity,
+      'icon': _icon,
+      'color': _color,
     };
     final title = _titleCtrl.text.trim();
     if (title.isNotEmpty) raw['title'] = title;
@@ -2549,9 +2542,56 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
               ),
               const SizedBox(height: 14),
 
-              // Target
+              // Icon picker
               const Text(
-                'Gửi cho',
+                'Biểu tượng',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MpColors.text3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: kNotifyIconKeys.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (ctx, i) {
+                    final key = kNotifyIconKeys[i];
+                    final selected = key == _icon;
+                    final color = colorByHex(_color);
+                    return GestureDetector(
+                      onTap: () => setState(() => _icon = key),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        width: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected
+                              ? color.withValues(alpha: 0.18)
+                              : MpColors.surfaceAlt,
+                          border: Border.all(
+                            color: selected ? color : MpColors.border,
+                            width: selected ? 1.5 : 0.5,
+                          ),
+                        ),
+                        child: Icon(
+                          iconByName(key),
+                          size: 20,
+                          color: selected ? color : MpColors.text2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Color picker
+              const Text(
+                'Màu',
                 style: TextStyle(
                   fontSize: 11,
                   color: MpColors.text3,
@@ -2562,18 +2602,29 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  _ChoiceChip(
-                    label: 'Tất cả thành viên',
-                    selected: _target == 'all',
-                    onTap: () => setState(() => _target = 'all'),
-                  ),
-                  _ChoiceChip(
-                    label: 'Chủ nhà',
-                    selected: _target == 'owner',
-                    onTap: () => setState(() => _target = 'owner'),
-                  ),
-                ],
+                children: kSmarthomeColors.map((hex) {
+                  final selected = hex == _color;
+                  final c = colorByHex(hex);
+                  return GestureDetector(
+                    onTap: () => setState(() => _color = hex),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: c,
+                        border: Border.all(
+                          color: selected ? MpColors.text : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: selected
+                          ? const Icon(Icons.check, size: 16, color: Colors.white)
+                          : null,
+                    ),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 14),
 
@@ -2631,44 +2682,6 @@ class _NotifyActionSheetState extends State<_NotifyActionSheet> {
                 ],
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? MpColors.text : MpColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? Colors.transparent : MpColors.border,
-            width: 0.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: selected ? MpColors.bg : MpColors.text2,
           ),
         ),
       ),
