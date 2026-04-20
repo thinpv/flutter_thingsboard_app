@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
@@ -108,21 +109,7 @@ class HomeHeader extends ConsumerWidget {
 
               const SizedBox(width: 12),
 
-              // ── Right: weather icon + add button ─────────────────────
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const SmarthomeAddButton(),
-                  if (stats.fromWeather || stats.weatherLoading) ...[
-                    const SizedBox(height: 6),
-                    Icon(
-                      _weatherIcon(stats.weatherCode),
-                      size: 28,
-                      color: _weatherIconColor(hour, stats.weatherCode),
-                    ),
-                  ],
-                ],
-              ),
+              const SmarthomeAddButton(),
             ],
           ),
 
@@ -191,24 +178,6 @@ class HomeHeader extends ConsumerWidget {
     );
   }
 
-  IconData _weatherIcon(int? code) {
-    if (code == null) return Icons.wb_sunny_outlined;
-    if (code == 0) return Icons.wb_sunny_outlined;
-    if (code <= 3) return Icons.wb_cloudy_outlined;
-    if (code <= 48) return Icons.cloud_outlined;
-    if (code <= 67) return Icons.grain_outlined; // drizzle/rain
-    if (code <= 77) return Icons.ac_unit_outlined; // snow
-    if (code <= 82) return Icons.umbrella_outlined; // showers
-    return Icons.thunderstorm_outlined; // storm
-  }
-
-  Color _weatherIconColor(int hour, int? code) {
-    if (code != null && code >= 51) return const Color(0xFF7A90B0);
-    if (hour >= 17 && hour < 20) return const Color(0xFFE87020);
-    if (hour >= 6 && hour < 17) return const Color(0xFFF0A020);
-    return const Color(0xFF8899CC); // night stars
-  }
-
   void _showHomePicker(
     BuildContext context,
     WidgetRef ref,
@@ -250,44 +219,74 @@ class _StatsBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(homeStatsProvider);
-
     final cells = <Widget>[];
 
     if (stats.temp != null) {
+      final t = stats.temp!;
       cells.add(_StatCell(
+        metricKey: 'temp',
         label: 'Nhiệt độ',
-        value: '${stats.temp!.toStringAsFixed(1)}°C',
-        icon: stats.fromWeather ? Icons.cloud_outlined : Icons.thermostat_outlined,
+        value: '${t.toStringAsFixed(1)}°C',
+        icon: Icons.device_thermostat,
+        accentColor: t < 18
+            ? const Color(0xFF42A5F5)
+            : t < 26
+                ? const Color(0xFF66BB6A)
+                : t < 32
+                    ? const Color(0xFFFFA726)
+                    : const Color(0xFFEF5350),
+        fraction: (t.clamp(0, 50) / 50),
+        pulse: t > 38,
       ));
     } else if (stats.weatherLoading) {
       cells.add(const _StatCell(
+        metricKey: '',
         label: 'Nhiệt độ',
         value: '…',
-        icon: Icons.cloud_outlined,
+        icon: Icons.device_thermostat,
         muted: true,
       ));
     }
 
     if (stats.hum != null) {
+      final h = stats.hum!;
       cells.add(_StatCell(
+        metricKey: 'hum',
         label: 'Độ ẩm',
-        value: '${stats.hum!.toStringAsFixed(0)}%',
-        icon: stats.fromWeather ? Icons.cloud_outlined : Icons.water_drop_outlined,
+        value: '${h.toStringAsFixed(0)}%',
+        icon: Icons.water_drop,
+        accentColor: h < 30
+            ? const Color(0xFFFFA726)
+            : h < 70
+                ? const Color(0xFF42A5F5)
+                : const Color(0xFF1565C0),
+        fraction: h / 100,
+        pulse: false,
       ));
     } else if (stats.weatherLoading) {
       cells.add(const _StatCell(
+        metricKey: '',
         label: 'Độ ẩm',
         value: '…',
-        icon: Icons.cloud_outlined,
+        icon: Icons.water_drop,
         muted: true,
       ));
     }
 
     if (stats.totalPowerKw != null) {
+      final p = stats.totalPowerKw!;
       cells.add(_StatCell(
+        metricKey: 'power',
         label: 'Điện',
-        value: '${stats.totalPowerKw!.toStringAsFixed(1)}kW',
-        icon: Icons.bolt_outlined,
+        value: '${p.toStringAsFixed(1)} kW',
+        icon: Icons.bolt,
+        accentColor: p < 0.5
+            ? const Color(0xFF66BB6A)
+            : p < 2
+                ? const Color(0xFFFFA726)
+                : const Color(0xFFEF5350),
+        fraction: (p.clamp(0, 5) / 5),
+        pulse: p > 3,
       ));
     }
 
@@ -296,7 +295,9 @@ class _StatsBar extends ConsumerWidget {
     final rowChildren = <Widget>[];
     for (int i = 0; i < cells.length; i++) {
       rowChildren.add(Expanded(child: cells[i]));
-      if (i < cells.length - 1) rowChildren.add(_Divider());
+      if (i < cells.length - 1) {
+        rowChildren.add(Container(width: 0.5, color: MpColors.border));
+      }
     }
 
     return Padding(
@@ -307,71 +308,432 @@ class _StatsBar extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: MpColors.border, width: 0.5),
         ),
-        child: IntrinsicHeight(
-          child: Row(children: rowChildren),
-        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(child: Row(children: rowChildren)),
       ),
     );
   }
 }
 
-class _StatCell extends StatelessWidget {
+// ─── Individual stat cell ─────────────────────────────────────────────────────
+
+class _StatCell extends StatefulWidget {
   const _StatCell({
+    required this.metricKey,
     required this.label,
     required this.value,
     required this.icon,
+    this.accentColor,
+    this.fraction,
+    this.pulse = false,
     this.muted = false,
   });
 
+  final String metricKey;
   final String label;
   final String value;
   final IconData icon;
+  final Color? accentColor;
+  final double? fraction;
+  final bool pulse;
   final bool muted;
 
   @override
+  State<_StatCell> createState() => _StatCellState();
+}
+
+class _StatCellState extends State<_StatCell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _opacity = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+    if (widget.pulse) _pulseCtrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_StatCell old) {
+    super.didUpdateWidget(old);
+    if (widget.pulse && !_pulseCtrl.isAnimating) {
+      _pulseCtrl.repeat(reverse: true);
+    } else if (!widget.pulse && _pulseCtrl.isAnimating) {
+      _pulseCtrl.stop();
+      _pulseCtrl.value = 1.0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+    final color = widget.muted
+        ? MpColors.text3
+        : (widget.accentColor ?? MpColors.text3);
+
+    Widget visual;
+    if (!widget.muted && widget.fraction != null) {
+      if (widget.metricKey == 'temp') {
+        visual = _AnimatedThermometer(fraction: widget.fraction!, color: color);
+      } else if (widget.metricKey == 'hum') {
+        visual = _AnimatedWave(fraction: widget.fraction!, color: color);
+      } else {
+        // power: bolt with optional pulse
+        final bolt = Icon(widget.icon, size: 28, color: color);
+        visual = widget.pulse
+            ? AnimatedBuilder(
+                animation: _opacity,
+                builder: (_, __) =>
+                    Opacity(opacity: _opacity.value, child: bolt),
+              )
+            : bolt;
+      }
+    } else {
+      visual = Icon(widget.icon, size: 28, color: color);
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 11, color: MpColors.text3),
-              const SizedBox(width: 3),
+              visual,
+              const SizedBox(height: 6),
               Text(
-                label,
+                widget.label,
                 style: const TextStyle(
                   fontSize: 11,
                   color: MpColors.text3,
                   fontWeight: FontWeight.w400,
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                widget.value,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: widget.muted ? MpColors.text3 : MpColors.text,
+                  letterSpacing: -0.3,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: muted ? MpColors.text3 : MpColors.text,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ],
+        ),
+        if (widget.fraction != null && !widget.muted)
+          _LevelBar(fraction: widget.fraction!, color: color),
+      ],
+    );
+  }
+}
+
+// ─── Animated thermometer ─────────────────────────────────────────────────────
+
+class _AnimatedThermometer extends StatefulWidget {
+  const _AnimatedThermometer({required this.fraction, required this.color});
+  final double fraction;
+  final Color color;
+
+  @override
+  State<_AnimatedThermometer> createState() => _AnimatedThermometerState();
+}
+
+class _AnimatedThermometerState extends State<_AnimatedThermometer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late Animation<double> _frac;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _frac = Tween<double>(begin: 0, end: widget.fraction)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedThermometer old) {
+    super.didUpdateWidget(old);
+    if (old.fraction != widget.fraction) {
+      _frac = Tween<double>(begin: old.fraction, end: widget.fraction)
+          .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) => CustomPaint(
+        size: const Size(28, 52),
+        painter: _ThermoPainter(fraction: _frac.value, color: widget.color),
       ),
     );
   }
 }
 
-class _Divider extends StatelessWidget {
+class _ThermoPainter extends CustomPainter {
+  const _ThermoPainter({required this.fraction, required this.color});
+  final double fraction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+    final tubeW = w * 0.28;
+    final bulbR = w * 0.38;
+    final tubeLeft = cx - tubeW / 2;
+    final tubeTop = 2.0;
+    final bulbCy = h - bulbR;
+    final tubeBottom = bulbCy;
+
+    final bgPaint = Paint()..color = color.withOpacity(0.15);
+    final fillPaint = Paint()..color = color;
+    final borderPaint = Paint()
+      ..color = color.withOpacity(0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    final tubeRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(tubeLeft, tubeTop, tubeW, tubeBottom - tubeTop),
+      const Radius.circular(3),
+    );
+    final bulbRect =
+        Rect.fromCircle(center: Offset(cx, bulbCy), radius: bulbR);
+
+    // Clip to thermometer shape
+    final clip = Path()
+      ..addRRect(tubeRect)
+      ..addOval(bulbRect);
+    canvas.save();
+    canvas.clipPath(clip);
+
+    // Background
+    canvas.drawPath(clip, bgPaint);
+
+    // Fill from bulb up
+    final fillH = (tubeBottom - tubeTop) * fraction;
+    canvas.drawRect(
+      Rect.fromLTWH(0, tubeBottom - fillH, w, h),
+      fillPaint,
+    );
+    canvas.restore();
+
+    // Border outline
+    canvas.drawRRect(tubeRect, borderPaint);
+    canvas.drawCircle(Offset(cx, bulbCy), bulbR, borderPaint);
+
+    // Tick marks
+    final tickPaint = Paint()
+      ..color = color.withOpacity(0.4)
+      ..strokeWidth = 1;
+    for (int i = 1; i < 4; i++) {
+      final ty = tubeTop + (tubeBottom - tubeTop) * i / 4;
+      canvas.drawLine(
+        Offset(tubeLeft - 1, ty),
+        Offset(tubeLeft - 4, ty),
+        tickPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ThermoPainter old) =>
+      old.fraction != fraction || old.color != color;
+}
+
+// ─── Animated wave (humidity) ─────────────────────────────────────────────────
+
+class _AnimatedWave extends StatefulWidget {
+  const _AnimatedWave({required this.fraction, required this.color});
+  final double fraction;
+  final Color color;
+
+  @override
+  State<_AnimatedWave> createState() => _AnimatedWaveState();
+}
+
+class _AnimatedWaveState extends State<_AnimatedWave>
+    with TickerProviderStateMixin {
+  late final AnimationController _waveCtrl;
+  late final AnimationController _fillCtrl;
+  late Animation<double> _fillAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _waveCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 2))
+      ..repeat();
+    _fillCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _fillAnim = Tween<double>(begin: 0, end: widget.fraction)
+        .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOut));
+    _fillCtrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedWave old) {
+    super.didUpdateWidget(old);
+    if (old.fraction != widget.fraction) {
+      _fillAnim = Tween<double>(begin: old.fraction, end: widget.fraction)
+          .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOut));
+      _fillCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _waveCtrl.dispose();
+    _fillCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 0.5,
-      color: MpColors.border,
+    return AnimatedBuilder(
+      animation: Listenable.merge([_waveCtrl, _fillCtrl]),
+      builder: (_, __) => CustomPaint(
+        size: const Size(44, 44),
+        painter: _WavePainter(
+          phase: _waveCtrl.value,
+          fraction: _fillAnim.value,
+          color: widget.color,
+        ),
+      ),
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  const _WavePainter(
+      {required this.phase, required this.fraction, required this.color});
+  final double phase;
+  final double fraction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final r = w / 2;
+
+    // Circular clip
+    canvas.save();
+    canvas.clipPath(Path()..addOval(Rect.fromLTWH(0, 0, w, h)));
+
+    // BG tint
+    canvas.drawCircle(
+        Offset(r, r), r, Paint()..color = color.withOpacity(0.12));
+
+    // Wave
+    final fillY = h * (1 - fraction.clamp(0.0, 1.0));
+    final path = Path();
+    const amp = 3.5;
+    for (double x = 0; x <= w + 1; x++) {
+      final y = fillY +
+          amp * math.sin((x / w * 2 * math.pi) + phase * 2 * math.pi);
+      x == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+    }
+    path
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color.withOpacity(0.75));
+
+    // Second wave (offset phase, lighter)
+    final path2 = Path();
+    for (double x = 0; x <= w + 1; x++) {
+      final y = fillY +
+          amp *
+              math.sin(
+                  (x / w * 2 * math.pi) + (phase + 0.5) * 2 * math.pi) +
+          2;
+      x == 0 ? path2.moveTo(x, y) : path2.lineTo(x, y);
+    }
+    path2
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    canvas.drawPath(path2, Paint()..color = color.withOpacity(0.35));
+
+    canvas.restore();
+
+    // Circle border
+    canvas.drawCircle(
+      Offset(r, r),
+      r - 0.5,
+      Paint()
+        ..color = color.withOpacity(0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) =>
+      old.phase != phase || old.fraction != fraction || old.color != color;
+}
+
+// ─── Thin level bar ───────────────────────────────────────────────────────────
+
+class _LevelBar extends StatelessWidget {
+  const _LevelBar({required this.fraction, required this.color});
+  final double fraction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 3,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: MpColors.border),
+          FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: fraction.clamp(0.0, 1.0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(2),
+                  bottomRight: Radius.circular(2),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

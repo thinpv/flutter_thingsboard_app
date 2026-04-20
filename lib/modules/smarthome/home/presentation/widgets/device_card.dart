@@ -98,7 +98,10 @@ class DeviceCard extends ConsumerWidget {
                 backgroundColor: Colors.transparent,
                 builder: (_) => _AssignSheet(onTap: onAssignToRoom!),
               ),
-      child: AnimatedContainer(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: device.isOnline ? 1.0 : 0.5,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: bgColor,
@@ -142,7 +145,20 @@ class DeviceCard extends ConsumerWidget {
 
             const Spacer(),
 
-            // ── Bottom: name + room/summary ──────────────────────────────
+            // ── Bottom: summary (trên) + name (dưới) ────────────────────
+            if (meta != null && CardComposer.canCompose(meta))
+              Builder(builder: (ctx) {
+                final summary = CardComposer.buildSummaryRow(ctx, device, meta);
+                if (summary == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(fontSize: 10.5, color: subColor),
+                    child: summary,
+                  ),
+                );
+              }),
+
             Text(
               device.displayName,
               style: TextStyle(
@@ -154,31 +170,9 @@ class DeviceCard extends ConsumerWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
-            if (meta != null && CardComposer.canCompose(meta))
-              Builder(builder: (ctx) {
-                final summary = CardComposer.buildSummaryRow(ctx, device, meta);
-                if (summary == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(fontSize: 10.5, color: subColor),
-                    child: summary,
-                  ),
-                );
-              })
-            else if (roomName != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  roomName!,
-                  style: TextStyle(fontSize: 10.5, color: subColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -207,7 +201,7 @@ class DeviceCard extends ConsumerWidget {
   }
 }
 
-// ─── Icon badge (30×30, rounded 8) ───────────────────────────────────────────
+// ─── Icon badge (120×120, rounded 30) ────────────────────────────────────────
 
 class _IconBadge extends StatelessWidget {
   const _IconBadge({
@@ -230,29 +224,20 @@ class _IconBadge extends StatelessWidget {
       final token = getIt<ITbClientService>().client.getJwtToken();
       icon = CachedNetworkImage(
         imageUrl: url,
-        width: 24,
-        height: 24,
+        width: 60,
+        height: 60,
         fit: BoxFit.contain,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
-        placeholder: (_, _) => const SizedBox(width: 24, height: 24),
-        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 20, color: fg),
+        placeholder: (_, _) => const SizedBox(width: 48, height: 48),
+        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 60, color: fg),
       );
     } else {
-      icon = Icon(fallbackIcon, size: 20, color: fg);
+      icon = Icon(fallbackIcon, size: 48, color: fg);
     }
 
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: tint,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      alignment: Alignment.center,
-      child: icon,
-    );
+    return icon;
   }
 }
 

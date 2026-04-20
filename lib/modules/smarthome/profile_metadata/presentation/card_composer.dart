@@ -3,6 +3,152 @@ import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
 
+// ─── Metric icon + color resolver ─────────────────────────────────────────────
+
+({IconData icon, Color color, bool pulse}) _resolveMetric(
+    String key, dynamic raw) {
+  final n = raw is num ? raw.toDouble() : double.tryParse(raw.toString());
+
+  switch (key) {
+    case 'temp':
+      final t = n ?? 25;
+      return (
+        icon: Icons.device_thermostat,
+        color: t < 18
+            ? const Color(0xFF42A5F5)
+            : t < 26
+                ? const Color(0xFF66BB6A)
+                : t < 32
+                    ? const Color(0xFFFFA726)
+                    : const Color(0xFFEF5350),
+        pulse: t > 35,
+      );
+
+    case 'hum':
+      final h = n ?? 50;
+      return (
+        icon: Icons.water_drop,
+        color: h < 30
+            ? const Color(0xFFFFA726)
+            : h < 70
+                ? const Color(0xFF42A5F5)
+                : const Color(0xFF1565C0),
+        pulse: false,
+      );
+
+    case 'power':
+      final p = n ?? 0;
+      return (
+        icon: Icons.bolt,
+        color: p < 1
+            ? MpColors.text3
+            : p < 100
+                ? const Color(0xFF66BB6A)
+                : p < 500
+                    ? const Color(0xFFFFA726)
+                    : const Color(0xFFEF5350),
+        pulse: p > 1000,
+      );
+
+    case 'energy':
+      return (
+        icon: Icons.electric_meter,
+        color: const Color(0xFF7E57C2),
+        pulse: false,
+      );
+
+    case 'pir':
+      final detected = raw == 1 || raw == true || raw == '1';
+      return (
+        icon: Icons.motion_photos_on_outlined,
+        color: detected ? const Color(0xFFFFA726) : MpColors.text3,
+        pulse: detected,
+      );
+
+    case 'door':
+      final open = raw == false || raw == 0 || raw == '0';
+      return (
+        icon: open ? Icons.sensor_door_outlined : Icons.door_front_door_outlined,
+        color: open ? const Color(0xFFFFA726) : const Color(0xFF66BB6A),
+        pulse: open,
+      );
+
+    case 'lux':
+      final l = n ?? 0;
+      return (
+        icon: Icons.wb_sunny_outlined,
+        color: l < 100
+            ? MpColors.text3
+            : l < 500
+                ? const Color(0xFFFDD835)
+                : const Color(0xFFFFA726),
+        pulse: false,
+      );
+
+    case 'co2':
+      final c = n ?? 400;
+      return (
+        icon: Icons.air,
+        color: c < 800
+            ? const Color(0xFF66BB6A)
+            : c < 1500
+                ? const Color(0xFFFFA726)
+                : const Color(0xFFEF5350),
+        pulse: c > 1500,
+      );
+
+    case 'pm25':
+      final p = n ?? 0;
+      return (
+        icon: Icons.grain,
+        color: p < 12
+            ? const Color(0xFF66BB6A)
+            : p < 35
+                ? const Color(0xFFFFA726)
+                : const Color(0xFFEF5350),
+        pulse: p > 35,
+      );
+
+    case 'smoke':
+      final on = raw == 1 || raw == true || raw == '1';
+      return (
+        icon: Icons.local_fire_department_outlined,
+        color: on ? const Color(0xFFEF5350) : MpColors.text3,
+        pulse: on,
+      );
+
+    case 'leak':
+      final on = raw == 1 || raw == true || raw == '1';
+      return (
+        icon: Icons.water_damage_outlined,
+        color: on ? const Color(0xFF1565C0) : MpColors.text3,
+        pulse: on,
+      );
+
+    case 'bat':
+    case 'pin':
+      final b = n ?? 100;
+      return (
+        icon: b > 60
+            ? Icons.battery_full
+            : b > 20
+                ? Icons.battery_3_bar
+                : Icons.battery_1_bar,
+        color: b > 20 ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+        pulse: b < 10,
+      );
+
+    case 'volt':
+      return (icon: Icons.electric_bolt, color: const Color(0xFFFDD835), pulse: false);
+
+    case 'curr':
+      return (icon: Icons.waves, color: const Color(0xFF42A5F5), pulse: false);
+
+    default:
+      return (icon: Icons.sensors, color: MpColors.text3, pulse: false);
+  }
+}
+
 /// Builds the inner content of a [DeviceCard] from [ProfileMetadata].
 ///
 /// When profile metadata is available (backend patch A-S-2 deployed), the card:
@@ -64,7 +210,7 @@ class CardComposer {
       final unit = def?.unit ?? '';
       final precision = def?.precision ?? _inferPrecision(raw);
       final display = _formatValue(raw, precision);
-      chips.add(_MetricChip(value: '$display$unit'));
+      chips.add(_MetricChip(metricKey: k, raw: raw, label: '$display$unit'));
     }
 
     if (chips.isEmpty) return null;
@@ -154,27 +300,96 @@ class CardComposer {
       };
 }
 
-// ─── Small metric chip ─────────────────────────────────────────────────────────
+// ─── Small metric chip with icon ──────────────────────────────────────────────
 
 class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.value});
-  final String value;
+  const _MetricChip({
+    required this.metricKey,
+    required this.raw,
+    required this.label,
+  });
+  final String metricKey;
+  final dynamic raw;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
+    final m = _resolveMetric(metricKey, raw);
+    final iconWidget = m.pulse
+        ? _PulsingIcon(icon: m.icon, color: m.color, size: 11)
+        : Icon(m.icon, size: 11, color: m.color);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
         color: MpColors.surfaceAlt,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        value,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: MpColors.text2,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          iconWidget,
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: MpColors.text2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Pulsing icon (for alert states) ─────────────────────────────────────────
+
+class _PulsingIcon extends StatefulWidget {
+  const _PulsingIcon({
+    required this.icon,
+    required this.color,
+    required this.size,
+  });
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  State<_PulsingIcon> createState() => _PulsingIconState();
+}
+
+class _PulsingIconState extends State<_PulsingIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Icon(widget.icon, size: widget.size, color: widget.color),
       ),
     );
   }
