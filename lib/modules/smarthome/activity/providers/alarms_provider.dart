@@ -14,10 +14,10 @@ final alarmsProvider = FutureProvider.autoDispose
     AlarmPeriod.week  => now.subtract(const Duration(days: 7)).millisecondsSinceEpoch,
     AlarmPeriod.month => now.subtract(const Duration(days: 30)).millisecondsSinceEpoch,
   };
+  // Không lọc theo status → trả cả ACTIVE lẫn CLEARED
   final query = AlarmQueryV2(
     TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC),
         startTime, now.millisecondsSinceEpoch),
-    statusList: [AlarmSearchStatus.ACTIVE],
   );
   final page = await client.getAlarmService().getAllAlarmsV2(query);
   return page.data;

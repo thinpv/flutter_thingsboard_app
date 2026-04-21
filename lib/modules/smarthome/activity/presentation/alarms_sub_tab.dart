@@ -1,8 +1,13 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
+import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_provider.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
+import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 class AlarmsSubTab extends ConsumerStatefulWidget {
   const AlarmsSubTab({super.key});
@@ -14,9 +19,27 @@ class AlarmsSubTab extends ConsumerStatefulWidget {
 class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
     with AutomaticKeepAliveClientMixin {
   AlarmPeriod _period = AlarmPeriod.all;
+  StreamSubscription<RemoteMessage>? _fcmSub;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fcmSub = FirebaseMessaging.onMessage.listen((_) => _invalidate());
+  }
+
+  @override
+  void dispose() {
+    _fcmSub?.cancel();
+    super.dispose();
+  }
+
+  void _invalidate() {
+    ref.invalidate(alarmsProvider(_period));
+    ref.invalidate(activeUnackAlarmsCountProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +79,7 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
           child: RefreshIndicator(
             color: MpColors.text,
             backgroundColor: MpColors.surface,
-            onRefresh: () async => ref.invalidate(alarmsProvider(_period)),
+            onRefresh: () async => _invalidate(),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -139,6 +162,7 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
                           return _AlarmItem(
                             alarm: alarms[i],
                             isLast: i == alarms.length - 1,
+                            onCleared: _invalidate,
                           );
                         },
                         childCount: alarmsAsync.value?.length ?? 0,
@@ -156,25 +180,59 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
 
 // ─── Alarm item ───────────────────────────────────────────────────────────────
 
-class _AlarmItem extends StatelessWidget {
-  const _AlarmItem({required this.alarm, required this.isLast});
+class _AlarmItem extends StatefulWidget {
+  const _AlarmItem({
+    required this.alarm,
+    required this.isLast,
+    required this.onCleared,
+  });
   final AlarmInfo alarm;
   final bool isLast;
+  final VoidCallback onCleared;
+
+  @override
+  State<_AlarmItem> createState() => _AlarmItemState();
+}
+
+class _AlarmItemState extends State<_AlarmItem> {
+  bool _clearing = false;
+
+  Future<void> _doClear() async {
+    final alarmId = widget.alarm.id?.id;
+    if (alarmId == null) return;
+    setState(() => _clearing = true);
+    try {
+      final client = getIt<ITbClientService>().client;
+      await client.getAlarmService().clearAlarm(alarmId);
+      widget.onCleared();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _clearing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể xóa cảnh báo: $e'),
+            backgroundColor: MpColors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final alarm = widget.alarm;
     final ts = alarm.startTs ?? alarm.createdTime ?? 0;
     final dt = DateTime.fromMillisecondsSinceEpoch(ts);
-    final dotColor = _severityColor(alarm.severity);
+    final cleared = alarm.cleared;
+    final dotColor = cleared ? MpColors.text3 : _severityColor(alarm.severity);
     final timeStr = _timeStr(dt);
-    final title = _title();
-    final sub = _subtitle();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Timestamp
           SizedBox(
             width: 46,
             child: Padding(
@@ -187,6 +245,7 @@ class _AlarmItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
+          // Timeline dot + line
           SizedBox(
             width: 10,
             child: Stack(
@@ -207,7 +266,7 @@ class _AlarmItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (!isLast)
+                if (!widget.isLast)
                   Positioned(
                     top: 18,
                     left: 4,
@@ -218,27 +277,60 @@ class _AlarmItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
+          // Content
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: MpColors.text,
-                    height: 1.35,
+            child: Opacity(
+              opacity: cleared ? 0.5 : 1.0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _title(alarm),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: MpColors.text,
+                      height: 1.35,
+                      decoration:
+                          cleared ? TextDecoration.lineThrough : null,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  sub,
-                  style: const TextStyle(fontSize: 11, color: MpColors.text3),
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    _subtitle(alarm),
+                    style:
+                        const TextStyle(fontSize: 11, color: MpColors.text3),
+                  ),
+                ],
+              ),
             ),
           ),
+          // Clear button — chỉ hiện khi alarm chưa được xóa
+          if (!cleared)
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: _clearing
+                  ? const Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: MpColors.text3,
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.check_circle_outline_rounded,
+                          size: 18),
+                      color: MpColors.text3,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      tooltip: 'Xóa cảnh báo',
+                      onPressed: _doClear,
+                    ),
+            ),
         ],
       ),
     );
@@ -250,7 +342,7 @@ class _AlarmItem extends StatelessWidget {
     return '$h:$m';
   }
 
-  String _title() {
+  String _title(AlarmInfo alarm) {
     final device = alarm.originatorDisplayName ??
         alarm.originatorName ??
         alarm.originator.id ??
@@ -259,7 +351,7 @@ class _AlarmItem extends StatelessWidget {
     return '$device — ${alarm.type}';
   }
 
-  String _subtitle() {
+  String _subtitle(AlarmInfo alarm) {
     final parts = <String>[_severityLabel(alarm.severity)];
     if (alarm.cleared) {
       parts.add('Đã xóa');
