@@ -17,7 +17,7 @@ class QuickScenesStrip extends ConsumerWidget {
 
     return scenes.when(
       loading: () => const SizedBox(
-        height: 84,
+        height: 72,
         child: Center(
           child: SizedBox(
             width: 20,
@@ -34,7 +34,7 @@ class QuickScenesStrip extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -57,7 +57,7 @@ class QuickScenesStrip extends ConsumerWidget {
             ),
           ),
           SizedBox(
-            height: 84,
+            height: 72,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -105,13 +105,13 @@ class _SceneItem extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: soft,
                 ),
-                child: Icon(_iconData(scene.icon), color: color, size: 22),
+                child: Icon(_iconData(scene.icon), color: color, size: 20),
               ),
               const SizedBox(height: 6),
               Text(
@@ -288,8 +288,8 @@ class _AddSceneItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MpColors.surface,
@@ -299,7 +299,7 @@ class _AddSceneItem extends StatelessWidget {
                   strokeAlign: BorderSide.strokeAlignInside,
                 ),
               ),
-              child: const Icon(Icons.add, size: 20, color: MpColors.text3),
+              child: const Icon(Icons.add, size: 18, color: MpColors.text3),
             ),
             const SizedBox(height: 6),
             const Text(

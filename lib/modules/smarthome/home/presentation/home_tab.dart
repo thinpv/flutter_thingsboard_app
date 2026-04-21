@@ -290,7 +290,7 @@ class _AllDevicesView extends ConsumerWidget {
         slivers: [
           const SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: 10),
               child: QuickScenesStrip(),
             ),
           ),
@@ -334,7 +334,7 @@ class _EmptyDevicesView extends StatelessWidget {
         slivers: [
           const SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.only(top: 16),
+              padding: EdgeInsets.only(top: 10),
               child: QuickScenesStrip(),
             ),
           ),

@@ -114,7 +114,7 @@ class DeviceCard extends ConsumerWidget {
               ? null
               : Border.all(color: MpColors.border, width: 0.5),
         ),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -155,9 +155,9 @@ class DeviceCard extends ConsumerWidget {
                 final summary = CardComposer.buildSummaryRow(ctx, device, meta);
                 if (summary == null) return const SizedBox.shrink();
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: DefaultTextStyle.merge(
-                    style: TextStyle(fontSize: 10.5, color: subColor),
+                    style: TextStyle(fontSize: 8, color: subColor),
                     child: summary,
                   ),
                 );
@@ -228,17 +228,17 @@ class _IconBadge extends StatelessWidget {
       final token = getIt<ITbClientService>().client.getJwtToken();
       icon = CachedNetworkImage(
         imageUrl: url,
-        width: 60,
-        height: 60,
+        width: 42,
+        height: 42,
         fit: BoxFit.contain,
         httpHeaders: {
           if (token != null) 'X-Authorization': 'Bearer $token',
         },
-        placeholder: (_, _) => const SizedBox(width: 48, height: 48),
-        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 60, color: fg),
+        placeholder: (_, _) => const SizedBox(width: 42, height: 42),
+        errorWidget: (_, _, _) => Icon(fallbackIcon, size: 32, color: fg),
       );
     } else {
-      icon = Icon(fallbackIcon, size: 48, color: fg);
+      icon = Icon(fallbackIcon, size: 32, color: fg);
     }
 
     return icon;
@@ -458,7 +458,7 @@ const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   crossAxisCount: 2,
   mainAxisSpacing: 10,
   crossAxisSpacing: 10,
-  childAspectRatio: 1.15,
+  childAspectRatio: 1.45,
 );
 
 // ─── Legacy DeviceGrid ────────────────────────────────────────────────────────

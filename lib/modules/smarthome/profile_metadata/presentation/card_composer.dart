@@ -316,24 +316,24 @@ class _MetricChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = _resolveMetric(metricKey, raw);
     final iconWidget = m.pulse
-        ? _PulsingIcon(icon: m.icon, color: m.color, size: 11)
-        : Icon(m.icon, size: 11, color: m.color);
+        ? _PulsingIcon(icon: m.icon, color: m.color, size: 9)
+        : Icon(m.icon, size: 9, color: m.color);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: MpColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           iconWidget,
-          const SizedBox(width: 3),
+          const SizedBox(width: 2),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 9,
               fontWeight: FontWeight.w500,
               color: MpColors.text2,
             ),

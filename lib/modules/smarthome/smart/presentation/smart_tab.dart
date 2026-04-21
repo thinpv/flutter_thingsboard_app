@@ -207,7 +207,7 @@ class _ScenesView extends ConsumerWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.45,
             ),
             itemCount: scenes.length,
             itemBuilder: (context, i) => _SceneGridCard(scene: scenes[i]),
@@ -235,27 +235,27 @@ class _SceneGridCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: accent.withValues(alpha: 0.12)),
         ),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         child: Stack(
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     color: accent,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(_iconData(scene.icon), color: Colors.white, size: 20),
+                  child: Icon(_iconData(scene.icon), color: Colors.white, size: 17),
                 ),
                 const Spacer(),
                 Text(
                   scene.name,
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
-                    fontSize: 13,
+                    fontSize: 12,
                     color: MpColors.text,
                   ),
                   maxLines: 2,
@@ -264,8 +264,8 @@ class _SceneGridCard extends ConsumerWidget {
               ],
             ),
             Positioned(
-              top: -6,
-              right: -6,
+              top: -4,
+              right: -4,
               child: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_horiz, color: MpColors.text3, size: 18),
                 color: MpColors.surface,
