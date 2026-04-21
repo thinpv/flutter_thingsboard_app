@@ -20,6 +20,7 @@ class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
     with AutomaticKeepAliveClientMixin {
   bool _unreadOnly = false;
   StreamSubscription<RemoteMessage>? _fcmSub;
+  final _dismissedIds = <String>{};
 
   @override
   bool get wantKeepAlive => true;
@@ -148,9 +149,11 @@ class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
   }
 
   Widget _buildList(List<PushNotification> all) {
-    final list = _unreadOnly
-        ? all.where((n) => n.status == PushNotificationStatus.SENT).toList()
-        : all;
+    final list = (_unreadOnly
+            ? all.where((n) => n.status == PushNotificationStatus.SENT)
+            : all.where((_) => true))
+        .where((n) => !_dismissedIds.contains(n.id?.id))
+        .toList();
 
     if (list.isEmpty) {
       return SliverFillRemaining(
@@ -198,8 +201,11 @@ class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
   }
 
   Future<void> _handleDelete(PushNotification n) async {
-    if (n.id?.id == null) return;
-    await deleteNotification(n.id!.id!);
+    final id = n.id?.id;
+    if (id == null) return;
+    // Xóa khỏi UI ngay lập tức — tránh Dismissible còn trong tree sau khi dismissed
+    setState(() => _dismissedIds.add(id));
+    await deleteNotification(id);
     ref.invalidate(notificationsProvider);
     ref.invalidate(unreadNotificationsCountProvider);
   }

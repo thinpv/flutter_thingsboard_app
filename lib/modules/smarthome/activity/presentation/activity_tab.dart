@@ -172,12 +172,12 @@ class _TabLabel extends StatelessWidget {
           if (count > 0) ...[
             const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
                 color: MpColors.red,
                 borderRadius: BorderRadius.circular(999),
               ),
-              constraints: const BoxConstraints(minWidth: 16),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               alignment: Alignment.center,
               child: Text(
                 count > 99 ? '99+' : '$count',

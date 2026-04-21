@@ -179,6 +179,8 @@ class _DeviceAlertSettingsPageState
     final existing = config.findByKey(t.key);
     final initialValue = existing?.value ?? t.defaultValue;
     final initialMessage = existing?.message ?? t.defaultMessage ?? '';
+    final initialSeverity = existing?.severity ?? t.severity;
+    final initialIcon = existing?.icon ?? t.icon;
 
     final result = await showModalBottomSheet<_EditResult>(
       context: context,
@@ -188,6 +190,8 @@ class _DeviceAlertSettingsPageState
         template: t,
         initialValue: initialValue,
         initialMessage: initialMessage,
+        initialSeverity: initialSeverity,
+        initialIcon: initialIcon,
       ),
     );
     if (result == null) return;
@@ -201,7 +205,12 @@ class _DeviceAlertSettingsPageState
               value: t.defaultValue,
               message: t.defaultMessage,
             ))
-        .copyWith(value: result.value, message: result.message);
+        .copyWith(
+          value: result.value,
+          message: result.message,
+          severity: result.severity,
+          icon: result.icon,
+        );
     await _saveConfig(config.upsertRule(next));
   }
 
@@ -478,12 +487,12 @@ class _AlertTile extends StatelessWidget {
                   height: 32,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _severityColor(severity).withValues(alpha: 0.15),
+                    color: _tileColor(rule, severity).withValues(alpha: 0.15),
                   ),
                   child: Icon(
-                    _iconFor(template.icon),
+                    _iconFor(rule?.icon ?? template.icon),
                     size: 16,
-                    color: _severityColor(severity),
+                    color: _tileColor(rule, severity),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -615,6 +624,10 @@ class _AlertTile extends StatelessWidget {
         _ => Icons.notifications_outlined,
       };
 
+  Color _tileColor(AlertRule? rule, String severity) {
+    return _severityColor(rule?.severity ?? severity);
+  }
+
   Color _severityColor(String s) => switch (s) {
         'critical' => MpColors.red,
         'warning' => MpColors.amber,
@@ -649,21 +662,48 @@ class _AlertTile extends StatelessWidget {
 // ─── Edit rule sheet ──────────────────────────────────────────────────────────
 
 class _EditResult {
-  const _EditResult({required this.value, required this.message});
+  const _EditResult({
+    required this.value,
+    required this.message,
+    required this.severity,
+    this.icon,
+  });
   final dynamic value;
   final String? message;
+  final String severity;
+  final String? icon;
 }
+
+// (name, IconData, label)
+const _kIconOptions = <(String, IconData, String)>[
+  ('notifications', Icons.notifications_outlined, 'Chung'),
+  ('door_open', Icons.sensor_door_outlined, 'Cửa'),
+  ('motion', Icons.directions_run, 'Chuyển động'),
+  ('thermostat', Icons.thermostat_outlined, 'Nhiệt độ'),
+  ('water_drop', Icons.water_drop_outlined, 'Nước'),
+  ('smoke', Icons.local_fire_department_outlined, 'Khói'),
+  ('gas', Icons.gas_meter_outlined, 'Gas'),
+  ('battery_alert', Icons.battery_alert, 'Pin'),
+  ('bolt', Icons.bolt, 'Điện'),
+  ('air', Icons.air, 'Không khí'),
+  ('wifi_off', Icons.wifi_off, 'Offline'),
+  ('warning', Icons.warning_amber_outlined, 'Cảnh báo'),
+];
 
 class _EditRuleSheet extends StatefulWidget {
   const _EditRuleSheet({
     required this.template,
     required this.initialValue,
     required this.initialMessage,
+    required this.initialSeverity,
+    this.initialIcon,
   });
 
   final AlertTemplate template;
   final dynamic initialValue;
   final String initialMessage;
+  final String initialSeverity;
+  final String? initialIcon;
 
   @override
   State<_EditRuleSheet> createState() => _EditRuleSheetState();
@@ -674,12 +714,16 @@ class _EditRuleSheetState extends State<_EditRuleSheet> {
   late final TextEditingController _valueCtrl;
   late final TextEditingController _minCtrl;
   late final TextEditingController _maxCtrl;
+  late String _severity;
+  String? _icon;
 
   bool get _isRange => widget.template.op == '<>';
 
   @override
   void initState() {
     super.initState();
+    _severity = widget.initialSeverity;
+    _icon = widget.initialIcon;
     _msgCtrl = TextEditingController(text: widget.initialMessage);
     if (_isRange &&
         widget.initialValue is List &&
@@ -724,9 +768,28 @@ class _EditRuleSheetState extends State<_EditRuleSheet> {
     final msg = _msgCtrl.text.trim();
     Navigator.pop(
       context,
-      _EditResult(value: value, message: msg.isEmpty ? null : msg),
+      _EditResult(
+        value: value,
+        message: msg.isEmpty ? null : msg,
+        severity: _severity,
+        icon: _icon,
+      ),
     );
   }
+
+  Color _severityColor(String s) => switch (s) {
+        'critical' => MpColors.red,
+        'warning' => MpColors.amber,
+        'info' => MpColors.blue,
+        _ => MpColors.text3,
+      };
+
+  String _severityLabel(String s) => switch (s) {
+        'critical' => 'Nghiêm trọng',
+        'warning' => 'Cảnh báo',
+        'info' => 'Thông tin',
+        _ => s,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -742,109 +805,250 @@ class _EditRuleSheetState extends State<_EditRuleSheet> {
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 16,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: MpColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Text(
-                widget.template.labelKey ?? widget.template.key,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: MpColors.text,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Text(
-                'Operator: ${widget.template.op}',
-                style: const TextStyle(fontSize: 12, color: MpColors.text3),
-              ),
-            ),
-            // Threshold inputs
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _isRange
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: _LabeledField(
-                            label: 'Min',
-                            controller: _minCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _LabeledField(
-                            label: 'Max',
-                            controller: _maxCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true, signed: true),
-                          ),
-                        ),
-                      ],
-                    )
-                  : _LabeledField(
-                      label: 'Ngưỡng',
-                      controller: _valueCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true, signed: true),
-                    ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _LabeledField(
-                label: 'Message',
-                controller: _msgCtrl,
-                maxLines: 3,
-                maxLength: 200,
-                hint: widget.template.defaultMessage ?? '',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Hủy',
-                          style: TextStyle(color: MpColors.text2)),
-                    ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: MpColors.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _save,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: MpColors.text,
-                        foregroundColor: MpColors.bg,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Text(
+                  widget.template.labelKey ?? widget.template.key,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: MpColors.text,
+                  ),
+                ),
+              ),
+              // Severity picker
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'MỨC ĐỘ & MÀU',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: MpColors.text3,
+                        letterSpacing: 0.5,
                       ),
-                      child: const Text('Lưu'),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        for (final s in ['info', 'warning', 'critical']) ...[
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _severity = s),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 9, horizontal: 4),
+                                decoration: BoxDecoration(
+                                  color: _severity == s
+                                      ? _severityColor(s).withValues(alpha: 0.12)
+                                      : MpColors.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: _severity == s
+                                        ? _severityColor(s)
+                                        : MpColors.border,
+                                    width: _severity == s ? 1.5 : 0.5,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _severityColor(s),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _severityLabel(s),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: _severity == s
+                                            ? _severityColor(s)
+                                            : MpColors.text3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (s != 'critical') const SizedBox(width: 8),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              // Icon picker
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ICON',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: MpColors.text3,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final (name, iconData, label) in _kIconOptions)
+                          GestureDetector(
+                            onTap: () => setState(() => _icon = name),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 140),
+                              width: 52,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: _icon == name
+                                    ? _severityColor(_severity)
+                                        .withValues(alpha: 0.12)
+                                    : MpColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _icon == name
+                                      ? _severityColor(_severity)
+                                      : MpColors.border,
+                                  width: _icon == name ? 1.5 : 0.5,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    iconData,
+                                    size: 20,
+                                    color: _icon == name
+                                        ? _severityColor(_severity)
+                                        : MpColors.text3,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    label,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: _icon == name
+                                          ? _severityColor(_severity)
+                                          : MpColors.text3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Threshold inputs
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _isRange
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: _LabeledField(
+                              label: 'Min',
+                              controller: _minCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: true),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _LabeledField(
+                              label: 'Max',
+                              controller: _maxCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: true),
+                            ),
+                          ),
+                        ],
+                      )
+                    : _LabeledField(
+                        label: 'Ngưỡng',
+                        controller: _valueCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: true),
+                      ),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _LabeledField(
+                  label: 'Nội dung thông báo',
+                  controller: _msgCtrl,
+                  maxLines: 3,
+                  maxLength: 200,
+                  hint: widget.template.defaultMessage ?? '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Hủy',
+                            style: TextStyle(color: MpColors.text2)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: MpColors.text,
+                          foregroundColor: MpColors.bg,
+                        ),
+                        child: const Text('Lưu'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

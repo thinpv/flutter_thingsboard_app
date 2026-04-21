@@ -3,21 +3,23 @@ import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
-enum AlarmPeriod { all, week, month }
+enum AlarmPeriod { day, week, month, all }
 
 final alarmsProvider = FutureProvider.autoDispose
     .family<List<AlarmInfo>, AlarmPeriod>((ref, period) async {
   final client = getIt<ITbClientService>().client;
   final now = DateTime.now();
   final int? startTime = switch (period) {
-    AlarmPeriod.all   => null,
+    AlarmPeriod.day   => now.subtract(const Duration(days: 1)).millisecondsSinceEpoch,
     AlarmPeriod.week  => now.subtract(const Duration(days: 7)).millisecondsSinceEpoch,
     AlarmPeriod.month => now.subtract(const Duration(days: 30)).millisecondsSinceEpoch,
+    AlarmPeriod.all   => null,
   };
-  // Không lọc theo status → trả cả ACTIVE lẫn CLEARED
+  // ANY → trả cả ACTIVE lẫn CLEARED
   final query = AlarmQueryV2(
     TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC),
         startTime, now.millisecondsSinceEpoch),
+    statusList: [AlarmSearchStatus.ANY],
   );
   final page = await client.getAlarmService().getAllAlarmsV2(query);
   return page.data;
