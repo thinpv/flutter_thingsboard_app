@@ -40,6 +40,46 @@ class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
     super.dispose();
   }
 
+  Future<void> _deleteAll(List<PushNotification> list) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: MpColors.surface,
+        title: Text(
+          'Xóa ${list.length} thông báo?',
+          style: const TextStyle(
+              color: MpColors.text,
+              fontSize: 16,
+              fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Tất cả thông báo sẽ bị xóa vĩnh viễn.',
+          style: TextStyle(color: MpColors.text2, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Hủy',
+                style: TextStyle(color: MpColors.text2)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Xóa tất cả',
+                style: TextStyle(
+                    color: MpColors.red, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final ids = list.map((n) => n.id?.id).whereType<String>().toList();
+    await Future.wait(ids.map(deleteNotification));
+    if (!mounted) return;
+    setState(() => _dismissedIds.addAll(ids));
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadNotificationsCountProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -69,16 +109,28 @@ class _NotificationsSubTabState extends ConsumerState<NotificationsSubTab>
                 ],
               ),
               if (notiAsync.value?.isNotEmpty ?? false)
-                GestureDetector(
-                  onTap: () async {
-                    await markAllNotificationsRead();
-                    ref.invalidate(notificationsProvider);
-                    ref.invalidate(unreadNotificationsCountProvider);
-                  },
-                  child: const Text(
-                    'Đánh dấu đã đọc',
-                    style: TextStyle(fontSize: 12, color: MpColors.blue),
-                  ),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await markAllNotificationsRead();
+                        ref.invalidate(notificationsProvider);
+                        ref.invalidate(unreadNotificationsCountProvider);
+                      },
+                      child: const Text(
+                        'Đánh dấu đã đọc',
+                        style: TextStyle(fontSize: 12, color: MpColors.blue),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => _deleteAll(notiAsync.value!),
+                      child: const Text(
+                        'Xóa tất cả',
+                        style: TextStyle(fontSize: 12, color: MpColors.red),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -332,9 +384,11 @@ class _NotificationCard extends StatelessWidget {
   }
 
   IconData _iconFor(PushNotification n) {
-    final raw = n.additionalConfig?['icon'];
-    if (raw is String && raw.isNotEmpty) {
-      final resolved = kSmarthomeIcons[raw];
+    // additionalConfig['icon'] là Map {enabled, icon, color} — lấy field 'icon' bên trong
+    final iconConfig = n.additionalConfig?['icon'];
+    final iconName = iconConfig is Map ? iconConfig['icon']?.toString() ?? '' : '';
+    if (iconName.isNotEmpty) {
+      final resolved = kSmarthomeIcons[iconName];
       if (resolved != null) return resolved;
     }
     return switch (n.type) {
@@ -349,9 +403,10 @@ class _NotificationCard extends StatelessWidget {
   }
 
   Color _iconColorFor(PushNotification n) {
-    final raw = n.additionalConfig?['color'];
-    if (raw is String && raw.isNotEmpty) {
-      return colorByHex(raw, fallback: MpColors.text2);
+    final iconConfig = n.additionalConfig?['icon'];
+    final colorStr = iconConfig is Map ? iconConfig['color']?.toString() ?? '' : '';
+    if (colorStr.isNotEmpty) {
+      return colorByHex(colorStr, fallback: MpColors.text2);
     }
     return switch (n.type) {
       PushNotificationType.ALARM ||

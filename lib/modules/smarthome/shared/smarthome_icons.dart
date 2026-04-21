@@ -32,6 +32,16 @@ const Map<String, IconData> kSmarthomeIcons = {
   'gas': Icons.local_fire_department_outlined,
   'vibration': Icons.vibration,
   'lock': Icons.lock_outline,
+  'air': Icons.air,
+  'ac_unit': Icons.ac_unit,
+  'device_thermostat': Icons.device_thermostat,
+  'power': Icons.power_outlined,
+  'bolt': Icons.bolt,
+  'light': Icons.light_outlined,
+  'curtain': Icons.blinds_outlined,
+  'camera': Icons.videocam_outlined,
+  'leak': Icons.water_damage_outlined,
+  'co2': Icons.co2,
 
   // Notification / system
   'warning': Icons.warning_amber_rounded,

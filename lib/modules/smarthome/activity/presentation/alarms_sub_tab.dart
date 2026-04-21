@@ -7,8 +7,8 @@ import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_name_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/shared/smarthome_icons.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
-import 'package:thingsboard_app/utils/services/notification_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 
 class AlarmsSubTab extends ConsumerStatefulWidget {
@@ -174,7 +174,6 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
       getIt<ITbClientService>().client.getAlarmService();
 
   Future<void> _ackAll(List<AlarmInfo> alarms) async {
-    NotificationService.suppressFor(const Duration(seconds: 10));
     await Future.wait(
       alarms.map((a) => _alarmService.ackAlarm(a.id!.id!)),
     );
@@ -213,7 +212,6 @@ class _AlarmsSubTabState extends ConsumerState<AlarmsSubTab>
       ),
     );
     if (confirmed != true) return;
-    NotificationService.suppressFor(const Duration(seconds: 10));
     await Future.wait(
       alarms.map((a) => _alarmService.deleteAlarm(a.id!.id!)),
     );
@@ -364,7 +362,6 @@ class _AlarmItemState extends ConsumerState<_AlarmItem> {
     final alarmId = widget.alarm.id?.id;
     if (alarmId == null) return;
     setState(() => _busy = true);
-    NotificationService.suppressFor(const Duration(seconds: 6));
     try {
       await _alarmService.clearAlarm(alarmId);
       await _alarmService.ackAlarm(alarmId);
@@ -384,7 +381,6 @@ class _AlarmItemState extends ConsumerState<_AlarmItem> {
     final alarmId = widget.alarm.id?.id;
     if (alarmId == null) return;
     setState(() => _busy = true);
-    NotificationService.suppressFor(const Duration(seconds: 6));
     try {
       await _alarmService.ackAlarm(alarmId);
       widget.onRefresh();
@@ -436,7 +432,6 @@ class _AlarmItemState extends ConsumerState<_AlarmItem> {
 
     if (confirmed != true || !mounted) return;
     setState(() => _busy = true);
-    NotificationService.suppressFor(const Duration(seconds: 6));
     try {
       await _alarmService.deleteAlarm(alarmId);
       widget.onRefresh();
@@ -484,6 +479,21 @@ class _AlarmItemState extends ConsumerState<_AlarmItem> {
     final double cardOpacity = cat == _AlarmCat.clearedAck ? 0.65 : 1.0;
     final bool strikethrough = cat == _AlarmCat.clearedAck;
 
+    // Icon và màu từ details — chỉ ảnh hưởng icon circle, không đổi màu status card
+    final details = alarm.details;
+    IconData iconData = _severityIcon(alarm.severity);
+    Color iconColor = accentColor;
+    if (details is Map) {
+      final rawIcon = details['icon']?.toString() ?? '';
+      final rawColor = details['color']?.toString() ?? '';
+      if (rawIcon.isNotEmpty) {
+        iconData = kSmarthomeIcons[rawIcon] ?? iconData;
+      }
+      if (rawColor.isNotEmpty) {
+        iconColor = colorByHex(rawColor, fallback: accentColor);
+      }
+    }
+
     final deviceName = ref
         .watch(deviceDisplayNameProvider(alarm.originator.id ?? ''))
         .valueOrNull ??
@@ -518,19 +528,15 @@ class _AlarmItemState extends ConsumerState<_AlarmItem> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Severity icon
+                        // Icon từ details hoặc fallback severity
                         Container(
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: accentColor.withValues(alpha: 0.12),
+                            color: iconColor.withValues(alpha: 0.12),
                           ),
-                          child: Icon(
-                            _severityIcon(alarm.severity),
-                            size: 17,
-                            color: accentColor,
-                          ),
+                          child: Icon(iconData, size: 17, color: iconColor),
                         ),
                         const SizedBox(width: 10),
                         // Text block
