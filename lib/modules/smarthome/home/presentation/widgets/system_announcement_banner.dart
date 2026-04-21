@@ -27,7 +27,8 @@ class SystemAnnouncementBanner extends ConsumerWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(builder: (_) => const ActivityTab()),
+            MaterialPageRoute(
+                builder: (_) => const ActivityTab(initialTab: 0)),
           ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),

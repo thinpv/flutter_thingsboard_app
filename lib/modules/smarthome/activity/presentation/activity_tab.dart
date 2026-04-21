@@ -7,7 +7,10 @@ import 'package:thingsboard_app/modules/smarthome/activity/providers/alarms_prov
 import 'package:thingsboard_app/modules/smarthome/activity/providers/notifications_provider.dart';
 
 class ActivityTab extends ConsumerStatefulWidget {
-  const ActivityTab({super.key});
+  /// [initialTab]: 0 = Thông báo, 1 = Cảnh báo.
+  /// Nếu null → dùng logic mặc định (Cảnh báo nếu có unack alarms).
+  const ActivityTab({super.key, this.initialTab});
+  final int? initialTab;
 
   @override
   ConsumerState<ActivityTab> createState() => _ActivityTabState();
@@ -21,7 +24,13 @@ class _ActivityTabState extends ConsumerState<ActivityTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab ?? 0,
+    );
+    // Nếu initialTab được chỉ định rõ → không để logic tự động override
+    if (widget.initialTab != null) _initialTabResolved = true;
     WidgetsBinding.instance.addObserver(this);
     // Đảm bảo dữ liệu mới nhất khi mở màn hình (từ shell tab → push nav)
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());

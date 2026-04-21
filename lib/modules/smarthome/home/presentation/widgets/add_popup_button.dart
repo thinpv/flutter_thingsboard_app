@@ -52,7 +52,8 @@ class _SmarthomeBellButtonState extends ConsumerState<SmarthomeBellButton> {
 
     return GestureDetector(
       onTap: () => Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => const ActivityTab()),
+        MaterialPageRoute(
+            builder: (_) => const ActivityTab(initialTab: 0)),
       ),
       child: Container(
         width: 34,

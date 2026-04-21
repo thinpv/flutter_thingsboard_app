@@ -7,23 +7,57 @@ import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_ser
 const _kDeliveryMethod = 'MOBILE_APP';
 
 /// Latest 100 push notifications for the current user.
+/// Fetch raw JSON để đọc info.details (PushNotificationInfo.fromJson drop field này),
+/// inject details.icon / details.color vào additionalConfig trước khi parse model.
 final notificationsProvider =
     FutureProvider.autoDispose<List<PushNotification>>((ref) async {
-  debugPrint('[Notifications] Fetching...');
   final client = getIt<ITbClientService>().client;
   try {
-    final query = PushNotificationQuery(
+    final queryParams = PushNotificationQuery(
       TimePageLink(100, 0, null, SortOrder('createdTime', Direction.DESC)),
+    ).toQueryParameters();
+
+    final response = await client.get<Map<String, dynamic>>(
+      '/api/notifications',
+      queryParameters: queryParams,
     );
-    final page = await client.getNotificationService().getNotifications(query);
-    debugPrint('[Notifications] OK — count=${page.data.length}, '
-        'unread=${page.data.where((n) => n.status == PushNotificationStatus.SENT).length}');
-    return page.data;
+
+    final rawList =
+        (response.data!['data'] as List).cast<Map<String, dynamic>>();
+
+    return rawList.map(_parseWithDetails).toList();
   } catch (e, st) {
     debugPrint('[Notifications] ERROR: $e\n$st');
     rethrow;
   }
 });
+
+/// Parse một notification JSON, đồng thời inject icon/color từ info.details
+/// vào additionalConfig.icon nếu có (override giá trị mặc định của template).
+PushNotification _parseWithDetails(Map<String, dynamic> rawJson) {
+  final details =
+      (rawJson['info'] as Map?)?['details'] as Map<String, dynamic>?;
+
+  if (details != null) {
+    final iconName = details['details.icon']?.toString() ?? '';
+    final colorStr = details['details.color']?.toString() ?? '';
+
+    if (iconName.isNotEmpty || colorStr.isNotEmpty) {
+      final ac = Map<String, dynamic>.from(
+          (rawJson['additionalConfig'] as Map<String, dynamic>?) ?? {});
+      final icon = Map<String, dynamic>.from((ac['icon'] as Map?) ?? {});
+      if (iconName.isNotEmpty) icon['icon'] = iconName;
+      if (colorStr.isNotEmpty) icon['color'] = colorStr;
+      icon['enabled'] = true;
+      ac['icon'] = icon;
+      final patched = Map<String, dynamic>.from(rawJson);
+      patched['additionalConfig'] = ac;
+      return PushNotification.fromJson(patched);
+    }
+  }
+
+  return PushNotification.fromJson(rawJson);
+}
 
 /// Unread count for bottom-nav badge.
 final unreadNotificationsCountProvider =
