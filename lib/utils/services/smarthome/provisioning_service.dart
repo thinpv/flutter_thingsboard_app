@@ -57,18 +57,19 @@ class ProvisioningService {
 
   // ─── Gateway discovery ────────────────────────────────────────────────────
 
-  /// Finds all gateway devices belonging to the customer.
-  /// Gateways may or may not be assigned to a home, so we always search
-  /// all customer devices and filter by the gateway flag.
+  /// Finds all gateway devices that belong to [homeId].
+  /// Only returns gateways already assigned to this home via a Contains relation.
   Future<List<SmarthomeDevice>> fetchGatewayDevices(String homeId) async {
-    final user = await _client.getUserService().getUser();
-    final customerId = user.customerId?.id;
-    if (customerId == null) return [];
-    final page = await _client.getDeviceService().getCustomerDevices(
-          customerId,
-          PageLink(100),
-        );
-    return page.data
+    final homeDeviceIds = await fetchHomeDeviceIds(homeId);
+    if (homeDeviceIds.isEmpty) return [];
+    final svc = _client.getDeviceService();
+    final devices = <Device>[];
+    final ids = homeDeviceIds.toList();
+    for (var i = 0; i < ids.length; i += 50) {
+      final end = (i + 50).clamp(0, ids.length);
+      devices.addAll(await svc.getDevicesByIds(ids.sublist(i, end)));
+    }
+    return devices
         .where((d) => _isGateway(d))
         .map(SmarthomeDevice.fromDevice)
         .toList();
