@@ -420,7 +420,7 @@ class HomeDeviceGrid extends ConsumerWidget {
       builder: (_) => SimpleDialog(
         backgroundColor: MpColors.bg,
         title: Text(
-          'Gán "${device.name}" vào phòng',
+          'Gán "${device.displayName}" vào phòng',
           style: const TextStyle(color: MpColors.text),
         ),
         children: rooms
@@ -442,7 +442,7 @@ class HomeDeviceGrid extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Đã gán "${device.name}" vào "${room.name}"')),
+              content: Text('Đã gán "${device.displayName}" vào "${room.name}"')),
         );
       }
     } catch (e) {

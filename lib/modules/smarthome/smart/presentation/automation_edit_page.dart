@@ -1836,6 +1836,7 @@ class _DeviceConditionSheetState
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
+              homeId: widget.parentRef.read(selectedHomeProvider).valueOrNull?.id ?? '',
               initialDeviceId: widget.initial?.raw['deviceId'] as String?,
               onSelected: (d) {
                 setState(() {
@@ -2137,6 +2138,7 @@ class _DeviceActionSheetState
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             _DevicePicker(
+              homeId: widget.parentRef.read(selectedHomeProvider).valueOrNull?.id ?? '',
               initialDeviceId: widget.initial?.raw['deviceId'] as String?,
               onSelected: (d) {
                 setState(() {
@@ -2741,17 +2743,22 @@ class _SeverityChip extends StatelessWidget {
 
 // ─── Shared: Device picker ────────────────────────────────────────────────────
 
-class _DevicePicker extends ConsumerStatefulWidget {
-  const _DevicePicker({required this.onSelected, this.initialDeviceId});
+class _DevicePicker extends StatefulWidget {
+  const _DevicePicker({
+    required this.homeId,
+    required this.onSelected,
+    this.initialDeviceId,
+  });
 
+  final String homeId;
   final ValueChanged<SmarthomeDevice> onSelected;
   final String? initialDeviceId;
 
   @override
-  ConsumerState<_DevicePicker> createState() => _DevicePickerState();
+  State<_DevicePicker> createState() => _DevicePickerState();
 }
 
-class _DevicePickerState extends ConsumerState<_DevicePicker> {
+class _DevicePickerState extends State<_DevicePicker> {
   SmarthomeDevice? _selected;
   late Future<List<SmarthomeDevice>> _future;
 
@@ -2762,10 +2769,10 @@ class _DevicePickerState extends ConsumerState<_DevicePicker> {
   }
 
   Future<List<SmarthomeDevice>> _loadAll() async {
-    final home = await _awaitHome();
-    if (home == null) return [];
+    final homeId = widget.homeId;
+    if (homeId.isEmpty) return [];
     final svc = HomeService();
-    final rooms = await svc.fetchRooms(home.id);
+    final rooms = await svc.fetchRooms(homeId);
     final all = <SmarthomeDevice>[];
     final seen = <String>{};
     for (final r in rooms) {
@@ -2773,26 +2780,14 @@ class _DevicePickerState extends ConsumerState<_DevicePicker> {
         if (seen.add(d.id)) all.add(d);
       }
     }
-    for (final d in await svc.fetchDevicesInHome(home.id)) {
-      if (seen.add(d.id)) all.add(d);
+    // Include devices directly under home (unassigned), but exclude gateways —
+    // gateways are infrastructure, not controllable endpoints in automation rules.
+    for (final d in await svc.fetchDevicesInHome(homeId)) {
+      if (seen.add(d.id) && d.type.toLowerCase() != 'gateway') all.add(d);
     }
     // Populate profileName so `displayName` applies the 3-level priority
     // (label > profileName > name) — same as device cards.
     return resolveDeviceProfileMetaFromCache(all);
-  }
-
-  Future<SmarthomeHome?> _awaitHome() async {
-    try {
-      final homes = await ref.read(homesProvider.future);
-      if (homes.isEmpty) return null;
-      final selectedId = ref.read(selectedHomeIdProvider);
-      return selectedId == null
-          ? homes.first
-          : homes.firstWhere((h) => h.id == selectedId,
-              orElse: () => homes.first);
-    } catch (_) {
-      return null;
-    }
   }
 
   @override

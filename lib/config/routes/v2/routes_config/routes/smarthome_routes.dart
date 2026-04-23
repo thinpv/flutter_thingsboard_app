@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/home_tab.dart';
 import 'package:thingsboard_app/modules/smarthome/profile/presentation/profile_tab.dart';
@@ -10,14 +11,26 @@ abstract final class SmarthomeRoutes {
   static const profile = '/smarthome/profile';
 }
 
+/// Navigator keys for each tab branch.
+/// Exposed so SmartHomeShell can pop sub-screens when switching tabs.
+final smarthomeBranchNavKeys = [
+  GlobalKey<NavigatorState>(),
+  GlobalKey<NavigatorState>(),
+  GlobalKey<NavigatorState>(),
+];
+
 List<RouteBase> getSmarthomeRoutes() {
   return [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return SmartHomeShell(navigationShell: navigationShell);
+        return SmartHomeShell(
+          navigationShell: navigationShell,
+          branchNavKeys: smarthomeBranchNavKeys,
+        );
       },
       branches: [
         StatefulShellBranch(
+          navigatorKey: smarthomeBranchNavKeys[0],
           routes: [
             GoRoute(
               path: SmarthomeRoutes.home,
@@ -26,6 +39,7 @@ List<RouteBase> getSmarthomeRoutes() {
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: smarthomeBranchNavKeys[1],
           routes: [
             GoRoute(
               path: SmarthomeRoutes.smart,
@@ -34,6 +48,7 @@ List<RouteBase> getSmarthomeRoutes() {
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: smarthomeBranchNavKeys[2],
           routes: [
             GoRoute(
               path: SmarthomeRoutes.profile,

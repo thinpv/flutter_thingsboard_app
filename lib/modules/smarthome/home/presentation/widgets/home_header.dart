@@ -5,6 +5,7 @@ import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_stats_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/add_popup_button.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/selected_home_prefs.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
 
 /// mPipe-style home header:
@@ -185,6 +186,7 @@ class HomeHeader extends ConsumerWidget {
                     : null,
                 onTap: () {
                   ref.read(selectedHomeIdProvider.notifier).state = h.id;
+                  SelectedHomePrefs.instance.setSelectedHomeId(h.id);
                   Navigator.pop(context);
                 },
               ),

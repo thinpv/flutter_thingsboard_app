@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/selected_home_prefs.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
@@ -8,8 +9,11 @@ final homesProvider = FutureProvider<List<SmarthomeHome>>((ref) {
   return HomeService().fetchHomes();
 });
 
-/// Currently selected home id (persists within session).
-final selectedHomeIdProvider = StateProvider<String?>((ref) => null);
+/// Currently selected home id — initialised from Hive so it survives restarts.
+/// [SelectedHomePrefs.init] must be called in main() before ProviderScope mounts.
+final selectedHomeIdProvider = StateProvider<String?>(
+  (ref) => SelectedHomePrefs.instance.getSelectedHomeId(),
+);
 
 /// Selected home, resolved from [homesProvider] + [selectedHomeIdProvider].
 final selectedHomeProvider = Provider<AsyncValue<SmarthomeHome?>>((ref) {

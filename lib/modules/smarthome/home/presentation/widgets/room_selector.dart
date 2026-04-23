@@ -313,7 +313,7 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
-                Text('Đã gán "${widget.device.name}" vào "${name ?? 'phòng'}"'),
+                Text('Đã gán "${widget.device.displayName}" vào "${name ?? 'phòng'}"'),
           ),
         );
       }
@@ -349,7 +349,7 @@ class _UnassignedDeviceTileState extends ConsumerState<_UnassignedDeviceTile> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.device.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: MpColors.text)),
+                Text(widget.device.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: MpColors.text)),
                 Text(widget.device.type, style: const TextStyle(fontSize: 12, color: MpColors.text3)),
               ],
             ),

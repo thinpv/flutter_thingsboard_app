@@ -15,6 +15,7 @@ import 'package:thingsboard_app/constants/enviroment_variables.dart';
 import 'package:thingsboard_app/core/select_region/model/region.dart';
 import 'package:thingsboard_app/firebase_options.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/selected_home_prefs.dart';
 import 'package:thingsboard_app/modules/smarthome/notification_prefs/data/notification_preferences_service.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/thingsboard_app.dart';
@@ -43,6 +44,7 @@ Future<void> main() async {
   await ProfileMetadataCache.instance.init();
   await ProfileMetadataCache.instance.migrateIfNeeded();
   await NotificationPreferencesService.instance.init();
+  await SelectedHomePrefs.instance.init();
   await setUpRootDependencies();
   if (UniversalPlatform.isAndroid) {
     await InAppWebViewController.setWebContentsDebuggingEnabled(

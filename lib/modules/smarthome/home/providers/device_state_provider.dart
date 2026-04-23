@@ -269,12 +269,16 @@ final devicesInHomeProvider =
   },
 );
 
-/// Starts the entity data stream immediately (no wait for profile meta), then
-/// injects profileImage once it resolves in the background.
+/// Starts the entity data stream, ensuring profile metadata is populated before
+/// the first emit so device names and icons are correct on the initial render.
 ///
-/// Devices appear in the UI as soon as REST fetch completes. uiType arrives
-/// via the WebSocket server-attribute subscription. profileImage arrives once
-/// profile meta resolves — typically within a few hundred ms for cached profiles.
+/// Strategy:
+///   1. Try Hive cache (fast, ~1-5ms) — warm on second+ launch within 24h.
+///   2. If any device profile is missing from Hive (first install, cache
+///      expired, or cleared by a previous refresh), block until the network
+///      fetch completes so the first render shows correct names and icons
+///      instead of UUID-like device names and generic icons.
+///   3. For Hive-hit profiles: background-refresh to keep cache warm.
 Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   List<SmarthomeDevice> raw,
   String rootAssetId,
@@ -289,15 +293,39 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // IDs for which profile meta has already been (or is being) resolved.
   final resolvedIds = <String>{for (final d in raw) d.id};
 
-  // Pre-populate maps from Hive (local, ~1-5ms) BEFORE WebSocket connects.
-  // This ensures the first `injectImages()` call already has uiType, profileName,
-  // and profileImage from cache — names and icons appear on first frame.
+  // Step 1: Pre-populate maps from Hive (local, ~1-5ms) BEFORE WebSocket connects.
   if (raw.isNotEmpty) {
     final hiveMetas = await _resolveProfileMetaFromHive(raw);
     for (final e in hiveMetas) {
       if (e.value.profileImage != null) imageMap[e.key] = e.value.profileImage;
       if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
       if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
+    }
+  }
+
+  // Step 2: If any device with a profile is absent from the maps (Hive miss),
+  // block until the network fetch resolves so the very first render is correct.
+  // With in-flight dedup in DeviceProfileUiService, parallel room streams share
+  // the same HTTP requests — the total extra wait is one round-trip per unique
+  // profile, not per room.
+  final cacheMissDevices = raw
+      .where((d) => d.deviceProfileId != null && !profileNameMap.containsKey(d.id))
+      .toList();
+
+  if (cacheMissDevices.isNotEmpty) {
+    try {
+      final netMetas = await _resolveProfileMeta(cacheMissDevices)
+          .timeout(const Duration(seconds: 4));
+      for (final e in netMetas) {
+        imageMap[e.key] = e.value.profileImage;
+        if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
+        if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
+      }
+    } catch (_) {
+      // Timeout or network error: proceed with whatever Hive data we have.
+      // Devices will show with UUID-like names on this load; Hive will be
+      // populated once the background refresh completes and subsequent loads
+      // will be correct.
     }
   }
 
@@ -369,21 +397,25 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
     onDone: () { if (!merged.isClosed) merged.close(); },
   );
 
-  // Resolve profile meta for the initial list concurrently.
-  // When done, re-emit the LATEST WebSocket snapshot (not the stale raw list)
-  // so telemetry / online-state / uiType from WebSocket are preserved.
-  _resolveProfileMeta(raw).then((entries) {
-    if (merged.isClosed) return;
-    for (final e in entries) {
-      imageMap[e.key] = e.value.profileImage;
-      if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
-      if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
-    }
-    // Re-emit the latest snapshot with profile meta injected.
-    // Fall back to re-emitting raw list only if WebSocket hasn't emitted yet.
-    final snap = lastSnapshot ?? raw;
-    merged.add(injectImages(snap));
-  }).catchError((_) {});
+  // Step 3: Background refresh.
+  // - Hive-hit path: keeps cache warm and picks up profile description changes.
+  // - Cache-miss + timeout path: re-emits once the network eventually responds,
+  //   so the user sees correct names/icons without needing a manual refresh.
+  // _profileMetaCache in DeviceProfileUiService deduplicates in-flight requests,
+  // so this never sends redundant HTTP calls when step 2 already fetched data.
+  if (raw.isNotEmpty) {
+    _resolveProfileMeta(raw).then((entries) {
+      if (merged.isClosed) return;
+      for (final e in entries) {
+        imageMap[e.key] = e.value.profileImage;
+        if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
+        if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
+      }
+      // Re-emit the latest snapshot with refreshed meta injected.
+      final snap = lastSnapshot ?? raw;
+      merged.add(injectImages(snap));
+    }).catchError((_) {});
+  }
 
   yield* merged.stream;
 }

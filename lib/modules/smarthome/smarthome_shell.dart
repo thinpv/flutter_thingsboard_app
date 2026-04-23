@@ -3,9 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
 class SmartHomeShell extends StatelessWidget {
-  const SmartHomeShell({required this.navigationShell, super.key});
+  const SmartHomeShell({
+    required this.navigationShell,
+    required this.branchNavKeys,
+    super.key,
+  });
 
   final StatefulNavigationShell navigationShell;
+  final List<GlobalKey<NavigatorState>> branchNavKeys;
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +19,19 @@ class SmartHomeShell extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: _MpBottomNav(
         currentIndex: navigationShell.currentIndex,
-        onTap: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
+        onTap: (index) {
+          if (index != navigationShell.currentIndex) {
+            // Pop all sub-screens in the current tab before switching so
+            // returning to any tab always shows its root screen.
+            branchNavKeys[navigationShell.currentIndex]
+                .currentState
+                ?.popUntil((route) => route.isFirst);
+          }
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
       ),
     );
   }
