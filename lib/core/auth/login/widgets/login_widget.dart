@@ -1,11 +1,8 @@
-import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:reactive_forms/reactive_forms.dart';
-import 'package:thingsboard_app/config/routes/router.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/core/auth/login/provider/login_provider.dart';
 import 'package:thingsboard_app/core/auth/login/provider/oauth_provider.dart';
@@ -13,9 +10,7 @@ import 'package:thingsboard_app/core/auth/login/widgets/footer/login_footer.dart
 import 'package:thingsboard_app/core/auth/login/widgets/full_screen_loader.dart';
 import 'package:thingsboard_app/core/auth/login/widgets/header/login_header.dart';
 import 'package:thingsboard_app/core/auth/login/widgets/o_auth_buttons.dart';
-import 'package:thingsboard_app/core/logger/tb_logger.dart';
 import 'package:thingsboard_app/generated/l10n.dart';
-import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/ui/visibility_widget.dart';
 
@@ -46,10 +41,10 @@ class LoginWidget extends HookConsumerWidget {
       return null;
     }, [providers]);
 
-    final oauthClients = providers.value?.oAuth2Clients ?? [];
-    final hasOAuth =
-        oauthClients.isNotEmpty &&
-        !(oauthClients.length == 1 && oauthClients.first.name == 'qr');
+    final oauthClients = (providers.value?.oAuth2Clients ?? [])
+        .where((c) => c.name != 'qr')
+        .toList();
+    final hasOAuth = oauthClients.isNotEmpty;
 
     return Stack(
       children: [
@@ -480,20 +475,6 @@ Future<void> onLoginPressed(
   }
 }
 
-Future<void> onLoginWithBarcode(BuildContext context) async {
-  try {
-    final Barcode? barcode = await getIt<ThingsboardAppRouter>().navigateTo(
-      '/qrCodeScan',
-      transition: TransitionType.nativeModal,
-    );
-    if (barcode != null && barcode.rawValue != null) {
-      getIt<ThingsboardAppRouter>().navigateByAppLink(barcode.rawValue);
-    }
-  } catch (e) {
-    getIt<TbLogger>().error('Login with qr code error', e);
-  }
-}
-
 Future<void> onOauth2ButtonPressed(
   OAuth2ClientInfo client,
   BuildContext context,
@@ -501,10 +482,6 @@ Future<void> onOauth2ButtonPressed(
   WidgetRef ref,
 ) async {
   FocusScope.of(context).unfocus();
-  if (client.name == 'qr') {
-    await onLoginWithBarcode(context);
-    return;
-  }
   loading.value = true;
   final res = await ref.read(loginProvider.notifier).oauthLogin(client.url);
   loading.value = res;
