@@ -5,12 +5,16 @@ import 'package:thingsboard_app/core/auth/2FA/setup/two_factor_auth_force_descri
 import 'package:thingsboard_app/core/auth/2FA/setup/two_factor_auth_setup.dart';
 import 'package:thingsboard_app/core/auth/login/view/login_page.dart';
 import 'package:thingsboard_app/core/auth/reset_password/reset_password_request_page.dart';
+import 'package:thingsboard_app/core/auth/signup/view/otp_verify_page.dart';
+import 'package:thingsboard_app/core/auth/signup/view/signup_page.dart';
 import 'package:thingsboard_app/modules/version/view/update_required_page.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 
 class LoginRoutes {
   static const login = '/login';
   static const resetPasswordRequest = '/resetPasswordRequest';
+  static const signup = '/signup';
+  static const otpVerify = '/otpVerify';
   static const updateRequired = '/updateRequired';
   static const mfaConfirm = '/mfaConfirm';
   static const mfaForce = '/mfaForce';
@@ -27,6 +31,17 @@ final loginRoutes = [
         path: LoginRoutes.resetPasswordRequest,
         builder: (context, state) {
           return const ResetPasswordRequestPage();
+        },
+      ),
+      GoRoute(
+        path: LoginRoutes.signup,
+        builder: (context, state) => const SignupPage(),
+      ),
+      GoRoute(
+        path: LoginRoutes.otpVerify,
+        builder: (context, state) {
+          final email = state.extra as String? ?? '';
+          return OtpVerifyPage(email: email);
         },
       ),
       GoRoute(

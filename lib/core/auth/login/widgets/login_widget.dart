@@ -231,6 +231,38 @@ class LoginWidget extends HookConsumerWidget {
                           },
                         ),
 
+                        // ── Sign-up link ──────────────────────────────────
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Chưa có tài khoản?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: MpColors.text3,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => context.push('/login/signup'),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: const Text(
+                                'Đăng ký',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: MpColors.blue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
                         // ── OAuth divider + buttons ───────────────────────
                         if (hasOAuth) ...[
                           const SizedBox(height: 28),

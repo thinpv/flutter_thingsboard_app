@@ -14,6 +14,7 @@ import 'package:thingsboard_app/utils/services/device_info/i_device_info_service
 import 'package:thingsboard_app/utils/services/firebase/i_firebase_service.dart';
 import 'package:thingsboard_app/utils/services/notification_service.dart';
 import 'package:thingsboard_app/utils/services/overlay_service/i_overlay_service.dart';
+import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
@@ -105,8 +106,25 @@ class Login extends _$Login {
 
   Future<void> _onFullyLoggedIn() async {
     await loadUser();
+    // Auto-provision a default Home for CUSTOMER_USERs signing in for the
+    // first time (works for email sign-up, Google OAuth2, and future phone
+    // auth uniformly — sign-up flows deliberately skip home creation).
+    await _ensureDefaultHome();
     if (getIt<IFirebaseService>().apps.isNotEmpty) {
       await getIt<NotificationService>().init();
+    }
+  }
+
+  Future<void> _ensureDefaultHome() async {
+    try {
+      if (state.user?.authority != Authority.CUSTOMER_USER) return;
+      final service = HomeService();
+      final homes = await service.fetchHomes();
+      if (homes.isEmpty) {
+        await service.createHome('Nhà của tôi');
+      }
+    } catch (e) {
+      log('Auto-provision home failed (non-fatal): $e');
     }
   }
 
