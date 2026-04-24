@@ -52,3 +52,4 @@ WARP.md
 # Firebase config — không commit (chứa API keys per-package)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+dart_defines.json
