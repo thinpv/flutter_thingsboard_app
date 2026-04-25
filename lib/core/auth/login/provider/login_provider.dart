@@ -14,6 +14,8 @@ import 'package:thingsboard_app/utils/services/device_info/i_device_info_service
 import 'package:thingsboard_app/utils/services/firebase/i_firebase_service.dart';
 import 'package:thingsboard_app/utils/services/notification_service.dart';
 import 'package:thingsboard_app/utils/services/overlay_service/i_overlay_service.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
+import 'package:thingsboard_app/modules/smarthome/home/providers/room_provider.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
@@ -106,6 +108,11 @@ class Login extends _$Login {
 
   Future<void> _onFullyLoggedIn() async {
     await loadUser();
+    // Wipe smarthome cache so a new account never sees stale data from a
+    // previous session. homesProvider is the root — invalidating it cascades
+    // to roomsProvider, scenesProvider, serverRulesProvider, etc.
+    ref.invalidate(homesProvider);
+    ref.read(selectedRoomIdProvider.notifier).state = null;
     // Auto-provision a default Home for CUSTOMER_USERs signing in for the
     // first time (works for email sign-up, Google OAuth2, and future phone
     // auth uniformly — sign-up flows deliberately skip home creation).
