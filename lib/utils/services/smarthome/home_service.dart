@@ -283,22 +283,35 @@ class HomeService {
     return results.expand((r) => r).toList();
   }
 
-  /// Moves a device from home-level to a room.
-  /// Creates Room→Device relation and removes Home→Device relation.
+  /// Assigns a device to [roomId], replacing any existing asset Contains
+  /// relation. A device must live under exactly one home/room — adding a new
+  /// room Contains without dropping ALL old asset Contains (other rooms,
+  /// other homes, the current home's home-level relation) would cause the
+  /// device to appear in multiple places. [homeId] is unused now but kept
+  /// for callsite compatibility.
   Future<void> assignDeviceToRoom(
     String deviceId,
     String roomId,
     String homeId,
   ) async {
+    try {
+      final rels = await _client.getEntityRelationService().findByTo(
+            DeviceId(deviceId),
+          );
+      for (final rel in rels) {
+        if (rel.type == _containsRelation &&
+            rel.from.entityType == EntityType.ASSET) {
+          await _client.getEntityRelationService().deleteRelation(
+                rel.from,
+                rel.type,
+                RelationTypeGroup.COMMON,
+                rel.to,
+              );
+        }
+      }
+    } catch (_) {}
     await _client.getEntityRelationService().saveRelation(
           EntityRelation(from: AssetId(roomId), to: DeviceId(deviceId)),
-        );
-    // Remove the direct home→device relation so it no longer appears as unassigned
-    await _client.getEntityRelationService().deleteRelation(
-          AssetId(homeId),
-          _containsRelation,
-          RelationTypeGroup.COMMON,
-          DeviceId(deviceId),
         );
   }
 

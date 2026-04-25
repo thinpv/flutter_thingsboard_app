@@ -308,8 +308,28 @@ class ProvisioningService {
 
   // ─── Room assignment ──────────────────────────────────────────────────────
 
-  /// Creates a Contains relation from [homeId] to [deviceId].
+  /// Assigns [deviceId] to [homeId] at home level, replacing any existing
+  /// asset Contains relation. A device must live under exactly one home /
+  /// room — adding a new home Contains without dropping the old one would
+  /// cause the device to appear in both homes (the bug we hit when moving
+  /// sub-devices between homes via gateway transfer + re-pair).
   Future<void> assignToHome(String deviceId, String homeId) async {
+    try {
+      final rels = await _client.getEntityRelationService().findByTo(
+            DeviceId(deviceId),
+          );
+      for (final rel in rels) {
+        if (rel.type == _containsRelation &&
+            rel.from.entityType == EntityType.ASSET) {
+          await _client.getEntityRelationService().deleteRelation(
+                rel.from,
+                rel.type,
+                RelationTypeGroup.COMMON,
+                rel.to,
+              );
+        }
+      }
+    } catch (_) {}
     await _client.getEntityRelationService().saveRelation(
           EntityRelation(
             from: AssetId(homeId),
