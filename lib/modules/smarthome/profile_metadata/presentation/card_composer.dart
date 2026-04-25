@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/profile_metadata.dart';
+import 'package:thingsboard_app/modules/smarthome/profile_metadata/domain/state_def.dart';
 
 // ─── Metric icon + color resolver ─────────────────────────────────────────────
 
@@ -192,14 +193,35 @@ class CardComposer {
 
   /// Builds the summary metric chips row from [UiHints.summaryStates].
   ///
-  /// Each chip shows `value unit` for the corresponding key.
-  /// Returns null if summaryStates is empty.
+  /// Each chip shows either:
+  ///  - User-friendly status label (Vietnamese) for sensor boolean states
+  ///    (door/pir/leak/smoke/gas/vibration) — e.g. "Mở", "Có chuyển động"
+  ///  - `value unit` for numeric metrics (temp/hum/power/lux/...)
+  ///
+  /// Auto-prepends [UiHints.primaryState] when:
+  ///  - Device is non-toggleable (sensor) AND
+  ///  - primaryState is a known sensor boolean AND
+  ///  - It's not already in summaryStates
+  /// → ensures door/motion/leak status is always visible on sensor cards.
+  ///
+  /// Returns null if no chips could be built.
   static Widget? buildSummaryRow(
     BuildContext context,
     SmarthomeDevice device,
     ProfileMetadata meta,
   ) {
-    final keys = meta.uiHints?.summaryStates ?? [];
+    final summaryKeys = meta.uiHints?.summaryStates ?? const <String>[];
+    final primary = meta.uiHints?.primaryState;
+    final keys = <String>[];
+
+    // Auto-prepend primaryState for sensor cards (non-toggleable bool primary).
+    if (primary != null &&
+        _isSensorBooleanKey(primary) &&
+        !hasPrimaryToggle(meta) &&
+        !summaryKeys.contains(primary)) {
+      keys.add(primary);
+    }
+    keys.addAll(summaryKeys);
     if (keys.isEmpty) return null;
 
     final chips = <Widget>[];
@@ -207,14 +229,54 @@ class CardComposer {
       final raw = device.telemetry[k];
       if (raw == null) continue;
       final def = meta.states[k];
-      final unit = def?.unit ?? '';
-      final precision = def?.precision ?? _inferPrecision(raw);
-      final display = _formatValue(raw, precision);
-      chips.add(_MetricChip(metricKey: k, raw: raw, label: '$display$unit'));
+      final label = _formatChipLabel(k, raw, def);
+      if (label == null) continue;
+      chips.add(_MetricChip(metricKey: k, raw: raw, label: label));
     }
 
     if (chips.isEmpty) return null;
     return Wrap(spacing: 6, children: chips);
+  }
+
+  /// True if [key] is a known boolean sensor state with user-friendly labels.
+  static bool _isSensorBooleanKey(String key) =>
+      const {'door', 'pir', 'leak', 'smoke', 'gas', 'vibration'}.contains(key);
+
+  /// Returns chip text. For sensor boolean keys → Vietnamese status label.
+  /// For numeric → `value unit`. Null if no useful render.
+  static String? _formatChipLabel(String key, dynamic raw, StateDef? def) {
+    // Boolean sensor → status word
+    final boolLabel = _booleanStateLabel(key, raw);
+    if (boolLabel != null) return boolLabel;
+    // Numeric → value unit
+    final unit = def?.unit ?? '';
+    final precision = def?.precision ?? _inferPrecision(raw);
+    final display = _formatValue(raw, precision);
+    return '$display$unit';
+  }
+
+  /// User-friendly Vietnamese label cho boolean sensor states.
+  /// Convention from CLAUDE.md:
+  ///   door: true=đóng (1=đóng, 0=mở)
+  ///   pir/leak/smoke/gas/vibration: 1=triggered, 0=normal
+  static String? _booleanStateLabel(String key, dynamic raw) {
+    final on = raw == true || raw == 1 || raw == '1';
+    switch (key) {
+      case 'door':
+        return on ? 'Đóng' : 'Mở';
+      case 'pir':
+        return on ? 'Có chuyển động' : 'Đứng yên';
+      case 'leak':
+        return on ? 'Rò rỉ' : 'Khô';
+      case 'smoke':
+        return on ? 'Có khói' : 'Bình thường';
+      case 'gas':
+        return on ? 'Có khí' : 'Bình thường';
+      case 'vibration':
+        return on ? 'Có rung' : 'Yên';
+      default:
+        return null;
+    }
   }
 
   /// Resolves the icon for the card — prefers metadata icon over uiType fallback.
