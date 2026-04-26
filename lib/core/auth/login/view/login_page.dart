@@ -16,7 +16,16 @@ class LoginPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final loginState = ref.watch(loginProvider);
-    final isUserLoading = useState(false);
+    // Synchronously check whether the TB client rehydrated a session token
+    // from disk. If so, we are about to be redirected to /smarthome/home —
+    // skip the login form entirely and show only a loader so the user does
+    // not see a flash of the sign-in screen on app cold start.
+    final hasRehydratedSession = useMemoized(() {
+      final user = getIt<ITbClientService>().client.getAuthUser();
+      if (user == null) return false;
+      return !user.isPreVerificationToken() && !user.isMfaConfigurationToken();
+    });
+    final isUserLoading = useState(hasRehydratedSession);
     useEffect(() {
       LoginDi.init();
       handleUserLoading(loginState, isUserLoading);
@@ -28,8 +37,10 @@ class LoginPage extends HookConsumerWidget {
     return Scaffold(
       body: Stack(
         children: [
-          const LoginPageBackground(),
-          const LoginWidget(),
+          if (!isUserLoading.value) ...[
+            const LoginPageBackground(),
+            const LoginWidget(),
+          ],
           if (isUserLoading.value) const FullScreenLoader(),
         ],
       ),

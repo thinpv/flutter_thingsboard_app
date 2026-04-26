@@ -6,6 +6,7 @@ import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/devi
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/home_header.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/quick_scene_card.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/room_selector.dart';
+import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/skeleton.dart';
 import 'package:thingsboard_app/modules/smarthome/home/presentation/widgets/system_announcement_banner.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/device_state_provider.dart';
 import 'package:thingsboard_app/modules/smarthome/home/providers/home_provider.dart';
@@ -24,6 +25,13 @@ class HomeTab extends ConsumerStatefulWidget {
 class _HomeTabState extends ConsumerState<HomeTab> {
   late final PageController _pageCtrl;
   bool _pageChanging = false; // tránh vòng lặp sync
+
+  /// Latches once homes + rooms + home-devices have all loaded for the
+  /// first time. After that we never show the full-body skeleton again —
+  /// stale data + per-room loaders cover refresh and tab swipes — so the
+  /// initial-load skeleton can't flash a second time when one of the
+  /// downstream providers briefly re-enters loading.
+  bool _hasInitialData = false;
 
   @override
   void initState() {
@@ -80,6 +88,20 @@ class _HomeTabState extends ConsumerState<HomeTab> {
     final selectedRoomId = ref.watch(selectedRoomIdProvider);
     final roomList = roomsAsync.valueOrNull ?? [];
 
+    // Watch home-level devices alongside homes + rooms so the single
+    // initial-load skeleton waits on all three, instead of letting them
+    // cascade into multiple skeletons that flash sequentially.
+    final home = selectedHome.valueOrNull;
+    final homeDevicesLoading = home == null
+        ? selectedHome.isLoading
+        : ref.watch(devicesInHomeProvider(home.id)).isLoading;
+
+    final stillLoading = selectedHome.isLoading ||
+        roomsAsync.isLoading ||
+        homeDevicesLoading;
+    if (!stillLoading) _hasInitialData = true;
+    final showInitialSkeleton = !_hasInitialData;
+
     // Sync PageController khi tab được nhấn
     final targetIndex = _indexFor(selectedRoomId, roomList);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -96,62 +118,44 @@ class _HomeTabState extends ConsumerState<HomeTab> {
             const SystemAnnouncementBanner(),
 
             // ── Room tab bar ──────────────────────────────────────────────
-            selectedHome.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (home) {
-                if (home == null) return const SizedBox.shrink();
-                return roomsAsync.when(
-                  loading: () => const SizedBox(
-                    height: 44,
-                    child: Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: MpColors.text3,
-                        ),
-                      ),
-                    ),
-                  ),
-                  error: (_, _) => const SizedBox.shrink(),
-                  data: (list) => RoomSelector(rooms: list),
-                );
-              },
-            ),
+            if (showInitialSkeleton)
+              const RoomSelectorSkeleton()
+            else if (selectedHome.hasError)
+              const SizedBox.shrink()
+            else if (home != null)
+              RoomSelector(rooms: roomList),
 
             const Divider(height: 1, color: MpColors.border),
 
             // ── PageView content ──────────────────────────────────────────
             Expanded(
-              child: selectedHome.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: MpColors.text3),
-                ),
-                error: (e, _) => Center(child: Text('Lỗi: $e')),
-                data: (home) {
-                  if (home == null) return const _NoHomeView();
-                  return PageView(
-                    controller: _pageCtrl,
-                    onPageChanged: (i) => _onPageChanged(i, roomList),
-                    children: [
-                      _AllDevicesView(
-                        homeId: home.id,
-                        rooms: roomList,
-                        onRefresh: () => _refresh(home.id, roomList),
-                      ),
-                      ...roomList.map(
-                        (r) => _SingleRoomView(
-                          roomId: r.id,
-                          roomName: r.name,
-                          onRefresh: () => _refresh(home.id, roomList),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              child: showInitialSkeleton
+                  ? const DeviceGridSkeleton()
+                  : selectedHome.when(
+                      loading: () => const DeviceGridSkeleton(),
+                      error: (e, _) => Center(child: Text('Lỗi: $e')),
+                      data: (home) {
+                        if (home == null) return const _NoHomeView();
+                        return PageView(
+                          controller: _pageCtrl,
+                          onPageChanged: (i) => _onPageChanged(i, roomList),
+                          children: [
+                            _AllDevicesView(
+                              homeId: home.id,
+                              rooms: roomList,
+                              onRefresh: () => _refresh(home.id, roomList),
+                            ),
+                            ...roomList.map(
+                              (r) => _SingleRoomView(
+                                roomId: r.id,
+                                roomName: r.name,
+                                onRefresh: () => _refresh(home.id, roomList),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -294,13 +298,6 @@ class _AllDevicesView extends ConsumerWidget {
               child: QuickScenesStrip(),
             ),
           ),
-          if (loading)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 32),
-                child: Center(child: CircularProgressIndicator(color: MpColors.text3)),
-              ),
-            ),
           if (homeList.isNotEmpty) ...[
             const _SectionHeader(title: 'THIẾT BỊ'),
             SliverPadding(
@@ -453,7 +450,7 @@ class _SingleRoomView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final devices = ref.watch(devicesInRoomProvider(roomId));
     return devices.when(
-      loading: () => const Center(child: CircularProgressIndicator(color: MpColors.text3)),
+      loading: () => const DeviceGridSkeleton(),
       error: (e, _) => Center(child: Text('Lỗi: $e')),
       data: (list) {
         if (list.isEmpty) {

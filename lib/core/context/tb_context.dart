@@ -11,6 +11,7 @@ import 'package:thingsboard_app/core/context/tb_context_widget.dart';
 import 'package:thingsboard_app/core/logger/tb_logger.dart';
 import 'package:thingsboard_app/generated/l10n.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/home_data_cache.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/device_info/i_device_info_service.dart';
 import 'package:thingsboard_app/utils/services/endpoint/i_endpoint_service.dart';
@@ -307,6 +308,10 @@ class TbContext implements PopEntry {
     }
 
     await tbClient.logout(requestConfig: requestConfig, notifyUser: notifyUser);
+
+    // Drop the cached homes/rooms/devices snapshot so the next user does not
+    // briefly see the previous user's smart-home data on cold launch.
+    await HomeDataCache.instance.clear();
 
     _appLinkStreamSubscription?.cancel();
     _appLinkStreamSubscription = null;

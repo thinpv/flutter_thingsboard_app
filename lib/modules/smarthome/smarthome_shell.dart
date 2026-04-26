@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 
-class SmartHomeShell extends StatelessWidget {
+class SmartHomeShell extends StatefulWidget {
   const SmartHomeShell({
     required this.navigationShell,
     required this.branchNavKeys,
@@ -13,25 +14,84 @@ class SmartHomeShell extends StatelessWidget {
   final List<GlobalKey<NavigatorState>> branchNavKeys;
 
   @override
+  State<SmartHomeShell> createState() => _SmartHomeShellState();
+}
+
+class _SmartHomeShellState extends State<SmartHomeShell> {
+  /// Timestamp of the last back-press at the tab root. Two back-presses
+  /// within [_exitWindow] exit the app; a single press just shows a hint.
+  DateTime? _lastBackPressAt;
+  static const _exitWindow = Duration(seconds: 2);
+
+  void _handleBackInvoked() {
+    final now = DateTime.now();
+    if (_lastBackPressAt != null &&
+        now.difference(_lastBackPressAt!) < _exitWindow) {
+      // Second press within the window — leave the app. SystemNavigator.pop
+      // is the equivalent of the OS back gesture finishing the activity on
+      // Android; on iOS it's a no-op (Apple HIG forbids programmatic exit),
+      // which is the expected behaviour there anyway.
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackPressAt = now;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Nhấn lần nữa để thoát mHome',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        duration: _exitWindow,
+        behavior: SnackBarBehavior.floating,
+        // ~60% black for the soft translucent toast look (Android-style).
+        backgroundColor: Color(0x99000000),
+        elevation: 0,
+        // Fixed width auto-centers the snackbar horizontally and gives the
+        // pill-shape feel instead of stretching edge-to-edge.
+        width: 240,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(22)),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MpColors.bg,
-      body: navigationShell,
-      bottomNavigationBar: _MpBottomNav(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (index) {
-          if (index != navigationShell.currentIndex) {
-            // Pop all sub-screens in the current tab before switching so
-            // returning to any tab always shows its root screen.
-            branchNavKeys[navigationShell.currentIndex]
-                .currentState
-                ?.popUntil((route) => route.isFirst);
-          }
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
+    return PopScope(
+      // We always block the system pop and decide ourselves whether to exit.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackInvoked();
+      },
+      child: Scaffold(
+        backgroundColor: MpColors.bg,
+        body: widget.navigationShell,
+        bottomNavigationBar: _MpBottomNav(
+          currentIndex: widget.navigationShell.currentIndex,
+          onTap: (index) {
+            if (index != widget.navigationShell.currentIndex) {
+              // Pop all sub-screens in the current tab before switching so
+              // returning to any tab always shows its root screen.
+              widget.branchNavKeys[widget.navigationShell.currentIndex]
+                  .currentState
+                  ?.popUntil((route) => route.isFirst);
+            }
+            widget.navigationShell.goBranch(
+              index,
+              initialLocation: index == widget.navigationShell.currentIndex,
+            );
+          },
+        ),
       ),
     );
   }

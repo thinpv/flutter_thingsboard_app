@@ -1,12 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/home_data_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/home/data/selected_home_prefs.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_home.dart';
 import 'package:thingsboard_app/utils/services/smarthome/home_service.dart';
 
-/// Fetches all smarthome_home assets for the current customer.
-final homesProvider = FutureProvider<List<SmarthomeHome>>((ref) {
-  return HomeService().fetchHomes();
+/// Cache-first stream of homes.
+///
+/// Yields the Hive-cached snapshot immediately (instant render on cold start
+/// once data has been seen at least once), then fetches the network and yields
+/// the fresh result. Watchers see [AsyncData] within milliseconds instead of
+/// waiting ~1-2s for the HTTP roundtrip.
+final homesProvider = StreamProvider<List<SmarthomeHome>>((ref) async* {
+  final cached = HomeDataCache.instance.getHomes();
+  if (cached != null && cached.isNotEmpty) {
+    yield cached;
+  }
+  final fresh = await HomeService().fetchHomes();
+  await HomeDataCache.instance.saveHomes(fresh);
+  yield fresh;
 });
 
 /// Currently selected home id — initialised from Hive so it survives restarts.

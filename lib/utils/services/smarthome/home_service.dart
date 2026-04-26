@@ -158,41 +158,53 @@ class HomeService {
 
   // ─── Room ───────────────────────────────────────────────────────────────────
 
+  /// Fetches rooms for [homeId] in **one** HTTP call via EntityDataQuery,
+  /// pulling name + type + server attributes (icon, order) together.
+  ///
+  /// The previous implementation fired `findByQuery` first, then one
+  /// `getServerAttributes` per room — N+1 with N up to ~20. EntityDataQuery
+  /// pulls everything in a single request, cutting cold-start latency by
+  /// roughly the number of rooms × HTTP round-trip.
   Future<List<SmarthomeRoom>> fetchRooms(String homeId) async {
-    final query = AssetSearchQuery(
-      parameters: RelationsSearchParameters(
-        rootId: homeId,
-        rootType: EntityType.ASSET,
+    final query = EntityDataQuery(
+      entityFilter: RelationsQueryFilter(
+        rootEntity: AssetId(homeId),
+        filters: [
+          RelationEntityTypeFilter(_containsRelation, [EntityType.ASSET]),
+        ],
       ),
-      assetTypes: [_roomType],
-      relationType: _containsRelation,
+      pageLink: EntityDataPageLink(pageSize: 1024),
+      entityFields: [
+        EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'name'),
+        EntityKey(type: EntityKeyType.ENTITY_FIELD, key: 'type'),
+      ],
+      latestValues: [
+        EntityKey(type: EntityKeyType.SERVER_ATTRIBUTE, key: 'icon'),
+        EntityKey(type: EntityKeyType.SERVER_ATTRIBUTE, key: 'order'),
+      ],
     );
-    final assets = await _client.getAssetService().findByQuery(query);
-    final rooms = assets
-        .map((a) => SmarthomeRoom.fromAsset(a, homeId: homeId))
-        .toList();
 
-    // Load icon + order from server attributes in parallel
-    await Future.wait(rooms.asMap().entries.map((entry) async {
-      final i = entry.key;
-      final room = entry.value;
-      try {
-        final attrs = await getServerAttributes(
-          AssetId(room.id),
-          ['icon', 'order'],
-        );
-        if (attrs.isNotEmpty) {
-          rooms[i] = room.copyWith(
-            icon: attrs['icon'] as String?,
-            order: attrs['order'] is int
-                ? attrs['order'] as int
-                : int.tryParse(attrs['order']?.toString() ?? ''),
-          );
-        }
-      } catch (_) {
-        // best-effort: keep room without attributes
-      }
-    }));
+    final result =
+        await _client.getEntityQueryService().findEntityDataByQuery(query);
+
+    final rooms = <SmarthomeRoom>[];
+    for (final ed in result.data) {
+      // Home asset can technically contain other asset types (gateway groups
+      // etc.) — keep this filter as a guard so non-room assets don't leak in.
+      if (ed.field('type') != _roomType) continue;
+
+      final attrs = ed.latest[EntityKeyType.SERVER_ATTRIBUTE];
+      final icon = attrs?['icon']?.value;
+      final orderRaw = attrs?['order']?.value;
+
+      rooms.add(SmarthomeRoom(
+        id: ed.entityId.id!,
+        homeId: homeId,
+        name: ed.field('name') ?? '',
+        icon: (icon == null || icon.isEmpty) ? null : icon,
+        order: int.tryParse(orderRaw ?? '') ?? 0,
+      ));
+    }
 
     rooms.sort((a, b) => a.order.compareTo(b.order));
     return rooms;

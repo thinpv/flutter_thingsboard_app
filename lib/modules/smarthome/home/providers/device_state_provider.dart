@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:thingsboard_app/locator.dart';
+import 'package:thingsboard_app/modules/smarthome/home/data/home_data_cache.dart';
 import 'package:thingsboard_app/modules/smarthome/home/domain/entities/smarthome_device.dart';
 import 'package:thingsboard_app/modules/smarthome/profile_metadata/data/profile_metadata_cache.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
@@ -248,14 +249,19 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
 }
 
 /// Streams devices in [roomId] with live telemetry + connectivity updates.
+///
+/// Cache-first: yields the Hive-cached device list immediately so cards
+/// appear instantly on warm start, then fetches the fresh list over HTTP
+/// and hands off to the WebSocket-backed stream.
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
+    final cached = HomeDataCache.instance.getDevices(roomId);
+    if (cached != null && cached.isNotEmpty) {
+      yield cached;
+    }
     final raw = await HomeService().fetchDevicesInRoom(roomId);
-    // Yield raw devices immediately so cards appear without waiting for
-    // profile image resolution (which can take seconds with many devices).
-    // Profile meta resolves concurrently and the WebSocket stream will
-    // push uiType via server attribute anyway.
+    await HomeDataCache.instance.saveDevices(roomId, raw);
     yield* _entityDataStreamWithMeta(raw, roomId, ref.onDispose);
   },
 );
@@ -264,7 +270,12 @@ final devicesInRoomProvider =
 final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
+    final cached = HomeDataCache.instance.getDevices(homeId);
+    if (cached != null && cached.isNotEmpty) {
+      yield cached;
+    }
     final raw = await HomeService().fetchDevicesInHome(homeId);
+    await HomeDataCache.instance.saveDevices(homeId, raw);
     yield* _entityDataStreamWithMeta(raw, homeId, ref.onDispose);
   },
 );
@@ -303,31 +314,12 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
     }
   }
 
-  // Step 2: If any device with a profile is absent from the maps (Hive miss),
-  // block until the network fetch resolves so the very first render is correct.
-  // With in-flight dedup in DeviceProfileUiService, parallel room streams share
-  // the same HTTP requests — the total extra wait is one round-trip per unique
-  // profile, not per room.
-  final cacheMissDevices = raw
-      .where((d) => d.deviceProfileId != null && !profileNameMap.containsKey(d.id))
-      .toList();
-
-  if (cacheMissDevices.isNotEmpty) {
-    try {
-      final netMetas = await _resolveProfileMeta(cacheMissDevices)
-          .timeout(const Duration(seconds: 4));
-      for (final e in netMetas) {
-        imageMap[e.key] = e.value.profileImage;
-        if (e.value.uiType != null) uiTypeMap[e.key] = e.value.uiType;
-        if (e.value.profileName != null) profileNameMap[e.key] = e.value.profileName;
-      }
-    } catch (_) {
-      // Timeout or network error: proceed with whatever Hive data we have.
-      // Devices will show with UUID-like names on this load; Hive will be
-      // populated once the background refresh completes and subsequent loads
-      // will be correct.
-    }
-  }
+  // Step 2: Don't block on network meta resolution — render whatever Hive
+  // gave us (or bare device names on first launch) and let the background
+  // refresh below fill in icons/names when the HTTP responses arrive.
+  // Blocking here was the dominant cause of cold-start lag; with cache-first
+  // device lists already showing instantly, we cannot afford to gate the
+  // first render on a profile metadata fetch.
 
   // Tracks the most recent WebSocket snapshot so profile-meta resolution can
   // re-emit it (with images injected) instead of the stale raw list.
