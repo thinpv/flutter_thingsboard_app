@@ -6,6 +6,7 @@ import 'package:reactive_forms/reactive_forms.dart';
 import 'package:thingsboard_app/config/themes/mp_colors.dart';
 import 'package:thingsboard_app/core/auth/login/widgets/full_screen_loader.dart';
 import 'package:thingsboard_app/core/auth/signup/provider/signup_provider.dart';
+import 'package:thingsboard_app/core/auth/widgets/legal_links.dart';
 import 'package:thingsboard_app/utils/ui/visibility_widget.dart';
 
 class SignupPage extends HookConsumerWidget {
@@ -287,26 +288,14 @@ class SignupPage extends HookConsumerWidget {
                               value: agreeTerms.value,
                               onChanged: (v) => agreeTerms.value = v,
                               child: RichText(
-                                text: const TextSpan(
-                                  style: TextStyle(
+                                text: TextSpan(
+                                  style: const TextStyle(
                                       fontSize: 12, color: MpColors.text2),
                                   children: [
-                                    TextSpan(text: 'Tôi đồng ý với '),
-                                    TextSpan(
-                                      text: 'Điều khoản dịch vụ',
-                                      style: TextStyle(
-                                        color: MpColors.text,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                    TextSpan(text: ' và '),
-                                    TextSpan(
-                                      text: 'Chính sách riêng tư',
-                                      style: TextStyle(
-                                        color: MpColors.text,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
+                                    const TextSpan(text: 'Tôi đồng ý với '),
+                                    LegalTextSpans.terms(),
+                                    const TextSpan(text: ' và '),
+                                    LegalTextSpans.privacy(),
                                   ],
                                 ),
                               ),
