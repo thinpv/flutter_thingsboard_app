@@ -8,9 +8,14 @@ import 'package:thingsboard_app/locator.dart';
 import 'package:thingsboard_app/modules/more/profle_widget.dart';
 import 'package:thingsboard_app/thingsboard_client.dart';
 import 'package:thingsboard_app/utils/services/overlay_service/i_overlay_service.dart';
+import 'package:thingsboard_app/utils/services/smarthome/auth_middleware_service.dart';
 import 'package:thingsboard_app/utils/services/tb_client_service/i_tb_client_service.dart';
-/// Example of user deletion feature for CE, it's not needed since there is no self registration
-/// on CE app
+
+/// "Delete account" row for the Profile preview.
+///
+/// CUSTOMER_USER accounts can only be deleted via the mPipe middleware
+/// (TB CE rejects /api/user DELETE for non-admin authorities). Tenant admins
+/// fall back to the direct TB API since they have permission.
 Widget getDeleteButton(BuildContext context, WidgetRef ref, User user) {
   return Column(
     children: [
@@ -28,7 +33,6 @@ Widget getDeleteButton(BuildContext context, WidgetRef ref, User user) {
         },
         child: Row(
           spacing: 4,
-
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.delete_forever),
@@ -57,23 +61,31 @@ Future<void> deleteAccount(
           cancel: S.of(context).cancel,
         ),
   );
-  if (delete == true) {
-    final client = getIt<ITbClientService>().client;
-    try {
-      /// More strict way. Deletes overall tenant account.
-      if (user.authority == Authority.TENANT_ADMIN) {
-        client.getTenantService().deleteTenant(user.tenantId!.id!);
+  if (delete != true) return;
+
+  final client = getIt<ITbClientService>().client;
+  try {
+    if (user.authority == Authority.CUSTOMER_USER) {
+      // Customer self-delete must go through mPipe middleware — TB CE doesn't
+      // grant CUSTOMER_USER permission to call DELETE /api/user. Middleware
+      // re-verifies the token, then deletes user + customer with tenant creds.
+      final token = client.getJwtToken();
+      if (token == null || token.isEmpty) {
+        throw Exception('No active session');
       }
-// You can use this for tenant user's deletion as well, if you want to keep your tenant
-      if (user.authority == Authority.CUSTOMER_USER) {
-        client.getUserService().deleteUser(user.id!.id!);
-      }
-      await ref.read(loginProvider.notifier).logout();
-    } catch (e) {
-      getIt<IOverlayService>().showErrorNotification(
-        (_) => S.of(context).cantDeleteUserAccount,
-        duration: const Duration(milliseconds: 1500),
-      );
+      await AuthMiddlewareService().deleteAccount(token);
+    } else if (user.authority == Authority.TENANT_ADMIN) {
+      // Tenants delete the whole tenant entity directly — they have the
+      // permission already.
+      await client.getTenantService().deleteTenant(user.tenantId!.id!);
+    } else {
+      throw Exception('Unsupported authority for self-deletion');
     }
+    await ref.read(loginProvider.notifier).logout();
+  } catch (e) {
+    getIt<IOverlayService>().showErrorNotification(
+      (_) => S.of(context).cantDeleteUserAccount,
+      duration: const Duration(milliseconds: 1500),
+    );
   }
 }

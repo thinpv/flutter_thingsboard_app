@@ -163,10 +163,11 @@ class ProfilePreviewWidget extends HookConsumerWidget {
                     ],
                   ),
                 ),
-                // Commented out for CE app, uncoment this code if you need this feature
-                // for your users
-                // if (user.authority != Authority.SYS_ADMIN)
-                //   getDeleteButton(context, ref, user)
+                // CUSTOMER_USER → middleware proxy (TB rejects DELETE /api/user
+                // for non-admin); TENANT_ADMIN → direct TB call. SYS_ADMIN
+                // can't self-delete (handled inside getDeleteButton).
+                if (user.authority != Authority.SYS_ADMIN)
+                  getDeleteButton(context, ref, user),
               ],
             ),
           ),

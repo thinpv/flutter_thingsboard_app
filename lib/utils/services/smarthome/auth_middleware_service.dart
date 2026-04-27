@@ -44,6 +44,30 @@ class AuthMiddlewareService {
     return VerifyResult.fromJson(resp);
   }
 
+  /// Permanently deletes the authenticated CUSTOMER_USER account + the
+  /// owning Customer entity (cascades home/room/device data). TB CE only
+  /// allows admins to call DELETE /api/user/{id}, so this goes through the
+  /// middleware which uses tenant credentials to satisfy the permission
+  /// model after verifying the request came from the user themselves.
+  ///
+  /// `customerToken` is the live TB JWT — middleware.Auth re-verifies it
+  /// against /api/auth/user before deleting.
+  Future<void> deleteAccount(String customerToken) async {
+    final resp = await http.delete(
+      Uri.parse('$_base/auth/account'),
+      headers: {'Authorization': 'Bearer $customerToken'},
+    );
+    if (resp.statusCode == 204 || resp.statusCode == 200) return;
+    String msg = 'HTTP ${resp.statusCode}';
+    if (resp.body.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+        if (decoded['error'] is String) msg = decoded['error'] as String;
+      } catch (_) {/* fall through */}
+    }
+    throw AuthMiddlewareException(resp.statusCode, msg);
+  }
+
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final resp = await http.post(
       Uri.parse('$_base$path'),
