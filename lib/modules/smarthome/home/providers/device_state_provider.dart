@@ -228,9 +228,14 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
       }
 
       stateMap[id] = device.copyWith(
-        label: (device.label == null || device.label!.isEmpty)
-            ? (defaultLabel ?? clientName)
+        // defaultLabel (server attr, admin-controlled) → label field (high priority)
+        label: (device.label == null || device.label!.isEmpty) && defaultLabel != null
+            ? defaultLabel
             : null,
+        // clientName (gateway client attr) → gatewayName field (lower priority,
+        // ranked after profileName so a UUID-like gateway ID never shows over
+        // the human-readable profile type name).
+        gatewayName: clientName,
         uiType: uiType,
         isOnline: active != null ? _resolveOnline(active) : null,
         telemetry: Map.unmodifiable(tel),
@@ -325,8 +330,9 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
   // re-emit it (with images injected) instead of the stale raw list.
   List<SmarthomeDevice>? lastSnapshot;
 
-  // Controller that merges WebSocket updates with profileImage injections.
-  final merged = StreamController<List<SmarthomeDevice>>.broadcast();
+  // Single-subscription controller so events buffered before yield* merged.stream
+  // are not dropped (broadcast controllers drop events with no listener).
+  final merged = StreamController<List<SmarthomeDevice>>();
   onDispose(merged.close);
 
   List<SmarthomeDevice> injectImages(List<SmarthomeDevice> devices) => devices
@@ -405,7 +411,11 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
       }
       // Re-emit the latest snapshot with refreshed meta injected.
       final snap = lastSnapshot ?? raw;
-      merged.add(injectImages(snap));
+      final injected = injectImages(snap);
+      merged.add(injected);
+      // Persist profileName + WebSocket-resolved label to Hive so the next
+      // warm start shows correct names immediately (no UUID flash on yield cached).
+      HomeDataCache.instance.saveDevices(rootAssetId, injected);
     }).catchError((_) {});
   }
 

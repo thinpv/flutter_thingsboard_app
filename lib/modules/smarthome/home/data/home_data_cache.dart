@@ -136,6 +136,8 @@ class HomeDataCache {
         'type': d.type,
         if (d.label != null) 'label': d.label,
         if (d.deviceProfileId != null) 'deviceProfileId': d.deviceProfileId,
+        if (d.profileName != null) 'profileName': d.profileName,
+        if (d.gatewayName != null) 'gatewayName': d.gatewayName,
       };
 
   SmarthomeDevice _deviceFromJson(Map<String, dynamic> j) => SmarthomeDevice(
@@ -144,5 +146,7 @@ class HomeDataCache {
         type: j['type'] as String? ?? '',
         label: j['label'] as String?,
         deviceProfileId: j['deviceProfileId'] as String?,
+        profileName: j['profileName'] as String?,
+        gatewayName: j['gatewayName'] as String?,
       );
 }

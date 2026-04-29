@@ -39,6 +39,11 @@ class DeviceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Show skeleton until label or profileName is available. gatewayName is
+    // intentionally excluded: the gateway may publish a raw MAC/UUID as the
+    // client attribute `name` before proper provisioning completes.
+    if (!device.isNameResolved) return const _DeviceCardSkeleton();
+
     final profileId = device.deviceProfileId ?? '';
     final metaAsync = profileId.isNotEmpty
         ? ref.watch(deviceProfileMetadataProvider(profileId))
@@ -74,7 +79,7 @@ class DeviceCard extends ConsumerWidget {
     // Accent color thay amber khi bật (nếu home có tông màu)
     final onColor = accent ?? MpColors.amber;
     final iconBgColor = dark
-        ? onColor.withOpacity(0.18)
+        ? onColor.withValues(alpha: 0.18)
         : colors.tint;
     final iconFgColor = dark ? onColor : colors.fg;
 
@@ -334,6 +339,87 @@ class _AssignSheet extends StatelessWidget {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton placeholder (shown while device name is loading) ───────────────
+
+class _DeviceCardSkeleton extends StatelessWidget {
+  const _DeviceCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: MpColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MpColors.border, width: 0.5),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Shimmer(width: 36, height: 36, radius: 10),
+          Spacer(),
+          _Shimmer(width: 80, height: 10, radius: 4),
+          SizedBox(height: 6),
+          _Shimmer(width: 110, height: 12, radius: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({
+    required this.width,
+    required this.height,
+    required this.radius,
+  });
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, _) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: MpColors.border.withValues(alpha: _anim.value),
+          borderRadius: BorderRadius.circular(widget.radius),
         ),
       ),
     );
