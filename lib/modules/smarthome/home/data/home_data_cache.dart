@@ -138,6 +138,9 @@ class HomeDataCache {
         if (d.deviceProfileId != null) 'deviceProfileId': d.deviceProfileId,
         if (d.profileName != null) 'profileName': d.profileName,
         if (d.gatewayName != null) 'gatewayName': d.gatewayName,
+        if (d.profileImage != null) 'profileImage': d.profileImage,
+        if (d.isOnline) 'isOnline': true,
+        if (d.telemetry.isNotEmpty) 'telemetry': d.telemetry,
       };
 
   SmarthomeDevice _deviceFromJson(Map<String, dynamic> j) => SmarthomeDevice(
@@ -148,5 +151,8 @@ class HomeDataCache {
         deviceProfileId: j['deviceProfileId'] as String?,
         profileName: j['profileName'] as String?,
         gatewayName: j['gatewayName'] as String?,
+        profileImage: j['profileImage'] as String?,
+        isOnline: j['isOnline'] as bool? ?? false,
+        telemetry: (j['telemetry'] as Map<String, dynamic>?) ?? const {},
       );
 }

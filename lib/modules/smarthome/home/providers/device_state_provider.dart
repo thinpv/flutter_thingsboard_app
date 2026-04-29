@@ -261,13 +261,25 @@ Stream<List<SmarthomeDevice>> _entityDataStream(
 final devicesInRoomProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, roomId) async* {
+    List<SmarthomeDevice>? liveState;
+    ref.onDispose(() {
+      if (liveState != null && liveState!.isNotEmpty) {
+        HomeDataCache.instance.saveDevices(roomId, liveState!);
+      }
+    });
+
     final cached = HomeDataCache.instance.getDevices(roomId);
     if (cached != null && cached.isNotEmpty) {
       yield cached;
     }
     final raw = await HomeService().fetchDevicesInRoom(roomId);
-    await HomeDataCache.instance.saveDevices(roomId, raw);
-    yield* _entityDataStreamWithMeta(raw, roomId, ref.onDispose);
+    final seeded = _seedProfileImages(raw, cached);
+    await HomeDataCache.instance.saveDevices(roomId, seeded);
+    yield* _entityDataStreamWithMeta(seeded, roomId, ref.onDispose)
+        .map((devices) {
+          liveState = devices;
+          return devices;
+        });
   },
 );
 
@@ -275,15 +287,58 @@ final devicesInRoomProvider =
 final devicesInHomeProvider =
     StreamProvider.family<List<SmarthomeDevice>, String>(
   (ref, homeId) async* {
+    List<SmarthomeDevice>? liveState;
+    ref.onDispose(() {
+      if (liveState != null && liveState!.isNotEmpty) {
+        HomeDataCache.instance.saveDevices(homeId, liveState!);
+      }
+    });
+
     final cached = HomeDataCache.instance.getDevices(homeId);
     if (cached != null && cached.isNotEmpty) {
       yield cached;
     }
     final raw = await HomeService().fetchDevicesInHome(homeId);
-    await HomeDataCache.instance.saveDevices(homeId, raw);
-    yield* _entityDataStreamWithMeta(raw, homeId, ref.onDispose);
+    final seeded = _seedProfileImages(raw, cached);
+    await HomeDataCache.instance.saveDevices(homeId, seeded);
+    yield* _entityDataStreamWithMeta(seeded, homeId, ref.onDispose)
+        .map((devices) {
+          liveState = devices;
+          return devices;
+        });
   },
 );
+
+/// Merges live-session data from [cached] into [raw] (from HTTP) so that after
+/// a reload the onoff state, icons, and names are preserved immediately.
+///
+/// - Raw (HTTP) is authoritative for: id, name, type, label, deviceProfileId.
+/// - Cached (last live WS state) is authoritative for: isOnline, telemetry,
+///   profileImage, profileName, gatewayName, uiType.
+List<SmarthomeDevice> _seedProfileImages(
+  List<SmarthomeDevice> raw,
+  List<SmarthomeDevice>? cached,
+) {
+  if (cached == null || cached.isEmpty) return raw;
+  final byId = {for (final d in cached) d.id: d};
+  return raw.map((d) {
+    final c = byId[d.id];
+    if (c == null) return d;
+    return SmarthomeDevice(
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      label: d.label ?? c.label,
+      deviceProfileId: d.deviceProfileId ?? c.deviceProfileId,
+      profileName: c.profileName,
+      gatewayName: c.gatewayName,
+      uiType: c.uiType,
+      profileImage: c.profileImage,
+      isOnline: c.isOnline,
+      telemetry: c.telemetry,
+    );
+  }).toList();
+}
 
 /// Starts the entity data stream, ensuring profile metadata is populated before
 /// the first emit so device names and icons are correct on the initial render.
@@ -311,6 +366,13 @@ Stream<List<SmarthomeDevice>> _entityDataStreamWithMeta(
 
   // Step 1: Pre-populate maps from Hive (local, ~1-5ms) BEFORE WebSocket connects.
   if (raw.isNotEmpty) {
+    // Seed imageMap directly from device's profileImage field first — this is
+    // populated by _seedProfileImages from the HomeDataCache and survives even
+    // when ProfileMetadataCache is cleared by a pull-to-refresh invalidateAll().
+    for (final d in raw) {
+      if (d.profileImage != null) imageMap[d.id] = d.profileImage;
+    }
+
     final hiveMetas = await _resolveProfileMetaFromHive(raw);
     for (final e in hiveMetas) {
       if (e.value.profileImage != null) imageMap[e.key] = e.value.profileImage;
